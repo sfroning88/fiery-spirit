@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "focus_python"
+version = "0.0.1"
+description = "Shared core, FastAPI helpers, enums, services, and utils for Focus Python apps"
+requires-python = ">=3.13"
+dependencies = [
+  "python-dotenv>=1.0.0",
+  "psycopg2-binary>=2.9.0",
+  "structlog>=24.0.0",
+  "redis>=5.0.0",
+  "rq>=2.0.0",
+  "fastapi>=0.100.0",
+  "requests>=2.31.0",
+  "boto3>=1.34.0",
+  "joblib>=1.3.0",
+  "httpx>=0.27.0",
+  "slowapi>=0.1.9",
+]
+
+[project.optional-dependencies]
+dev = [
+  "black>=24.0.0",
+  "pytest>=8.0.0",
+  "ruff>=0.4.0",
+  "uvicorn>=0.20.0",
+  "pydantic>=2.10.0",
+  "scikit-learn>=1.4.0",
+  "xgboost>=3.1.3",
+  "numpy>=1.26.0",
+  "pandas>=2.0.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

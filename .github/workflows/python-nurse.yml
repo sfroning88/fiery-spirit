@@ -1,0 +1,48 @@
+name: Python Nurse
+
+on:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "apps/backend/**"
+      - "apps/ai/**"
+      - "packages/python/**"
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      workers: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'apps/backend/**'
+            ai:
+              - 'apps/ai/**'
+            packages:
+              - 'packages/python/**'
+
+  python-nurse:
+    needs: changes
+    if: needs.changes.outputs.workers != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    strategy:
+      fail-fast: false
+      matrix:
+        worker: ${{ fromJSON(needs.changes.outputs.workers) }}
+    steps:
+      - uses: sfroning88/python-nurse@3317a6d4e69d16c2293fa18c6f6a4973a8bce683
+        with:
+          app-path: ${{ matrix.worker == 'python' && 'packages/python' || format('apps/{0}', matrix.worker) }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          score-preset: structure

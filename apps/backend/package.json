@@ -1,0 +1,9 @@
+{
+  "name": "@focus/backend",
+  "private": true,
+  "scripts": {
+    "format": "ruff format .",
+    "lint": "ruff check .",
+    "build": "bash ./scripts/ci.sh"
+  }
+}

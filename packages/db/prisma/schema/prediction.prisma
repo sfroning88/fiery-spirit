@@ -1,0 +1,34 @@
+///////////////////////////////////////////////////////////////////////////////////////////
+//                                    AI PREDICTION                                      //
+///////////////////////////////////////////////////////////////////////////////////////////
+
+enum PredictionType {
+    controllablePrd         @map("controllable_prd")
+    occupancy               @map("occupancy")
+    operatingMargin         @map("operating_margin")
+
+    @@map("prediction_type")
+    @@schema("ai")
+}
+
+model Prediction {
+    type                    PredictionType
+    result                  Decimal @db.Decimal(14,2)
+    feedbackScore           Decimal? @map("feedback_score") @db.Decimal(14,2)
+
+    modelType               TrainingType @map("model_type")
+    modelBatchId            String @map("model_batch_id") @db.Uuid
+    model                   TrainingModel @relation(fields: [modelType, modelBatchId], references: [type, batchId], onDelete: Restrict, onUpdate: Cascade)
+
+    propertyId              String @map("property_id") @db.Uuid
+    property                Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+    createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt               DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+    @@id([type, modelType, modelBatchId, propertyId])
+    @@map("prediction")
+    @@schema("ai")
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,9 @@
+{
+  "name": "@focus/ai",
+  "private": true,
+  "scripts": {
+    "format": "ruff format .",
+    "lint": "ruff check .",
+    "build": "bash ./scripts/ci.sh"
+  }
+}

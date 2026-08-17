@@ -1,0 +1,85 @@
+/**
+ * @focus/ui — design tokens (Focus Healthcare Partners inspired)
+ * Blue/white palette and display typography aligned with focushealthcarepartners.com
+ * Cinzel/serif stack
+ */
+
+@theme {
+  /* —— Base palette: navy / steel blue / mist (light gradient-friendly) —— */
+  --color-fhp-navy-950: #020910;
+  --color-fhp-navy-900: #061228;
+  --color-fhp-navy-800: #0a1a36;
+  --color-fhp-navy-700: #0e2244;
+  --color-fhp-blue-800: #153a5c;
+  --color-fhp-blue-700: #1c4a6e;
+  --color-fhp-blue-600: #2563a0;
+  --color-fhp-blue-500: #2f7ab8;
+  --color-fhp-blue-400: #4a94c8;
+  --color-fhp-blue-300: #7eb3dc;
+  --color-fhp-blue-200: #b0d0eb;
+  --color-fhp-blue-100: #d4e6f4;
+  --color-fhp-blue-50: #e8f2fa;
+  --color-fhp-mist: #f0f6fb;
+  --color-fhp-white: #ffffff;
+
+  /* —— Semantic (maps to app chrome & Tailwind utilities) —— */
+  --color-background: var(--color-fhp-mist);
+  --color-foreground: var(--color-fhp-navy-900);
+  --color-card: var(--color-fhp-white);
+  --color-card-foreground: var(--color-fhp-navy-900);
+  --color-surface-dark: #111827;
+  --color-surface-dark-foreground: #ffffff;
+  --color-primary: var(--color-fhp-navy-800);
+  --color-primary-foreground: var(--color-fhp-white);
+  --color-secondary: var(--color-fhp-blue-100);
+  --color-secondary-foreground: var(--color-fhp-navy-800);
+  --color-muted: var(--color-fhp-blue-100);
+  --color-muted-foreground: var(--color-fhp-blue-800);
+  --color-accent: var(--color-fhp-blue-600);
+  --color-accent-foreground: var(--color-fhp-white);
+  --color-border: var(--color-fhp-blue-200);
+  --color-input: var(--color-fhp-blue-200);
+  --color-ring: var(--color-fhp-blue-500);
+
+  /* —— Surfaces: hero / panel gradients —— */
+  --background-image-fhp-hero: linear-gradient(
+    165deg,
+    var(--color-fhp-blue-50) 0%,
+    var(--color-fhp-white) 38%,
+    var(--color-fhp-mist) 100%
+  );
+  --background-image-fhp-ribbon: linear-gradient(
+    90deg,
+    var(--color-fhp-navy-800) 0%,
+    var(--color-fhp-blue-600) 50%,
+    var(--color-fhp-blue-400) 100%
+  );
+  --background-image-fhp-deep: linear-gradient(
+    180deg,
+    var(--color-fhp-navy-900) 0%,
+    var(--color-fhp-blue-800) 100%
+  );
+
+  /* —— Type: display = Trajan-style stack (Cinzel from next/font in app); body = Geist —— */
+  --font-display:
+    var(--font-focus-display), "Trajan Pro", "Trajan", "Times New Roman", Times,
+    serif;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono:
+    var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* —— Type: data UI pairing (DM Sans / DM Mono via next/font CSS vars) —— */
+  --font-data:
+    var(--font-dm-sans), "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-data-mono:
+    var(--font-dm-mono), "DM Mono", ui-monospace, SFMono-Regular, Menlo,
+    monospace;
+
+  /* —— Radii —— */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+}

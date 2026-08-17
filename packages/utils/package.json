@@ -1,0 +1,27 @@
+{
+  "name": "@focus/utils",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./number-utils": "./src/number-utils.ts",
+    "./server": "./src/server/supabase-utils.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@focus/config": "workspace:*",
+    "@focus/db": "workspace:*",
+    "@focus/types": "workspace:*",
+    "@supabase/supabase-js": "^2.49.1",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@focus/tsconfig": "workspace:*",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.0.0"
+  }
+}

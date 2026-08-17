@@ -1,0 +1,29 @@
+{
+  "name": "@focus/ui",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./theme.css": "./src/theme.css"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@focus/db": "workspace:*",
+    "@focus/types": "workspace:*",
+    "@focus/utils": "workspace:*",
+    "@supabase/supabase-js": "^2.49.1",
+    "iconoir-react": "^7.11.0"
+  },
+  "devDependencies": {
+    "@focus/tsconfig": "workspace:*",
+    "@types/react": "^19.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}

@@ -1,0 +1,47 @@
+previews:
+  generation: off
+services:
+- type: web
+  runtime: docker
+  name: focus-backend-api
+  plan: free
+  numInstances: 1
+  dockerfilePath: apps/backend/Dockerfile
+  buildFilter:
+    paths:
+      - apps/backend/**
+      - packages/python/**
+  envVars:
+    - fromGroup: Focus-Environment
+    - key: SERVICE_TYPE
+      value: api
+    - key: BACKEND_API_URL
+      value: https://focus-backend-api.onrender.com
+      previewValue: https://focus-backend-api-staging.onrender.com
+    - key: AI_API_URL
+      value: https://focus-ai-api-0nkf.onrender.com
+      previewValue: https://focus-ai-api-0nkf-staging.onrender.com
+    - key: JOB_DOMAIN
+      value: predictions
+
+- type: cron
+  runtime: docker
+  name: focus-backend-model-reload
+  schedule: "0 */6 * * *"
+  plan: free
+  dockerfilePath: apps/backend/Dockerfile
+  buildFilter:
+    paths:
+      - apps/backend/**
+      - packages/python/**
+  dockerCommand: python -m src.jobs.dispatch_models_reload
+  envVars:
+    - fromGroup: Focus-Environment
+    - key: BACKEND_API_URL
+      value: https://focus-backend-api.onrender.com
+      previewValue: https://focus-backend-api-staging.onrender.com
+    - key: AI_API_URL
+      value: https://focus-ai-api-0nkf.onrender.com
+      previewValue: https://focus-ai-api-0nkf-staging.onrender.com
+    - key: JOB_DOMAIN
+      value: predictions
