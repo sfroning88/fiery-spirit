@@ -1,9 +1,7 @@
-from .requests import ShuffleRequest, TrainingRequest
-from .responses import ShuffleResponse, TrainingResponse
+from .requests import TrainingRequest
+from .responses import TrainingResponse
 
 __all__ = [
-    "ShuffleRequest",
     "TrainingRequest",
-    "ShuffleResponse",
     "TrainingResponse",
 ]

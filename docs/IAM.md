@@ -1,6 +1,6 @@
 # Identity Access Management
 
-Last updated: **May 2026**
+Last updated: **August 2026**
 
 ## Users
 
@@ -32,8 +32,8 @@ The platform relies on `Supabase client` for sessions. This is basic and secure 
 Interaction with the platform is three basic levels:
 
 - The `User Session` is required to do anything managed by `Supabase client`
-- Every `server action` within the platform is guarded by `@focus/auth`
-- All `env secrets` are stored `server-only` from `@focus/config`
+- Every `server action` within the platform is guarded by `@fiery/auth`
+- All `env secrets` are stored `server-only` from `@fiery/config`
 
 Theres a couple basic methods for auth checks:
 

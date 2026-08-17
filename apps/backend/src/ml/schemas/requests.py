@@ -1,15 +1,13 @@
 """
 Author: Sean Froning
-Modified Date: 5.30.2026
+Created Date: 8.17.2026
 Request models for Models
 """
 
-from pydantic import BaseModel
-from focus_python import PredictionType
+from pydantic import BaseModel, ConfigDict
 
 
 class ModelRequest(BaseModel):
-    """Request model for reloading model registry"""
+    """Request model for reloading model registry (empty body)"""
 
-    prediction_type: PredictionType
-    multi_enabled: bool = False
+    model_config = ConfigDict(extra="forbid")

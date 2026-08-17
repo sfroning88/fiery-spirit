@@ -1,7 +1,7 @@
 """
 Author: Sean Froning
-Created Date: 5.3.2026
-Main entrypoint for Focus AI/ML API
+Created Date: 8.17.2026
+Main entrypoint for Fiery AI/ML API
 """
 
 import sys
@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from focus_python import config, exception, logging, middleware, limiter
+from fiery_python import config, exception, logging, middleware, limiter
 from core import health, lifespan
 from integrations import TrainingRouter
 
@@ -51,7 +51,7 @@ def root():
     """Root endpoint with basic API information and configuration status"""
 
     return {
-        "service": "Focus AI/ML API",
+        "service": "Fiery AI/ML API",
         "version": "0.0.1",
         "status": "running",
         "configuration": {

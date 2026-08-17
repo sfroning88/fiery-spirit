@@ -32,7 +32,7 @@ run_app() {
 
 run_python() {
   echo ""
-  echo "===== python (focus_python) unit tests ====="
+  echo "===== python (fiery_python) unit tests ====="
   if [ ! -x "$ROOT/packages/python/.venv/bin/python" ]; then
     echo "Missing venv: packages/python/.venv (run scripts/setup-python-venvs.sh)" >&2
     STATUS=1

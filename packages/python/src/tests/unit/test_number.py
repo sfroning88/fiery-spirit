@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Modified Date: 7.16.2026
+Created Date: 8.17.2026
 Unit tests for NumberUtils decimal clamping
 """
 
@@ -8,7 +8,7 @@ import math
 from datetime import date
 
 import pytest
-from focus_python import NumberUtils
+from fiery_python import NumberUtils
 
 
 def test_clamp_decimal_rounds_to_scale():

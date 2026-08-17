@@ -63,25 +63,25 @@ importers:
 
   apps/dashboard:
     dependencies:
-      '@focus/auth':
+      '@fiery/auth':
         specifier: workspace:*
         version: link:../../packages/auth
-      '@focus/config':
+      '@fiery/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@focus/db':
+      '@fiery/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@focus/services':
+      '@fiery/services':
         specifier: workspace:*
         version: link:../../packages/services
-      '@focus/types':
+      '@fiery/types':
         specifier: workspace:*
         version: link:../../packages/types
-      '@focus/ui':
+      '@fiery/ui':
         specifier: workspace:*
         version: link:../../packages/ui
-      '@focus/utils':
+      '@fiery/utils':
         specifier: workspace:*
         version: link:../../packages/utils
       '@supabase/ssr':
@@ -133,7 +133,7 @@ importers:
       '@eslint/js':
         specifier: ^9.39.4
         version: 9.39.4
-      '@focus/tsconfig':
+      '@fiery/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
       '@next/eslint-plugin-next':
@@ -166,16 +166,16 @@ importers:
 
   packages/auth:
     dependencies:
-      '@focus/config':
+      '@fiery/config':
         specifier: workspace:*
         version: link:../config
-      '@focus/db':
+      '@fiery/db':
         specifier: workspace:*
         version: link:../db
-      '@focus/services':
+      '@fiery/services':
         specifier: workspace:*
         version: link:../services
-      '@focus/types':
+      '@fiery/types':
         specifier: workspace:*
         version: link:../types
       '@supabase/ssr':
@@ -194,7 +194,7 @@ importers:
         specifier: ^3.24.2
         version: 3.25.76
     devDependencies:
-      '@focus/tsconfig':
+      '@fiery/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       '@types/node':
@@ -228,7 +228,7 @@ importers:
         specifier: ^3.24.3
         version: 3.25.76
     devDependencies:
-      '@focus/tsconfig':
+      '@fiery/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       '@types/node':
@@ -256,7 +256,7 @@ importers:
         specifier: ^8.13.1
         version: 8.20.0
     devDependencies:
-      '@focus/tsconfig':
+      '@fiery/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       '@types/node':
@@ -271,16 +271,16 @@ importers:
 
   packages/services:
     dependencies:
-      '@focus/config':
+      '@fiery/config':
         specifier: workspace:*
         version: link:../config
-      '@focus/db':
+      '@fiery/db':
         specifier: workspace:*
         version: link:../db
-      '@focus/types':
+      '@fiery/types':
         specifier: workspace:*
         version: link:../types
-      '@focus/utils':
+      '@fiery/utils':
         specifier: workspace:*
         version: link:../utils
       '@supabase/supabase-js':
@@ -290,7 +290,7 @@ importers:
         specifier: ^0.0.1
         version: 0.0.1
     devDependencies:
-      '@focus/tsconfig':
+      '@fiery/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       '@types/node':
@@ -304,14 +304,14 @@ importers:
 
   packages/types:
     dependencies:
-      '@focus/db':
+      '@fiery/db':
         specifier: workspace:*
         version: link:../db
       '@supabase/supabase-js':
         specifier: ^2.49.1
         version: 2.100.1
     devDependencies:
-      '@focus/tsconfig':
+      '@fiery/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       typescript:
@@ -320,13 +320,13 @@ importers:
 
   packages/ui:
     dependencies:
-      '@focus/db':
+      '@fiery/db':
         specifier: workspace:*
         version: link:../db
-      '@focus/types':
+      '@fiery/types':
         specifier: workspace:*
         version: link:../types
-      '@focus/utils':
+      '@fiery/utils':
         specifier: workspace:*
         version: link:../utils
       '@supabase/supabase-js':
@@ -339,7 +339,7 @@ importers:
         specifier: ^19.0.0
         version: 19.2.4
     devDependencies:
-      '@focus/tsconfig':
+      '@fiery/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       '@types/react':
@@ -351,13 +351,13 @@ importers:
 
   packages/utils:
     dependencies:
-      '@focus/config':
+      '@fiery/config':
         specifier: workspace:*
         version: link:../config
-      '@focus/db':
+      '@fiery/db':
         specifier: workspace:*
         version: link:../db
-      '@focus/types':
+      '@fiery/types':
         specifier: workspace:*
         version: link:../types
       '@supabase/supabase-js':
@@ -367,7 +367,7 @@ importers:
         specifier: ^0.0.1
         version: 0.0.1
     devDependencies:
-      '@focus/tsconfig':
+      '@fiery/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       '@types/node':

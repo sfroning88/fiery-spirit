@@ -3,7 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { revalidatePath } from "next/cache";
 import { supabaseServerClient } from "../client/server";
-import { SessionProfile } from "@focus/types";
+import { SessionProfile } from "@fiery/types";
 
 export const getSession = cache(async (): Promise<SessionProfile> => {
   const supabase = await supabaseServerClient();

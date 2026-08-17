@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Modified Date: 5.30.2026
+Created Date: 8.17.2026
 Train Sklearn testing script
 """
 
@@ -13,7 +13,7 @@ from ..endpoints import (
     build_testing_url,
     endpoint_test,
 )
-from ...focus_python import PREDICTION_TARGETS
+from ...fiery_python import PREDICTION_TARGETS
 from ..helpers import wait_for_jobs
 
 

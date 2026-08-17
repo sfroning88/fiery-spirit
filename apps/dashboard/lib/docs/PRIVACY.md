@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Last updated: **March 2026**
+Last updated: **August 2026**
 
 This is a proof-of-concept dashboard with minimal Supabase user accounts, no forms, and minimal anonymous tracking for analytics purposes only.
 
@@ -18,7 +18,7 @@ See [Vercel's Privacy Policy](https://vercel.com/legal/privacy-policy) for detai
 
 This site uses one first-party cookie:
 
-- **`deep-focus-id`**: An anonymous identifier used for visit analytics and IP rate limiting. This cookie:
+- **`fiery-spirit-id`**: An anonymous identifier used for visit analytics and IP rate limiting. This cookie:
   - Is set automatically when you visit the site
   - Expires after 30 days
   - Cannot be used to identify you personally
@@ -39,7 +39,7 @@ No data is shared with advertisers. I do not control how these services collect 
 
 ## Your Rights
 
-You can delete the `deep-focus-id` cookie at any time through your browser settings. Deleting this cookie will not affect your ability to use the site, but a new anonymous identifier will be generated on your next visit.
+You can delete the `fiery-spirit-id` cookie at any time through your browser settings. Deleting this cookie will not affect your ability to use the site, but a new anonymous identifier will be generated on your next visit.
 
 For data held by Vercel, refer to their privacy policy linked above.
 

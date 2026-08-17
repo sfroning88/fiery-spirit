@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { createPublicAction } from "@focus/auth/server";
+import { createPublicAction } from "@fiery/auth/server";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { PRIVACY_DOC_PATH } from "@/lib/constants";

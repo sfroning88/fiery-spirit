@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { getSession } from "@focus/auth/server";
+import { getSession } from "@fiery/auth/server";
 import { routes } from "@lib/routes";
 
 export default async function Home() {

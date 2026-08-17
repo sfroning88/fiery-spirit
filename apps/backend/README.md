@@ -1,6 +1,6 @@
-# Focus AI+ML
+# Fiery AI+ML
 
-FastAPI service for Focus full stack AI/ML app.
+FastAPI service for Fiery full stack AI/ML app.
 
 ## Local development
 

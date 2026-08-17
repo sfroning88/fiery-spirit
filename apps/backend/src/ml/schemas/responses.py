@@ -1,18 +1,13 @@
 """
 Author: Sean Froning
-Created Date: 5.16.2026
+Created Date: 8.17.2026
 Response models for Models
 """
 
-from pydantic import BaseModel, Field
-from typing import List
+from pydantic import BaseModel, ConfigDict
 
 
 class ModelResponse(BaseModel):
-    """Response model for retrieving prediction from winning model or all models"""
+    """Response model for retrieving predictions (empty body)"""
 
-    model_ids: List[str] = Field(
-        ...,
-        description="List of ids of the loaded models",
-        example=["model_1", "model_2", "model_3", "model_4"],
-    )
+    model_config = ConfigDict(extra="forbid")

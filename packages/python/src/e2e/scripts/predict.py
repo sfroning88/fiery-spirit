@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Modified Date: 5.21.2026
+Created Date: 8.17.2026
 Predict from models testing script
 """
 
@@ -13,7 +13,7 @@ from ..endpoints import (
     build_testing_url,
     endpoint_test,
 )
-from ...focus_python import PREDICTION_TARGETS, PredictionType, PrismaPredictionType
+from ...fiery_python import PREDICTION_TARGETS, PredictionType, PrismaPredictionType
 from ..helpers import PREDICT_PRESET_PATH, load_preset_lines
 
 

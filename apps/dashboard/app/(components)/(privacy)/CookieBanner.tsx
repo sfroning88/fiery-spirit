@@ -11,7 +11,7 @@ import {
   COOKIE_BANNER_SYNC_EVENT,
   MOBILE_BREAKPOINT,
 } from "@/lib/constants";
-import { POSTHOG_EVENTS } from "@focus/types";
+import { POSTHOG_EVENTS } from "@fiery/types";
 
 export function CookieBanner() {
   const isMobile = !useMediaQuery(`(min-width: ${MOBILE_BREAKPOINT}px)`, true);

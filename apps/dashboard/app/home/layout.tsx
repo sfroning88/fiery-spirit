@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { requireUser } from "@focus/auth/server";
+import { requireUser } from "@fiery/auth/server";
 
 export default async function HomeLayout({
   children,

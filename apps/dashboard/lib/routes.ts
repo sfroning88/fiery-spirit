@@ -1,4 +1,4 @@
-import { authRoutes } from "@focus/auth/routes";
+import { authRoutes } from "@fiery/auth/routes";
 
 export const routes = {
   ...authRoutes,

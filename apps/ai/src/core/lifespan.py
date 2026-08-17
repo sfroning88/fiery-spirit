@@ -1,12 +1,12 @@
 """
 Author: Sean Froning
-Created Date: 5.3.2026
+Created Date: 8.17.2026
 Lifespan events for FastAPI app
 """
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from focus_python import db_pool, logging, queue
+from fiery_python import db_pool, logging, queue
 
 logger = logging.get_logger(__name__)
 

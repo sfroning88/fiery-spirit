@@ -1,19 +1,12 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { requireUser } from "@focus/auth/server";
-import type { PropertyListEntry } from "@focus/types";
-import { fetchPropertiesCached } from "@lib/api/cache/property-cache";
-import { PropertyListAsync } from "@/app/(components)/(properties)/PropertyListAsync";
-import { PropertyListSkeleton } from "@/app/(components)/(properties)/PropertyListSkeleton";
+import { requireUser } from "@fiery/auth/server";
 import { MyProfileButton } from "@/app/(components)/(privacy)/MyProfileButton";
 import { routes } from "@lib/routes";
 import { TEST_IDS } from "@lib/test-ids";
 
 export default async function HomePage() {
   const { appUser, supabaseUser } = await requireUser();
-  const propertiesPromise = fetchPropertiesCached(supabaseUser.id).catch(
-    (): PropertyListEntry[] => [],
-  );
 
   return (
     <div className="flex flex-col gap-6" data-testid={TEST_IDS.homeScreen}>
@@ -42,9 +35,7 @@ export default async function HomePage() {
           </Link>
         ) : null}
       </div>
-      <Suspense fallback={<PropertyListSkeleton />}>
-        <PropertyListAsync initialDataPromise={propertiesPromise} />
-      </Suspense>
+      <Suspense />
     </div>
   );
 }

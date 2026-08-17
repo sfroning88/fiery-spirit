@@ -1,8 +1,8 @@
 import "server-only";
 
-import { db } from "@focus/db";
+import { db } from "@fiery/db";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { SignInResult, SignOutResult, CurrentUser } from "@focus/types";
+import { SignInResult, SignOutResult, CurrentUser } from "@fiery/types";
 
 export const AuthService = {
   async signIn(params: {

@@ -1,10 +1,10 @@
 """
 Author: Sean Froning
-Created Date: 5.9.2026
+Created Date: 8.17.2026
 Shared redis cleanup for tests
 """
 
-from ..focus_python import queue
+from ..fiery_python import queue
 
 
 def clear_redis_queue() -> None:

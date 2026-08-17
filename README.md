@@ -1,6 +1,6 @@
-# Deep Focus
+# Fiery Spirit
 
-Portal + AI system for **senior healthcare investing** deployed to [deep-focus.vercel.app](https://deep-focus.vercel.app).
+Portal + AI system for **detecting volcanic unrest** deployed to [fiery-spirit.vercel.app](https://fiery-spirit.vercel.app).
 Simple [Next.js](https://nextjs.org) project bootstrapped with [create-next-app](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 **Like what you see? Reach out!**
@@ -18,7 +18,7 @@ This application uses lightweight and free `libraries`:
 
 ## Database
 
-Connection and schema is managed by [`@focus/db`](packages/db):
+Connection and schema is managed by [`@fiery/db`](packages/db):
 
 - `Prisma v7` + `PostgreSQL v17.6` installations
 - Config and migrations live under [`packages/db`](packages/db)

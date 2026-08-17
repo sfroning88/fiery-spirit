@@ -1,4 +1,1 @@
 # Predict workflow preset
-# Treeo Senior Living
-property_id=020c0c89-7f92-4511-b717-59d272898c3c
-multi_enabled=true
