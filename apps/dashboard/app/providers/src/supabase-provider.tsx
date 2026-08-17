@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { supabaseClient } from "@focus/auth";
+import { supabaseClient } from "@fiery/auth";
 
 const SupabaseContext = createContext<SupabaseClient | null>(null);
 

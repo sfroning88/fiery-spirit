@@ -1,4 +1,4 @@
-import { env } from "@focus/config";
+import { env } from "@fiery/config";
 import posthog from "posthog-js";
 
 function posthogUiHostFromApiHost(apiHostUrl: string): string {

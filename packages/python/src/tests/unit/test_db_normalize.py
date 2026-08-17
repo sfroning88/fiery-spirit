@@ -1,10 +1,10 @@
 """
 Author: Sean Froning
-Created Date: 6.3.2026
+Created Date: 8.17.2026
 Unit tests for database query placeholder normalization
 """
 
-from focus_python.core.db import _normalize_query
+from fiery_python.core.db import _normalize_query
 
 
 def test_normalize_query_rewrites_numbered_placeholders():

@@ -1,5 +1,5 @@
 {
-  "name": "@focus/auth",
+  "name": "@fiery/auth",
   "version": "0.0.1",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -16,10 +16,10 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@focus/config": "workspace:*",
-    "@focus/db": "workspace:*",
-    "@focus/services": "workspace:*",
-    "@focus/types": "workspace:*",
+    "@fiery/config": "workspace:*",
+    "@fiery/db": "workspace:*",
+    "@fiery/services": "workspace:*",
+    "@fiery/types": "workspace:*",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.1",
     "iconoir-react": "^7.11.0",
@@ -31,7 +31,7 @@
     "react": ">=19"
   },
   "devDependencies": {
-    "@focus/tsconfig": "workspace:*",
+    "@fiery/tsconfig": "workspace:*",
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

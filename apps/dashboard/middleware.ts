@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { COOKIE_MAX_AGE, USER_ID_COOKIE_NAME } from "@lib/constants";
 import { generateAnonymousUserId } from "@lib/utils";
-import { updateSession } from "@focus/auth/middleware";
+import { updateSession } from "@fiery/auth/middleware";
 
 export async function middleware(request: NextRequest) {
   const response = await updateSession(request);

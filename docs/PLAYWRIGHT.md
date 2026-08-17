@@ -1,6 +1,6 @@
 # Playwright CI
 
-Last updated: **May 2026**
+Last updated: **August 2026**
 
 ## Overview
 

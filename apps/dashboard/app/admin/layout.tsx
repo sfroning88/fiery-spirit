@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { requirePlatformAdmin } from "@focus/auth/server";
+import { requirePlatformAdmin } from "@fiery/auth/server";
 
 export default async function AdminLayout({
   children,

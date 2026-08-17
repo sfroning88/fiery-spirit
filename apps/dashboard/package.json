@@ -1,5 +1,5 @@
 {
-  "name": "@focus/dashboard",
+  "name": "@fiery/dashboard",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -11,13 +11,13 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@focus/auth": "workspace:*",
-    "@focus/config": "workspace:*",
-    "@focus/db": "workspace:*",
-    "@focus/services": "workspace:*",
-    "@focus/types": "workspace:*",
-    "@focus/ui": "workspace:*",
-    "@focus/utils": "workspace:*",
+    "@fiery/auth": "workspace:*",
+    "@fiery/config": "workspace:*",
+    "@fiery/db": "workspace:*",
+    "@fiery/services": "workspace:*",
+    "@fiery/types": "workspace:*",
+    "@fiery/ui": "workspace:*",
+    "@fiery/utils": "workspace:*",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.1",
     "@tanstack/react-query": "^5.0.0",
@@ -37,7 +37,7 @@
   "devDependencies": {
     "@playwright/test": "^1.52.0",
     "@eslint/js": "^9.39.4",
-    "@focus/tsconfig": "workspace:*",
+    "@fiery/tsconfig": "workspace:*",
     "@next/eslint-plugin-next": "^15.0.0",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^20.0.0",

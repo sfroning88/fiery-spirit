@@ -1,4 +1,4 @@
-import { env } from "@focus/config";
+import { env } from "@fiery/config";
 import { createServerClient, type CookieMethodsServer } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { authRoutes } from "../routes";

@@ -7,7 +7,7 @@ Unit tests for inference feature engineering
 from datetime import date
 
 import pytest
-from focus_python import FEATURE_COLUMNS, NICState, NumberUtils, Property
+from fiery_python import FEATURE_COLUMNS, NICState, NumberUtils, Property
 from ml.features import Features
 
 

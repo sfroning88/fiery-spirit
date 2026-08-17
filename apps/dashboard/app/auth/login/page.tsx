@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { LoginForm } from "@focus/auth";
+import { LoginForm } from "@fiery/auth";
 import { routes } from "@lib/routes";
 
 export default function LoginPage() {

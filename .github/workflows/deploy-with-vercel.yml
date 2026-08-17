@@ -43,9 +43,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build dashboard
-        run: pnpm exec turbo run build --filter=@focus/dashboard
+        run: pnpm exec turbo run build --filter=@fiery/dashboard
 
       - name: Notify Vercel
         uses: vercel/repository-dispatch/actions/status@30f760c6640485cd92f8c785ef361382555fb712
         with:
-          name: "Vercel - deep-focus: deploy-with-vercel"
+          name: "Vercel - fiery-spirit: deploy-with-vercel"

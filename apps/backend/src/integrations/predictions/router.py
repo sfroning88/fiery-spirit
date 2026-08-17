@@ -1,12 +1,11 @@
 """
 Author: Sean Froning
-Created Date: 5.9.2026
+Created Date: 8.17.2026
 Core backend API orchestration
 """
 
 from fastapi import APIRouter, Depends, Request
-from focus_python import dependency, error, logging
-from focus_python import PredictionType, PrismaPrediction
+from fiery_python import dependency, error, logging
 from .schemas import PredictionRequest, PredictionResponse
 
 logger = logging.get_logger(__name__)
@@ -19,7 +18,6 @@ router = APIRouter(
 
 predictions_available: bool = False
 try:
-    from .services import InferenceServices
 
     predictions_available = True
 except ImportError as err:
@@ -34,24 +32,16 @@ except Exception as err:
     "/predict/{prediction_type}", dependencies=[Depends(dependency.get_token_header)]
 )
 async def model_predict(
-    request: Request, prediction_type: PredictionType, payload: PredictionRequest
+    request: Request, payload: PredictionRequest
 ) -> PredictionResponse:
-    """Retrieve controllable PRD prediction(s) from the latest training batch"""
+    """Retrieve prediction(s) from the latest training batch"""
     if not predictions_available:
         raise error("Predictions service unavailable", status_code=503)
 
     logging.bind_job_context(property_id=payload.property_id)
     try:
-        predictions = InferenceServices.predict(
-            property_id=payload.property_id,
-            prediction_type=prediction_type,
-            multi_enabled=payload.multi_enabled,
-        )
-        return PredictionResponse(
-            predictions=[
-                PrismaPrediction.from_prediction(pred) for pred in predictions
-            ],
-        )
+        # code
+        return PredictionResponse()
     except ValueError as err:
         logger.warning("model_prediction_rejected", error=str(err))
         raise error(str(err), status_code=404)

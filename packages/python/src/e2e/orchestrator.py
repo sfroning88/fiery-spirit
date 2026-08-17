@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Author: Sean Froning
-Created Date: 5.9.2026
+Created Date: 8.17.2026
 Unified test orchestrator for worker pipelines
 
 Usage: python3 -m src.tests.orchestrator <train|predict>
@@ -185,7 +185,9 @@ def _run_workflow(workflow: str) -> None:
 
 def main() -> None:
     """CLI entry point - workflow argument is required"""
-    parser = argparse.ArgumentParser(description="deep-focus unified test orchestrator")
+    parser = argparse.ArgumentParser(
+        description="fiery-spirit unified test orchestrator"
+    )
     parser.add_argument(
         "workflow",
         choices=sorted(WORKFLOW_WORKERS.keys()),

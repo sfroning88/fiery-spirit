@@ -34,7 +34,7 @@ jobs:
             run: pnpm install --frozen-lockfile
 
         -   name: Generate Prisma Client
-            run: pnpm --filter @focus/db run db:generate
+            run: pnpm --filter @fiery/db run db:generate
 
         -   name: Wait for Vercel preview deployment
             id: vercel
@@ -47,11 +47,11 @@ jobs:
                     await require('./scripts/wait-for-vercel-preview.js')({ github, context, core });
 
         -   name: Install Chromium
-            run: pnpm --filter @focus/dashboard exec playwright install chromium --with-deps
+            run: pnpm --filter @fiery/dashboard exec playwright install chromium --with-deps
 
         -   name: Run smoke tests
             id: smoke
-            run: pnpm --filter @focus/dashboard test:e2e
+            run: pnpm --filter @fiery/dashboard test:e2e
             continue-on-error: true
             env:
                 CI: true

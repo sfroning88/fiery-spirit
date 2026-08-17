@@ -1,8 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { db } from "@focus/db";
-import { selfUserAction } from "@focus/auth/server";
+import { db } from "@fiery/db";
+import { selfUserAction } from "@fiery/auth/server";
 
 const emptySchema = z.object({});
 

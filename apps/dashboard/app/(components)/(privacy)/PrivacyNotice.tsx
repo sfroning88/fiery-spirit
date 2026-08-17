@@ -7,7 +7,7 @@ import ReactMarkdown from "react-markdown";
 import { useCookieBannerDismissed } from "@/app/(hooks)/use-cookie-banner-dismissed";
 import { useMediaQuery } from "@/app/(hooks)/use-media-query";
 import { MOBILE_BREAKPOINT } from "@/lib/constants";
-import { POSTHOG_EVENTS } from "@focus/types";
+import { POSTHOG_EVENTS } from "@fiery/types";
 import { useGetPrivacyContent } from "@/app/(hooks)/use-get-privacy-content";
 
 export function PrivacyNotice() {

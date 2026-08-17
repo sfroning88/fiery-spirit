@@ -1,5 +1,5 @@
-import { OccupancyTier } from "@focus/utils";
-import type { TrainingStatus } from "@focus/types";
+import { OccupancyTier } from "@fiery/utils";
+import type { TrainingStatus } from "@fiery/types";
 
 export const occupancyColors: Record<OccupancyTier, string> = {
   [OccupancyTier.high]: "text-white bg-green-950 border-green-700",

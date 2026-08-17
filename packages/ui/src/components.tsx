@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { formatCurrency, formatPercent } from "@focus/utils";
+import { formatCurrency, formatPercent } from "@fiery/utils";
 import { MetricFormat } from "./types";
 
 function formatMetricValue(value: number, format: MetricFormat): string {

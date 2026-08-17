@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Created Date: 5.9.2026
+Created Date: 8.17.2026
 Shared utility helpers for tests
 """
 
@@ -11,7 +11,7 @@ from typing import List, Tuple
 import requests
 from rq.job import Job
 
-from ..focus_python import queue
+from ..fiery_python import queue
 
 TESTS_DIR = os.path.dirname(__file__)
 

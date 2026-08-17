@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@focus/ui/theme.css";
+@import "@fiery/ui/theme.css";
 
 body {
   min-height: 100%;

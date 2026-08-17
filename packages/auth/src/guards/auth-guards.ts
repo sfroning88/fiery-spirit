@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import { AppUserProfileNotFoundError, UserService } from "@focus/services";
+import { AppUserProfileNotFoundError, UserService } from "@fiery/services";
 import { getSession } from "./session";
 import { authRoutes } from "../routes";
 

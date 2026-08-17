@@ -3,7 +3,7 @@ previews:
 services:
 - type: web
   runtime: docker
-  name: focus-ai-api
+  name: fiery-ai-api
   plan: free
   numInstances: 1
   dockerfilePath: apps/backend/Dockerfile
@@ -12,21 +12,21 @@ services:
       - apps/backend/**
       - packages/python/**
   envVars:
-    - fromGroup: Focus-Environment
+    - fromGroup: Fiery-Environment
     - key: SERVICE_TYPE
       value: api
     - key: BACKEND_API_URL
-      value: https://focus-backend-api.onrender.com
-      previewValue: https://focus-backend-api-staging.onrender.com
+      value: https://fiery-backend-api.onrender.com
+      previewValue: https://fiery-backend-api-staging.onrender.com
     - key: AI_API_URL
-      value: https://focus-ai-api-0nkf.onrender.com
-      previewValue: https://focus-ai-api-0nkf-staging.onrender.com
+      value: https://fiery-ai-api-0nkf.onrender.com
+      previewValue: https://fiery-ai-api-0nkf-staging.onrender.com
     - key: JOB_DOMAIN
       value: training
 
 - type: worker
   runtime: docker
-  name: focus-ai-worker
+  name: fiery-ai-worker
   plan: free
   numInstances: 1
   dockerfilePath: apps/ai/Dockerfile
@@ -35,14 +35,14 @@ services:
       - apps/ai/**
       - packages/python/**
   envVars:
-    - fromGroup: Focus-Environment
+    - fromGroup: Fiery-Environment
     - key: SERVICE_TYPE
       value: worker
     - key: BACKEND_API_URL
-      value: https://focus-backend-api.onrender.com
-      previewValue: https://focus-backend-api-staging.onrender.com
+      value: https://fiery-backend-api.onrender.com
+      previewValue: https://fiery-backend-api-staging.onrender.com
     - key: AI_API_URL
-      value: https://focus-ai-api-0nkf.onrender.com
-      previewValue: https://focus-ai-api-0nkf-staging.onrender.com
+      value: https://fiery-ai-api-0nkf.onrender.com
+      previewValue: https://fiery-ai-api-0nkf-staging.onrender.com
     - key: JOB_DOMAIN
       value: training

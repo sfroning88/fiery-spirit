@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "focus_python"
+name = "fiery_python"
 version = "0.0.1"
 description = "Shared core, FastAPI helpers, enums, services, and utils for Focus Python apps"
 requires-python = ">=3.13"

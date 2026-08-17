@@ -2,17 +2,14 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { routes } from "@lib/routes";
 import { TEST_IDS } from "@lib/test-ids";
-import { requirePlatformAdmin } from "@focus/auth/server";
-import type { TrainingBatchListEntry } from "@focus/types";
-import { fetchBatchesCached } from "@lib/api/cache/training-cache";
-import { BatchListAsync } from "@/app/(components)/(training)/BatchListAsync";
-import { BatchListSkeleton } from "@/app/(components)/(training)/BatchListSkeleton";
+import { requirePlatformAdmin } from "@fiery/auth/server";
 
 export default async function AdminPage() {
   const { supabaseUser } = await requirePlatformAdmin();
-  const batchesPromise = fetchBatchesCached(supabaseUser.id).catch(
-    (): TrainingBatchListEntry[] => [],
-  );
+  if (!supabaseUser) {
+    // temp
+    return <div></div>;
+  }
 
   return (
     <div className="flex flex-col gap-6" data-testid={TEST_IDS.adminScreen}>
@@ -36,9 +33,7 @@ export default async function AdminPage() {
           Back to dashboard
         </Link>
       </div>
-      <Suspense fallback={<BatchListSkeleton />}>
-        <BatchListAsync initialDataPromise={batchesPromise} />
-      </Suspense>
+      <Suspense />
     </div>
   );
 }

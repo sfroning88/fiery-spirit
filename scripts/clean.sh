@@ -31,4 +31,4 @@ find . -type f \
 
 echo ""
 echo "Done!"
-echo "Next: pnpm install && pnpm --filter @focus/db db:generate"
+echo "Next: pnpm install && pnpm --filter @fiery/db db:generate"

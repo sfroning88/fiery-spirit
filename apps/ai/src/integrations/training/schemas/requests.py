@@ -1,16 +1,10 @@
 """
 Author: Sean Froning
-Modified Date: 5.16.2026
+Created Date: 8.17.2026
 Request models for Training
 """
 
 from pydantic import BaseModel, ConfigDict
-
-
-class ShuffleRequest(BaseModel):
-    """Request model for shuffling training groups (empty body)"""
-
-    model_config = ConfigDict(extra="forbid")
 
 
 class TrainingRequest(BaseModel):

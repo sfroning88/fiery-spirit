@@ -1,6 +1,6 @@
 # Focus Dashboard
 
-`Next.js` platform app for [deep-focus-dashboard.vercel.app](https://deep-focus-dashboard.vercel.app).
+`Next.js` platform app for [fiery-spirit-dashboard.vercel.app](https://fiery-spirit-dashboard.vercel.app).
 
 ## Local Development
 
