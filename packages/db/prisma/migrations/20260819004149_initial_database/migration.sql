@@ -627,14 +627,17 @@ ALTER TABLE "ai"."training_contract"
 
 -- (manual) Create Constraint
 -- enforce at least one hyperparameter set per training_session
-CHECK (
-    num_nonnulls(hyperparameter_pretrain_id, hyperparameter_lora_id, hyperparameter_distill_id,
-                 hyperparameter_prune_id, hyperparameter_quantize_id) = 1
-    AND (
-        (stage = 'pretrain' AND hyperparameter_pretrain_id IS NOT NULL) OR
-        (stage = 'lora'     AND hyperparameter_lora_id     IS NOT NULL) OR
-        (stage = 'distill'  AND hyperparameter_distill_id  IS NOT NULL) OR
-        (stage = 'prune'    AND hyperparameter_prune_id    IS NOT NULL) OR
-        (stage = 'quantize' AND hyperparameter_quantize_id IS NOT NULL)
-    )
-)
+ALTER TABLE "ai"."training_session"
+    ADD CONSTRAINT "training_session_stage_hyperparameter_check"
+    CHECK (
+        num_nonnulls(hyperparameter_pretrain_id, hyperparameter_lora_id, hyperparameter_distill_id,
+                     hyperparameter_prune_id, hyperparameter_quantize_id) = 1
+        AND (
+            (stage = 'pretrain' AND hyperparameter_pretrain_id IS NOT NULL) OR
+            (stage = 'lora'     AND hyperparameter_lora_id     IS NOT NULL) OR
+            (stage = 'distill'  AND hyperparameter_distill_id  IS NOT NULL) OR
+            (stage = 'prune'    AND hyperparameter_prune_id    IS NOT NULL) OR
+            (stage = 'quantize' AND hyperparameter_quantize_id IS NOT NULL)
+        )
+    );
+    
