@@ -34,7 +34,7 @@ enum VolcanoAlertLevel {
 
 model Volcano {
     id                          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    gvpNumber                   Int @unique @map("gvp_number")
+    gvpNumber                   Int? @unique @map("gvp_number")
     name                        String
     country                     String
     zone                        VolcanoZone

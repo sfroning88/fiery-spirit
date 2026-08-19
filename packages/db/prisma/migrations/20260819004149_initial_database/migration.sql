@@ -408,7 +408,7 @@ CREATE TABLE IF NOT EXISTS "ai"."training_session" (
 -- CreateTable
 CREATE TABLE IF NOT EXISTS "geo"."volcano" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "gvp_number" INTEGER NOT NULL,
+    "gvp_number" INTEGER,
     "name" TEXT NOT NULL,
     "country" TEXT NOT NULL,
     "zone" "geo"."volcano_zone" NOT NULL,
@@ -611,3 +611,30 @@ ALTER TABLE "ai"."training_session" ADD CONSTRAINT "training_session_contract_id
 
 -- AddForeignKey
 ALTER TABLE "geo"."volcano_activity" ADD CONSTRAINT "volcano_activity_volcano_id_fkey" FOREIGN KEY ("volcano_id") REFERENCES "geo"."volcano"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- (manual) Create Partial Index
+-- enforce unique model_artifact per tier and role for promoted
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_model_artifact_promoted_slot" ON "ai"."model_artifact" ("tier", "role") WHERE "promoted";
+
+-- (manual) Create Constraint
+-- enforce at least one of seismic or deformation relationship per training_contract
+ALTER TABLE "ai"."training_contract"
+    ADD CONSTRAINT "training_contract_signal_config_check"
+    CHECK (
+        ("signal" = 'seismic'     AND "seismic_id"     IS NOT NULL AND "deformation_id" IS NULL)
+     OR ("signal" = 'deformation' AND "deformation_id" IS NOT NULL AND "seismic_id"     IS NULL)
+    );
+
+-- (manual) Create Constraint
+-- enforce at least one hyperparameter set per training_session
+CHECK (
+    num_nonnulls(hyperparameter_pretrain_id, hyperparameter_lora_id, hyperparameter_distill_id,
+                 hyperparameter_prune_id, hyperparameter_quantize_id) = 1
+    AND (
+        (stage = 'pretrain' AND hyperparameter_pretrain_id IS NOT NULL) OR
+        (stage = 'lora'     AND hyperparameter_lora_id     IS NOT NULL) OR
+        (stage = 'distill'  AND hyperparameter_distill_id  IS NOT NULL) OR
+        (stage = 'prune'    AND hyperparameter_prune_id    IS NOT NULL) OR
+        (stage = 'quantize' AND hyperparameter_quantize_id IS NOT NULL)
+    )
+)
