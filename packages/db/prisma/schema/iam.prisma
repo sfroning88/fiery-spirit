@@ -3,15 +3,15 @@
 ///////////////////////////////////////////////////////////////////////////////////////////
 
 model User {
-    id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    name                    String
-    email                   String   @unique
-    phone                   String   @unique
-    isActive                Boolean? @default(false) @map("is_active")
-    isPlatformAdmin         Boolean? @default(false) @map("is_platform_admin")
+    id                          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    name                        String
+    email                       String   @unique
+    phone                       String   @unique
+    isActive                    Boolean? @default(false) @map("is_active")
+    isPlatformAdmin             Boolean? @default(false) @map("is_platform_admin")
 
-    createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt               DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
     @@index([isActive], map: "idx_users_is_active")
     @@map("users")
