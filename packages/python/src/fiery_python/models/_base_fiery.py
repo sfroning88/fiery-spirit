@@ -1,7 +1,7 @@
 """
 Author: Sean Froning
 Created Date: 8.17.2026
-Class objects for Focus schemas
+Class objects for Fiery schemas
 """
 
 import uuid
@@ -28,8 +28,15 @@ class BaseFiery(BaseModel):
         if not self.id:
             self.id = str(uuid.uuid4())
 
+    def deterministic_id(self) -> Optional[str]:
+        """Stable id derived from the row natural key; None when unavailable"""
+        return None
+
     def prepare_for_storage(self, include_id: bool = True) -> tuple:
         """Convert row to batch insertion tuple"""
+        derived = self.deterministic_id()
+        if derived:
+            self.id = derived
         raw: dict[str, object] = self.model_dump(mode="python")
 
         def storage_value(value: object) -> object:
