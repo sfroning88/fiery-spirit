@@ -1,4 +1,6 @@
 from .constants import (
+    DATASET_INGEST_TABLE,
+    DATASET_VERSION_TABLE,
     MODEL_REGISTRY_SLOTS,
     MODEL_TIER_ENUM,
     MODEL_ROLE_ENUM,
@@ -72,6 +74,8 @@ from .fastapi import (
 from .models import (
     BaseFiery,
     BasePrisma,
+    DatasetIngest,
+    DatasetVersion,
     ModelArtifact,
     ModelMetric,
     ModelBudget,
@@ -109,6 +113,8 @@ from .utils import (
 )
 
 __all__ = [
+    "DATASET_INGEST_TABLE",
+    "DATASET_VERSION_TABLE",
     "MODEL_REGISTRY_SLOTS",
     "MODEL_REGISTRY_SLOTS",
     "MODEL_TIER_ENUM",
@@ -175,6 +181,8 @@ __all__ = [
     "limiter",
     "BaseFiery",
     "BasePrisma",
+    "DatasetIngest",
+    "DatasetVersion",
     "ModelArtifact",
     "ModelMetric",
     "ModelBudget",

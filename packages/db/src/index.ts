@@ -29,6 +29,8 @@ export type {
   User,
   Volcano,
   VolcanoActivity,
+  DatasetIngest,
+  DatasetVersion,
   TrainingDeformationClass,
   TrainingSeismicClass,
   TrainingDeformationSource,
