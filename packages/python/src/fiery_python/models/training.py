@@ -306,9 +306,9 @@ class TrainingSession(BaseFiery):
     version_id: str
 
     def deterministic_id(self) -> Optional[str]:
-        """Stable id derived from (contract_id, stage, seed)"""
-        if not self.contract_id:
+        """Stable id derived from (contract_id, version_id, stage, seed)"""
+        if not self.contract_id or not self.version_id:
             return None
         return UuidUtils.deterministic_uuid(
-            self.contract_id, self.stage.value, self.seed
+            self.contract_id, self.version_id, self.stage.value, self.seed
         )

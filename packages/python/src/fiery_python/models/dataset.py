@@ -24,14 +24,6 @@ class DatasetIngest(BaseFiery):
     finished_at: Optional[datetime] = None
     error_message: Optional[str] = None
 
-    def deterministic_id(self) -> Optional[str]:
-        """Stable id derived from (source, status, asset_count)"""
-        if not self.source or not self.status or not self.asset_count:
-            return None
-        return UuidUtils.deterministic_uuid(
-            self.source.value, self.status.value, self.asset_count
-        )
-
 
 class DatasetVersion(BaseFiery):
     """Normalized Dataset Version"""

@@ -452,7 +452,7 @@ model TrainingContract {
     updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
     sessions                    TrainingSession[]
-    datasets                    DatasetVersion[]
+    versions                    DatasetVersion[]
 
     @@unique([signal, version])
     @@map("training_contract")
