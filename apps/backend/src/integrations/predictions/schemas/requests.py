@@ -8,6 +8,6 @@ from pydantic import BaseModel, ConfigDict
 
 
 class PredictionRequest(BaseModel):
-    """Request model for retrieving predictions"""
+    """Request model for retrieving prediction"""
 
     model_config = ConfigDict(extra="forbid")

@@ -5,6 +5,7 @@ Core backend API orchestration
 """
 
 from fastapi import APIRouter, Depends, Request
+from fastapi.concurrency import run_in_threadpool
 from fiery_python import dependency, error, logging, limiter
 from .schemas import ModelRequest, ModelResponse
 
@@ -18,7 +19,7 @@ router = APIRouter(
 
 models_available: bool = False
 try:
-    # import registry
+    from .registry import model_registry
 
     models_available = True
 except ImportError as err:
@@ -32,14 +33,20 @@ except Exception as err:
 @router.post("/ml/reload", dependencies=[Depends(dependency.get_token_header)])
 @limiter.limit("6/hour")
 async def reload_registry(request: Request, payload: ModelRequest) -> ModelResponse:
-    """Reload model registry with latest batch winner"""
+    """Reload model registry"""
     if not models_available:
         raise error("Model registry unavailable", status_code=503)
 
     try:
-        # await in threadpool
+        key = (payload.tier, payload.role)
+        await run_in_threadpool(model_registry.load, key)
 
-        return ModelResponse()
+        return ModelResponse(
+            tier=payload.tier,
+            role=payload.role,
+            artifact_id=model_registry.get_metadata(key).get("artifact_id"),
+            ready=model_registry.is_ready(key),
+        )
     except RuntimeError as err:
         logger.error(
             "model_registry_unavailable",

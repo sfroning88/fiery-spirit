@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fiery_python import db_pool, logging, queue
-from fiery_python import PREDICTION_TARGETS
+from fiery_python import MODEL_REGISTRY_SLOTS
 from ml import model_registry
 
 logger = logging.get_logger(__name__)
@@ -18,20 +18,19 @@ logger = logging.get_logger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("Application startup")
     queue.get_connection()
-    prediction_types = list(PREDICTION_TARGETS.keys())
-    with ThreadPoolExecutor(max_workers=len(prediction_types)) as executor:
+    with ThreadPoolExecutor(max_workers=len(MODEL_REGISTRY_SLOTS)) as executor:
         futures = {
-            executor.submit(model_registry.load, prediction_type): prediction_type
-            for prediction_type in prediction_types
+            executor.submit(model_registry.load, key): key
+            for key in MODEL_REGISTRY_SLOTS
         }
         for future in as_completed(futures):
-            prediction_type = futures[future]
+            key = futures[future]
             try:
                 future.result()
             except Exception as err:
                 logger.warning(
                     "warmup_skipped",
-                    prediction_type=prediction_type.value,
+                    key=key,
                     error=str(err),
                 )
     app.state.db_pool = db_pool

@@ -1,10 +1,8 @@
-from .features import Features
-from .models import LoadedModel, PredictionTypeRegistry
+from .models import LoadedModel, ArtifactRegistry
 from .registry import model_registry
 
 __all__ = [
-    "Features",
     "LoadedModel",
-    "PredictionTypeRegistry",
+    "ArtifactRegistry",
     "model_registry",
 ]
