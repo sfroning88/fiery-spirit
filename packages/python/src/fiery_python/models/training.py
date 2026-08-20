@@ -303,6 +303,7 @@ class TrainingSession(BaseFiery):
     hyperparameter_prune_id: Optional[str] = None
     hyperparameter_quantize_id: Optional[str] = None
     contract_id: str
+    version_id: str
 
     def deterministic_id(self) -> Optional[str]:
         """Stable id derived from (contract_id, stage, seed)"""

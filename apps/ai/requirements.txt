@@ -16,7 +16,7 @@ anyio==3.7.1
     #   httpx
     #   starlette
 boto3==1.43.6
-    # via focus-python
+    # via fiery-python
 botocore==1.43.6
     # via
     #   boto3
@@ -40,7 +40,7 @@ deprecated==1.3.1
 fastapi==0.121.2
     # via
     #   -c constraints.txt
-    #   focus-python
+    #   fiery-python
 h11==0.16.0
     # via
     #   -c constraints.txt
@@ -49,7 +49,7 @@ h11==0.16.0
 httpcore==1.0.9
     # via httpx
 httpx==0.28.1
-    # via focus-python
+    # via fiery-python
 idna==3.11
     # via
     #   anyio
@@ -60,24 +60,15 @@ jmespath==1.1.0
     #   boto3
     #   botocore
 joblib==1.5.3
-    # via
-    #   focus-python
-    #   scikit-learn
+    # via fiery-python
 limits==5.8.0
     # via slowapi
 numpy==2.4.4
-    # via
-    #   -r requirements.in
-    #   pandas
-    #   scikit-learn
-    #   scipy
-    #   xgboost
+    # via -r requirements.in
 packaging==26.2
     # via limits
-pandas==3.0.2
-    # via -r requirements.in
 psycopg2-binary==2.9.11
-    # via focus-python
+    # via fiery-python
 pydantic==2.12.4
     # via
     #   -c constraints.txt
@@ -89,29 +80,22 @@ python-dateutil==2.9.0.post0
     # via
     #   botocore
     #   croniter
-    #   pandas
 python-dotenv==1.2.1
-    # via focus-python
+    # via fiery-python
 redis==7.0.1
     # via
-    #   focus-python
+    #   fiery-python
     #   rq
 requests==2.32.5
-    # via focus-python
+    # via fiery-python
 rq==2.6.0
-    # via focus-python
+    # via fiery-python
 s3transfer==0.17.0
     # via boto3
-scikit-learn==1.8.0
-    # via -r requirements.in
-scipy==1.17.1
-    # via
-    #   scikit-learn
-    #   xgboost
 six==1.17.0
     # via python-dateutil
 slowapi==0.1.9
-    # via focus-python
+    # via fiery-python
 sniffio==1.3.1
     # via
     #   -c constraints.txt
@@ -121,9 +105,7 @@ starlette==0.49.3
     #   -c constraints.txt
     #   fastapi
 structlog==25.5.0
-    # via focus-python
-threadpoolctl==3.6.0
-    # via scikit-learn
+    # via fiery-python
 typing-extensions==4.15.0
     # via
     #   -c constraints.txt
@@ -144,5 +126,3 @@ uvicorn==0.38.0
     #   -r requirements.in
 wrapt==2.2.1
     # via deprecated
-xgboost==3.2.0
-    # via -r requirements.in

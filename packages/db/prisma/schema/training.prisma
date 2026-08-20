@@ -452,6 +452,7 @@ model TrainingContract {
     updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
     sessions                    TrainingSession[]
+    datasets                    DatasetVersion[]
 
     @@unique([signal, version])
     @@map("training_contract")
@@ -487,7 +488,10 @@ model TrainingSession {
     hyperparameterQuantize      TrainingHyperparameterQuantize? @relation(fields: [hyperparameterQuantizeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
     contractId                  String @map("contract_id") @db.Uuid
-    contract                    TrainingContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+    contract                    TrainingContract @relation(fields: [contractId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+    versionId                   String @map("version_id") @db.Uuid
+    version                     DatasetVersion @relation(fields: [versionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
     createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
     updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)

@@ -4,6 +4,10 @@ from ._base_fiery import (
 from ._base_prisma import (
     BasePrisma,
 )
+from .dataset import (
+    DatasetIngest,
+    DatasetVersion,
+)
 from .model import (
     ModelArtifact,
     ModelMetric,
@@ -38,6 +42,8 @@ from .volcano import (
 __all__ = [
     "BaseFiery",
     "BasePrisma",
+    "DatasetIngest",
+    "DatasetVersion",
     "ModelArtifact",
     "ModelMetric",
     "ModelBudget",
