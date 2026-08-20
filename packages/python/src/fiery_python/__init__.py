@@ -1,10 +1,14 @@
 from .constants import (
+    MODEL_REGISTRY_SLOTS,
+    MODEL_TIER_ENUM,
+    MODEL_ROLE_ENUM,
     MODEL_ARTIFACT_TABLE,
     MODEL_METRIC_TABLE,
     MODEL_BUDGET_TABLE,
     MODEL_BUCKET_NAME,
     PREDICTION_DEFORMATION_TABLE,
     PREDICTION_SEISMIC_TABLE,
+    TRAINING_STATUS_ENUM,
     TRAINING_DEFORMATION_CLASS_TABLE,
     TRAINING_SEISMIC_CLASS_TABLE,
     TRAINING_DEFORMATION_SOURCE_TABLE,
@@ -93,6 +97,9 @@ from .resources import (
     AsyncLazyResource,
     SyncLazyResource,
 )
+from .services import (
+    ModelStorageServices,
+)
 from .utils import (
     NumberUtils,
     SchemaUtils,
@@ -100,12 +107,17 @@ from .utils import (
 )
 
 __all__ = [
+    "MODEL_REGISTRY_SLOTS",
+    "MODEL_REGISTRY_SLOTS",
+    "MODEL_TIER_ENUM",
+    "MODEL_ROLE_ENUM",
     "MODEL_ARTIFACT_TABLE",
     "MODEL_METRIC_TABLE",
     "MODEL_BUDGET_TABLE",
     "MODEL_BUCKET_NAME",
     "PREDICTION_DEFORMATION_TABLE",
     "PREDICTION_SEISMIC_TABLE",
+    "TRAINING_STATUS_ENUM",
     "TRAINING_DEFORMATION_CLASS_TABLE",
     "TRAINING_SEISMIC_CLASS_TABLE",
     "TRAINING_DEFORMATION_SOURCE_TABLE",
@@ -183,6 +195,7 @@ __all__ = [
     "VolcanoActivity",
     "AsyncLazyResource",
     "SyncLazyResource",
+    "ModelStorageServices",
     "NumberUtils",
     "SchemaUtils",
     "UuidUtils",

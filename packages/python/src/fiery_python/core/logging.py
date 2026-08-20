@@ -17,12 +17,9 @@ class _Logging:
     """Centralized logging configuration with structlog"""
 
     _JOB_CONTEXT_KEYS = (
-        "client_id",
-        "box_sync_chunk",
-        "box_file_id",
-        "staging_file_id",
-        "property_id",
-        "training_id",
+        "volcano_id",
+        "session_id",
+        "artifact_id",
     )
 
     def __init__(self) -> None:

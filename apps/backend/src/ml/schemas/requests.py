@@ -4,10 +4,12 @@ Created Date: 8.17.2026
 Request models for Models
 """
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
+from fiery_python import ModelTier, ModelRole
 
 
 class ModelRequest(BaseModel):
-    """Request model for reloading model registry (empty body)"""
+    """Request model for reloading model registry"""
 
-    model_config = ConfigDict(extra="forbid")
+    tier: ModelTier
+    role: ModelRole
