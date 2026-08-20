@@ -65,7 +65,7 @@ class _ModelRegistry:
         key: Tuple[ModelTier, ModelRole],
         force: bool = False,
     ) -> None:
-        """Pull model into the cache"""
+        """Attempt to pull fresh model into the cache"""
         try:
             tier, role = key
             artifact_id = None
@@ -76,7 +76,7 @@ class _ModelRegistry:
             logger.error("registry_lookup_failed", error=str(err))
             raise RuntimeError(f"Model registry lookup failed: {str(err)}")
 
-        if not artifact_id:
+        if not row or not artifact_id:
             logger.info("registry_no_promoted_artifact")
             with self._lock:
                 self._slot(key).reset()
@@ -99,7 +99,9 @@ class _ModelRegistry:
                     candidate=artifact_id,
                     cached=reg.artifact_id,
                 )
-                return
+                raise RuntimeError(
+                    f"Model artifact {artifact_id} failed to materialize"
+                )
 
             slot.reset()
             reg = slot.get()
@@ -159,15 +161,20 @@ class _ModelRegistry:
             )
             return None, None
         entry = LoadedModel(
+            artifact_id=artifact_id,
             tier=ModelTier(row.get("tier")),
             role=ModelRole(row.get("role")),
             stage=TrainingStage(row.get("stage")),
             precision=TrainingPrecision(row.get("precision")),
             architecture=str(row.get("architecture")),
-            param_count=int(row.get("param_count")),
-            sparsity=Decimal(row.get("sparsity")),
-            artifact_id=artifact_id,
+            param_count=int(row.get("param_count") or 0),
+            sparsity=Decimal(str(row.get("sparsity") or "0")),
+            storage_path=str(row.get("storage_path")),
+            signature=str(row.get("signature")),
+            signed_at=row.get("signed_at"),
+            promoted=bool(row.get("promoted")),
             promoted_at=row.get("promoted_at"),
+            session_id=str(row.get("session_id")),
             parent_id=str(row.get("parent_id")) if row.get("parent_id") else None,
         )
         artifact = payload.get("model")

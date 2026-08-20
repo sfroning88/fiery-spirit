@@ -20,6 +20,7 @@ from fiery_python import (
 class LoadedModel(BaseModel):
     """In-memory representation of a loaded model artifact"""
 
+    artifact_id: str
     tier: ModelTier
     role: ModelRole
     stage: TrainingStage
@@ -27,11 +28,15 @@ class LoadedModel(BaseModel):
     architecture: str
     param_count: int
     sparsity: Decimal
-    artifact_id: str
+    storage_path: str
+    signature: str
+    signed_at: datetime
+    promoted: bool
     promoted_at: datetime
+    session_id: str
+    parent_id: Optional[str] = None
     metrics: Dict[str, Decimal] = {}
     preprocessing: Dict[str, Any] = {}
-    parent_id: Optional[str] = None
 
 
 @dataclass

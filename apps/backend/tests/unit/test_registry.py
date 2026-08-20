@@ -14,12 +14,12 @@ from ml.models import LoadedModel
 from ml.registry import _ModelRegistry
 
 KEY = (ModelTier.CLOUD, ModelRole.SCREENER)
+NOW = datetime.now(tz=timezone.utc)
 
 
 def _artifact_row(**overrides):
     row = {
         "id": "art-1",
-        "storage_path": "models/cloud/screener/art-1.pt",
         "tier": ModelTier.CLOUD.value,
         "role": ModelRole.SCREENER.value,
         "stage": TrainingStage.LORA.value,
@@ -27,7 +27,12 @@ def _artifact_row(**overrides):
         "architecture": "vit-small",
         "param_count": 22_000_000,
         "sparsity": "0.0",
-        "promoted_at": datetime.now(tz=timezone.utc),
+        "storage_path": "models/cloud/screener/art-1.pt",
+        "signature": "sig-art-1",
+        "signed_at": NOW,
+        "promoted": True,
+        "promoted_at": NOW,
+        "session_id": "session-1",
         "parent_id": None,
     }
     row.update(overrides)
@@ -36,6 +41,7 @@ def _artifact_row(**overrides):
 
 def _loaded(artifact_id: str = "art-1") -> LoadedModel:
     return LoadedModel(
+        artifact_id=artifact_id,
         tier=ModelTier.CLOUD,
         role=ModelRole.SCREENER,
         stage=TrainingStage.LORA,
@@ -43,8 +49,12 @@ def _loaded(artifact_id: str = "art-1") -> LoadedModel:
         architecture="vit-small",
         param_count=22_000_000,
         sparsity=Decimal("0.0"),
-        artifact_id=artifact_id,
-        promoted_at=datetime.now(tz=timezone.utc),
+        storage_path="models/cloud/screener/art-1.pt",
+        signature="sig-art-1",
+        signed_at=NOW,
+        promoted=True,
+        promoted_at=NOW,
+        session_id="session-1",
     )
 
 
@@ -155,7 +165,8 @@ def test_load_keeps_empty_slot_when_artifact_fails_to_materialize():
         ),
         patch.object(registry, "_load_model_entry", return_value=(None, None)),
     ):
-        registry.load(KEY)
+        with pytest.raises(RuntimeError, match="failed to materialize"):
+            registry.load(KEY)
 
     assert registry.is_ready(KEY) is False
 
@@ -174,7 +185,8 @@ def test_load_keeps_cached_when_artifact_fails_to_materialize():
         ),
         patch.object(registry, "_load_model_entry", return_value=(None, None)),
     ):
-        registry.load(KEY)
+        with pytest.raises(RuntimeError, match="failed to materialize"):
+            registry.load(KEY)
 
     assert registry.get(KEY) is cached
     assert registry.get_metadata(KEY)["artifact_id"] == "stale"
@@ -198,6 +210,10 @@ def test_load_caches_model_and_metadata():
     assert metadata["tier"] == ModelTier.CLOUD
     assert metadata["role"] == ModelRole.SCREENER
     assert metadata["architecture"] == "vit-small"
+    assert metadata["storage_path"] == "models/cloud/screener/art-1.pt"
+    assert metadata["signature"] == "sig-art-1"
+    assert metadata["promoted"] is True
+    assert metadata["session_id"] == "session-1"
 
 
 def test_reset_drops_all_cached_slots():
@@ -261,3 +277,8 @@ def test_load_model_entry_builds_loaded_model():
     assert entry.parent_id == "parent-9"
     assert entry.param_count == 22_000_000
     assert entry.sparsity == Decimal("0.0")
+    assert entry.storage_path == "models/cloud/screener/art-1.pt"
+    assert entry.signature == "sig-art-1"
+    assert entry.signed_at == NOW
+    assert entry.promoted is True
+    assert entry.session_id == "session-1"

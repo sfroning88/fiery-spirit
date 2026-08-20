@@ -8,6 +8,6 @@ from pydantic import BaseModel, ConfigDict
 
 
 class PredictionResponse(BaseModel):
-    """Response model for retrieving prediction from winning model or all models"""
+    """Response model for retrieving prediction"""
 
     model_config = ConfigDict(extra="forbid")

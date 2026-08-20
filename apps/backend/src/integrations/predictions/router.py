@@ -28,9 +28,7 @@ except Exception as err:
     logger.error("Failed to boot up Predictions", error=str(err))
 
 
-@router.post(
-    "/predict/{prediction_type}", dependencies=[Depends(dependency.get_token_header)]
-)
+@router.post("/predict", dependencies=[Depends(dependency.get_token_header)])
 async def model_predict(
     request: Request, payload: PredictionRequest
 ) -> PredictionResponse:
@@ -38,7 +36,7 @@ async def model_predict(
     if not predictions_available:
         raise error("Predictions service unavailable", status_code=503)
 
-    logging.bind_job_context(property_id=payload.property_id)
+    logging.bind_job_context(volcano_id=None)
     try:
         # code
         return PredictionResponse()

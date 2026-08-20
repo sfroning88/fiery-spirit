@@ -15,7 +15,7 @@ class TrainingBackgroundJobs:
     @staticmethod
     def background_model_train() -> None:
         """Background: Train single model"""
-        logging.bind_job_context(training_id=None)
+        logging.bind_job_context(session_id=None)
         try:
             # code
             logger.info("model_train_job_completed")

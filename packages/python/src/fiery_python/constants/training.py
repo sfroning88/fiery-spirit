@@ -5,6 +5,8 @@ Definitions for Training structures
 """
 
 TRAINING_STATUS_ENUM = ("ai", "training_status")
+TRAINING_STAGE_ENUM = ("ai", "training_stage")
+TRAINING_PRECISION_ENUM = ("ai", "training_precision")
 TRAINING_DEFORMATION_CLASS_TABLE = ("ai", "training_deformation_class")
 TRAINING_SEISMIC_CLASS_TABLE = ("ai", "training_seismic_class")
 TRAINING_DEFORMATION_SOURCE_TABLE = ("ai", "training_deformation_source")
