@@ -112,7 +112,11 @@ class _S3ClientStorage:
 
     def get_bytes(self, bucket: str, key: str) -> bytes:
         """Download object body from the given bucket"""
-        return self.get_object(bucket, key)["Body"].read()
+        body = self.get_object(bucket, key)["Body"]
+        try:
+            return body.read()
+        finally:
+            body.close()
 
     def exists(self, bucket: str, key: str) -> bool:
         """Return True if the object exists"""

@@ -53,7 +53,11 @@ class ModelStorageServices:
     def load(cls, key: str) -> Any:
         """Download .pkl from bucket, verify HMAC metadata, then deserialize with joblib"""
         obj = models_s3.get_object(MODEL_BUCKET_NAME, key)
-        body = obj["Body"].read()
+        stream = obj["Body"]
+        try:
+            body = stream.read()
+        finally:
+            stream.close()
         meta = obj.get("Metadata") or {}
         expected = meta.get(_ARTIFACT_HMAC_META_KEY)
         if not expected:

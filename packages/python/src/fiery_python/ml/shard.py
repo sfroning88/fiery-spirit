@@ -22,6 +22,11 @@ class Shard:
         """Append one tar member"""
         info = tarfile.TarInfo(name=name)
         info.size = len(body)
+        info.mtime = 0
+        info.uid = 0
+        info.gid = 0
+        info.uname = ""
+        info.gname = ""
         tar.addfile(info, io.BytesIO(body))
 
     @classmethod
@@ -34,11 +39,15 @@ class Shard:
     @classmethod
     def write(cls, samples: List[Tuple[str, np.ndarray, Dict[str, Any]]]) -> bytes:
         """Pack samples into web dataset tar; return bytes"""
+        keys = [key for key, _, _ in samples]
+        if any(not key for key in keys):
+            raise ValueError("missing required sample key")
+        if len(keys) != len(set(keys)):
+            raise ValueError("duplicate sample key")
+        ordered = sorted(samples, key=lambda sample: sample[0])
         buf = io.BytesIO()
         with tarfile.open(fileobj=buf, mode="w") as tar:
-            for key, phase, label in samples:
-                if not key:
-                    raise ValueError("missing required sample key")
+            for key, phase, label in ordered:
                 cls._add_npy(
                     tar,
                     f"{key}.{_PHASE_SUFFIX}",
@@ -64,7 +73,13 @@ class Shard:
                 fileobj = tar.extractfile(info)
                 if fileobj is None:
                     continue
-                key, _, suffix = info.name.partition(".")
+                if info.name.endswith(f".{_PHASE_SUFFIX}"):
+                    suffix = _PHASE_SUFFIX
+                elif info.name.endswith(f".{_LABEL_SUFFIX}"):
+                    suffix = _LABEL_SUFFIX
+                else:
+                    continue
+                key = info.name[: -(len(suffix) + 1)]
                 members.setdefault(key, {})[suffix] = fileobj.read()
         samples = []
         for key in sorted(members):

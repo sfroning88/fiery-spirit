@@ -69,7 +69,9 @@ class Transformation:
     ) -> np.ndarray:
         """Deterministic preprocess: wrap, crop, normalize; raise if incoherent"""
         phase, coherence = cls._split_channels(array)
-        if float(np.nanmean(coherence)) < float(training_deformation.coherence_min):
+        if not (np.isfinite(phase).all() and np.isfinite(coherence).all()):
+            raise TransformationRejected("non-finite phase or coherence")
+        if float(np.mean(coherence)) < float(training_deformation.coherence_min):
             raise TransformationRejected("coherence below min")
         wrap_rad = float(training_deformation.wrap_rad)
         wrapped = np.mod(phase + wrap_rad, 2.0 * wrap_rad) - wrap_rad

@@ -70,6 +70,20 @@ def test_apply_rejects_low_coherence():
         Transformation.apply(_stack(phase, coherence), _params())
 
 
+def test_apply_rejects_non_finite_coherence():
+    phase = np.zeros((8, 8), dtype=np.float32)
+    coherence = np.full((8, 8), np.nan, dtype=np.float32)
+    with pytest.raises(TransformationRejected, match="non-finite"):
+        Transformation.apply(_stack(phase, coherence), _params())
+
+
+def test_apply_rejects_non_finite_phase():
+    phase = np.full((8, 8), np.inf, dtype=np.float32)
+    coherence = np.ones((8, 8), dtype=np.float32)
+    with pytest.raises(TransformationRejected, match="non-finite"):
+        Transformation.apply(_stack(phase, coherence), _params())
+
+
 def test_apply_minmax_scales_crop_to_unit_interval():
     phase = np.zeros((8, 8), dtype=np.float32)
     phase[2:6, 2:6] = np.array(
