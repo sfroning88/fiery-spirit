@@ -6,7 +6,7 @@ services:
   name: fiery-ai-api
   plan: free
   numInstances: 1
-  dockerfilePath: apps/backend/Dockerfile
+  dockerfilePath: apps/ai/Dockerfile
   buildFilter:
     paths:
       - apps/ai/**

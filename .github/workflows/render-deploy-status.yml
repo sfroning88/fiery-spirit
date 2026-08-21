@@ -27,8 +27,8 @@ jobs:
             ai:
               - 'apps/ai/**'
 
-  render-focus-backend-api:
-    name: Render (focus-backend-api)
+  render-fiery-backend-api:
+    name: Render (fiery-backend-api)
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
@@ -42,8 +42,8 @@ jobs:
           retries: 3
           wait: 10000
 
-  render-focus-ai-api:
-    name: Render (focus-ai-api)
+  render-fiery-ai-api:
+    name: Render (fiery-ai-api)
     needs: changes
     if: needs.changes.outputs.ai == 'true'
     runs-on: ubuntu-latest
@@ -57,8 +57,8 @@ jobs:
           retries: 3
           wait: 10000
 
-  render-focus-ai-worker:
-    name: Render (focus-ai-worker)
+  render-fiery-ai-worker:
+    name: Render (fiery-ai-worker)
     needs: changes
     if: needs.changes.outputs.ai == 'true'
     runs-on: ubuntu-latest
