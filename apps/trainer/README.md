@@ -1,4 +1,4 @@
-# Fiery AI
+# Fiery Trainer
 
 FastAPI service for Fiery full stack AI/ML app.
 

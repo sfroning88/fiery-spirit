@@ -5,14 +5,14 @@ ROOT="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 usage() {
-  echo "Usage: $0 [ai|backend|packages]" >&2
+  echo "Usage: $0 [ai|backend|trainer|packages]" >&2
   echo "  No argument runs all suites sequentially." >&2
   exit 1
 }
 
 TARGET="${1:-all}"
 case "$TARGET" in
-  ai | backend | packages | all) ;;
+  ai | backend | trainer | packages | all) ;;
   *) usage ;;
 esac
 
@@ -43,13 +43,13 @@ run_python() {
 
 run_target() {
   case "$1" in
-    ai | backend) run_app "$1" ;;
+    ai | backend | trainer) run_app "$1" ;;
     packages) run_python ;;
   esac
 }
 
 if [ "$TARGET" = "all" ]; then
-  for t in ai backend packages; do
+  for t in ai backend trainer packages; do
     run_target "$t"
   done
 else

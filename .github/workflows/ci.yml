@@ -60,4 +60,5 @@ jobs:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
           BACKEND_API_URL: ${{ secrets.BACKEND_API_URL }}
           AI_API_URL: ${{ secrets.AI_API_URL }}
+          TRAINER_API_URL: ${{ secrets.TRAINER_API_URL }}
           AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}

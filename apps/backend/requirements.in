@@ -1,13 +1,2 @@
 # Python package
-# Provides: fastapi, redis, rq, psycopg2-binary, python-dotenv,
-# structlog, requests, boto3, joblib (see packages/python/pyproject.toml)
 -e ../../packages/python
-
-# Server
-uvicorn>=0.20.0
-
-# Schemas (direct usage; also pulled transitively by fastapi)
-pydantic>=2.10.0
-
-# Model inference
-numpy>=1.26.0
