@@ -4,7 +4,7 @@ Last updated: **August 2026**
 
 ## Feature Enforcement
 
-The current pixel contract is:
+The current **pixel contract** is:
 
 ```python
 array_shape = (2, H, W) # phase, coherence
@@ -16,12 +16,12 @@ ops = [
 ]
 ```
 
-The current packing contract is:
+The current **packing contract** is:
 
 ```python
 shard_members = [
-    "{key}.phase.npy", #
-    "{key}.label.json", #
+    "{key}.phase.npy",
+    "{key}.label.json",
 ]
 ```
 
@@ -39,14 +39,14 @@ Refined shard `.tar` files are **layout-addressed:**
 
 ```python
 payload = {
-    "patch_px",
-    "wrap_rad",
-    "normalize",
-    "coherence_min",
-    "apply",
-    "_split_channels",
-    "_center_crop",
-    "_normalize",
+    "patch_px", # crop size
+    "wrap_rad", # wrap interval
+    "normalize", # scale mode
+    "coherence_min", # keep/drop
+    "apply", # pipeline source
+    "_split_channels", # stack layout
+    "_center_crop", # crop geometry
+    "_normalize", # scale function
 }
 transform_hash = sha256(sorted(payload))
 ```
