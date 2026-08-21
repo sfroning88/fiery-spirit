@@ -30,6 +30,8 @@ class Transformation:
     @staticmethod
     def _center_crop(array: np.ndarray, patch_px: int) -> np.ndarray:
         """Center crop to patch_px; reject if either side is smaller"""
+        if patch_px <= 0:
+            raise TransformationRejected("patch_px must be postive int")
         height, width = array.shape[-2], array.shape[-1]
         if height < patch_px or width < patch_px:
             raise TransformationRejected("array smaller than patch_px")
@@ -74,6 +76,8 @@ class Transformation:
         if float(np.mean(coherence)) < float(training_deformation.coherence_min):
             raise TransformationRejected("coherence below min")
         wrap_rad = float(training_deformation.wrap_rad)
+        if not np.isfinite(wrap_rad) or wrap_rad <= 0:
+            raise TransformationRejected("wrap_rad must be positive finite")
         wrapped = np.mod(phase + wrap_rad, 2.0 * wrap_rad) - wrap_rad
         cropped = cls._center_crop(wrapped, training_deformation.patch_px)
         return cls._normalize(cropped, training_deformation.normalize)
