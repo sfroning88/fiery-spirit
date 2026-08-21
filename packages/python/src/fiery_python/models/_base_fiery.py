@@ -32,12 +32,12 @@ class BaseFiery(BaseModel):
         """Stable id derived from the row natural key; None when unavailable"""
         return None
 
-    def prepare_for_storage(self, include_id: bool = True) -> tuple:
-        """Convert row to batch insertion tuple"""
+    def prepare_for_storage(self, include_id: bool = True) -> dict:
+        """Convert row to batch insertion dict"""
         derived = self.deterministic_id()
         if derived:
             self.id = derived
-        raw: dict[str, object] = self.model_dump(mode="python")
+        skip = {"id"} if not include_id else set()
 
         def storage_value(value: object) -> object:
             if isinstance(value, Enum):
@@ -45,8 +45,8 @@ class BaseFiery(BaseModel):
             return value
 
         skip = {"id"} if not include_id else set()
-        return tuple(
-            storage_value(raw[name])
-            for name in type(self).model_fields
+        return {
+            name: storage_value(value)
+            for name, value in self.model_dump(mode="python").items()
             if name not in skip
-        )
+        }

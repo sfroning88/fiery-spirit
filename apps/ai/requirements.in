@@ -1,2 +1,5 @@
 # Python package
 -e ../../packages/python
+
+# Hugging Face
+datasets>=4.0.0
