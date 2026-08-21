@@ -19,8 +19,8 @@ services:
       value: https://fiery-backend-api.onrender.com
       previewValue: https://fiery-backend-api-staging.onrender.com
     - key: AI_API_URL
-      value: https://fiery-ai-api-0nkf.onrender.com
-      previewValue: https://fiery-ai-api-0nkf-staging.onrender.com
+      value: https://fiery-ai-api.onrender.com
+      previewValue: https://fiery-ai-api-staging.onrender.com
     - key: JOB_DOMAIN
       value: predictions
 
