@@ -1,4 +1,4 @@
-name: Build
+name: Build with Vercel
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build dashboard
+    name: Build apps/dashboard
     runs-on: ubuntu-latest
     permissions:
       contents: read

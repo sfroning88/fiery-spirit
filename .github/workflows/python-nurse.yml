@@ -6,6 +6,7 @@ on:
     paths:
       - "apps/backend/**"
       - "apps/ai/**"
+      - "apps/trainer/**"
       - "packages/python/**"
 
 jobs:
@@ -25,6 +26,8 @@ jobs:
               - 'apps/backend/**'
             ai:
               - 'apps/ai/**'
+            trainer:
+              - 'apps/trainer/**'
             packages:
               - 'packages/python/**'
 

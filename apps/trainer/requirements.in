@@ -1,0 +1,9 @@
+# Python package
+-e ../../packages/python
+
+# Model training
+modal>=1.5.4
+torch>=2.13.0
+timm>=1.0.28
+peft>=0.20.0
+webdataset>=1.0.2

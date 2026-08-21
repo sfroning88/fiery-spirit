@@ -21,6 +21,9 @@ services:
     - key: AI_API_URL
       value: https://fiery-ai-api.onrender.com
       previewValue: https://fiery-ai-api-staging.onrender.com
+    - key: TRAINER_API_URL
+      value: https://fiery-trainer-api.modal.run
+      previewValue: https://fiery-trainer-api-staging.modal.run
     - key: JOB_DOMAIN
       value: training
 
@@ -44,5 +47,8 @@ services:
     - key: AI_API_URL
       value: https://fiery-ai-api.onrender.com
       previewValue: https://fiery-ai-api-staging.onrender.com
+    - key: TRAINER_API_URL
+      value: https://fiery-trainer-api.modal.run
+      previewValue: https://fiery-trainer-api-staging.modal.run
     - key: JOB_DOMAIN
       value: training
