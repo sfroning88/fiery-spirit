@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 Author: Sean Froning
-Created Date: 8.21.2026
+Created Date: 8.22.2026
 Unified test orchestrator for worker pipelines
 
-Usage: python3 -m src.tests.orchestrator <ingest|registry>
+Usage: python3 -m src.tests.orchestrator <ingest|refine|registry>
 
 Notes:
 - Tests run against the real Supabase project (tables + storage buckets).
@@ -17,7 +17,7 @@ Setup Steps:
 1) pnpm use:local
 2) pnpm redis:up
 3) cd packages/python
-4) python -m src.e2e.orchestrator <ingest|registry>
+4) python -m src.e2e.orchestrator <ingest|refine|registry>
 
 If Creating or Activating venv:
 1) python3 -m venv .venv
@@ -80,6 +80,7 @@ class WorkerSpec:
 
 WORKFLOW_WORKERS: Dict[str, Tuple[WorkerSpec, ...]] = {
     "ingest": (WorkerSpec(domain="ai", needs_rq_worker=True),),
+    "refine": (WorkerSpec(domain="ai", needs_rq_worker=True),),
     "registry": (WorkerSpec(domain="backend", needs_rq_worker=False),),
 }
 
@@ -170,6 +171,10 @@ def _run_workflow(workflow: str) -> None:
         from .scripts.ingest import run_ingest_test
 
         run_ingest_test()
+    elif workflow == "refine":
+        from .scripts.refine import run_refine_test
+
+        run_refine_test()
     elif workflow == "registry":
         from .scripts.registry import run_reload_test
 

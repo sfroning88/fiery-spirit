@@ -2,7 +2,9 @@
 
 Last updated: **August 2026**
 
-## Supported Sources
+## Deformation API
+
+### Ingest Endpoint
 
 `Interferograms` sources include:
 
@@ -22,6 +24,23 @@ class IngestResponse(BaseModel):
     """Response model for running ingest job"""
 
     job_ids: List[str]
+```
+
+### Refine Endpoint
+
+`Refine` functions are requested via `/api/refine`:
+
+```python
+class RefineRequest(BaseModel):
+    """Request model for running refine job"""
+    contract_id: str
+    force: bool = False
+class RefineResponse(BaseModel):
+    """Response model for running refine job"""
+    job_ids: List[str]
+    version_id: str
+    transform_hash: str
+    cached: bool = False
 ```
 
 ## Feature Enforcement
@@ -97,14 +116,14 @@ Attempting to apply `padding` or `normalization` would invent fringes.
 
 Deformation interferograms move through the pipeline:
 
-1. Sourced from `Hephaestus` or `Okada`
-2. Dumped unrefined `.npz` into `r2_s3`
+1. Source from `Hephaestus` or `Okada`
+2. Flush unrefined `.npz` to `r2_s3`
 3. Mark `DatasetIngest`
 4. Load unrefined `.npz` from `r2_s3`
 5. Apply `Transformation`
 6. Write `Shard`
 7. Write `Manifest`
-8. Load refined `.tar` to `r2_s3`
+8. Flush refined `.tar` to `r2_s3`
 9. Mark `DatasetVersion`
 
 ### Self Contained Artifacts
@@ -122,24 +141,35 @@ To prevent `training-serving skew` across the pipeline:
 
 Using **Hugging Face** [`datasets`](https://huggingface.co/docs/datasets/en/index):
 
-- Read `MAX_DEFORMATION_SAMPLES` with `load_dataset`
-- Take `MAX_DEFORMATION_SAMPLES` with `dataset.take`
-- Iterate and process each `interferogram`
-- Idempotently `execute_values` by `TRAINING_DB_PAGE_SIZE`
+1. Read `MAX_DEFORMATION_SAMPLES` with `load_dataset`
+2. Take `MAX_DEFORMATION_SAMPLES` with `dataset.take`
+3. Iterate and process each `interferogram`
+4. Idempotently `execute_values` by `TRAINING_DB_PAGE_SIZE`
 
 Processing for each `interferogram`:
 
-- Read `insar_difference` and `insar_coherence` (clipped)
-- Assign `TrainingDeformationLabel` from `flags`
-- Yield the unrefined catalog fields
+1. Read `insar_difference` and `insar_coherence` (clipped)
+2. Assign `TrainingDeformationLabel` from `flags`
+3. Yield the unrefined catalog fields
 
 ### Synthetic Fringes
 
 To generate synthetic fringe fields:
 
-- Iter `index` from `MAX_DEFORMATION_SAMPLES`
-- Compute geographic numerical fields from `index`
-- Compute `channels` by [`Okada forward phase`](https://www.clawpack.org/geoclaw/Okada.htmlv)
+1. Iter `index` from `MAX_DEFORMATION_SAMPLES`
+2. Compute geographic numerical fields from `index`
+3. Compute `channels` by [`Okada forward phase`](https://www.clawpack.org/geoclaw/Okada.htmlv)
+
+### Refined Shards
+
+To refine `.npz` samples to `.tar` shards:
+
+1. Resolve `contract` to compute `transform_hash`
+2. Reuse (`cache-hit`) or create (`cache-miss`) `version`
+3. Stream unrefined `.npz` samples from `r2_s3`
+4. Apply `Transformation` and drop if `TransformationRejected`
+5. Pack `WebDataset` members; flush `.tar` shards to `r2_s3`
+6. Write `manifest.json`; mark `version` done
 
 ### Data Citation
 
