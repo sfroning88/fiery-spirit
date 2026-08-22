@@ -15,15 +15,17 @@ class IngestBackgroundJobs:
     """Operations for background jobs from Ingest"""
 
     @staticmethod
-    def background_ingest_source(source: TrainingSampleSource, ingest_id: str) -> None:
+    def background_ingest_source(
+        source: TrainingSampleSource, ingest_id: str, max_samples: int
+    ) -> None:
         """Background: Ingest dataset from source"""
         logging.bind_job_context(session_id=ingest_id)
         try:
             match source:
                 case TrainingSampleSource.HEPHAESTUS:
-                    asset_count = IngestHephaestusSource.run(ingest_id)
+                    asset_count = IngestHephaestusSource.run(ingest_id, max_samples)
                 case TrainingSampleSource.OKADA:
-                    asset_count = IngestOkadaSource.run(ingest_id)
+                    asset_count = IngestOkadaSource.run(ingest_id, max_samples)
                 case _:
                     raise ValueError("unsupported ingest source")
             logger.info(

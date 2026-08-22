@@ -54,11 +54,7 @@ QUERY = sql.SQL("""
         wavelength_m = EXCLUDED.wavelength_m,
         noise_model = EXCLUDED.noise_model,
         updated_at = NOW()
-""").format(
-    table=sql.Identifier(*TRAINING_DEFORMATION_SOURCE_TABLE),
-    source_enum=sql.Identifier(*TRAINING_DEFORMATION_SOURCE_TYPE_ENUM),
-    noise_enum=sql.Identifier(*TRAINING_NOISE_MODEL_ENUM),
-)
+""").format(table=sql.Identifier(*TRAINING_DEFORMATION_SOURCE_TABLE))
 
 TEMPLATE = sql.SQL("""
     (

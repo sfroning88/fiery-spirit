@@ -74,3 +74,32 @@ class IngestPersistService:
                 template=UPSERT_INTERFEROGRAMS_TEMPLATE.as_string(cursor),
                 page_size=TRAINING_DB_PAGE_SIZE,
             )
+
+    @staticmethod
+    def upsert_okada_page(
+        deformation_sources: List[TrainingDeformationSource],
+        interferograms: List[TrainingInterferogram],
+    ) -> None:
+        source_values = [
+            deformation_source.prepare_for_storage(include_id=True)
+            for deformation_source in deformation_sources
+        ]
+        interferogram_values = [
+            interferogram.prepare_for_storage(include_id=True)
+            for interferogram in interferograms
+        ]
+        with db_pool.get_cursor() as cursor:
+            execute_values(
+                cursor,
+                UPSERT_DEFORMATION_SOURCES.as_string(cursor),
+                source_values,
+                template=UPSERT_DEFORMATION_SOURCES_TEMPLATE.as_string(cursor),
+                page_size=TRAINING_DB_PAGE_SIZE,
+            )
+            execute_values(
+                cursor,
+                UPSERT_INTERFEROGRAMS.as_string(cursor),
+                interferogram_values,
+                template=UPSERT_INTERFEROGRAMS_TEMPLATE.as_string(cursor),
+                page_size=TRAINING_DB_PAGE_SIZE,
+            )

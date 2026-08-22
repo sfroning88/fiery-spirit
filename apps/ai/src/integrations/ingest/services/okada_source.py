@@ -23,7 +23,6 @@ from fiery_python import (
 )
 from .persist_service import IngestPersistService
 
-_MAX_DEFORMATION_SAMPLES = 10
 _PATCH_PX = 128
 _WAVELENGTH_M = Decimal("0.0555")
 _LOS_INCIDENCE_DEG = Decimal("37.0")
@@ -34,8 +33,9 @@ class IngestOkadaSource:
     """Synthesize Okada-like patches to unrefined R2 and catalog interferograms"""
 
     @classmethod
-    def run(cls, ingest_id: str) -> int:
+    def run(cls, ingest_id: str, max_samples: int = 5) -> int:
         """Augment interferograms; return asset_count"""
+        max_samples = min(max_samples, 5)
         started_at = datetime.now(timezone.utc)
         IngestPersistService.upsert_ingest(
             DatasetIngest(
@@ -50,7 +50,7 @@ class IngestOkadaSource:
         interferogram_page: List[TrainingInterferogram] = []
         asset_count = 0
         try:
-            for sample in cls._iter_samples():
+            for sample in cls._iter_samples(max_samples):
                 deformation_source: TrainingDeformationSource = sample["source"]
                 body = IngestPersistService.npz_bytes(
                     sample["phase"], sample["coherence"]
@@ -70,13 +70,15 @@ class IngestOkadaSource:
                 interferogram_page.append(interferogram)
                 asset_count += 1
                 if len(interferogram_page) >= TRAINING_DB_PAGE_SIZE:
-                    cls._flush(source_page, interferogram_page)
+                    IngestPersistService.upsert_okada_page(
+                        source_page, interferogram_page
+                    )
                     source_page = []
                     interferogram_page = []
-                if asset_count >= _MAX_DEFORMATION_SAMPLES:
+                if asset_count >= max_samples:
                     break
             if interferogram_page:
-                cls._flush(source_page, interferogram_page)
+                IngestPersistService.upsert_okada_page(source_page, interferogram_page)
             finished_at = datetime.now(timezone.utc)
             IngestPersistService.upsert_ingest(
                 DatasetIngest(
@@ -105,15 +107,6 @@ class IngestOkadaSource:
             )
             raise
 
-    @classmethod
-    def _flush(
-        cls,
-        sources: List[TrainingDeformationSource],
-        interferograms: List[TrainingInterferogram],
-    ) -> None:
-        IngestPersistService.upsert_deformation_sources(sources)
-        IngestPersistService.upsert_interferograms(interferograms)
-
     @staticmethod
     def _forward_phase(slip_m: float) -> Tuple[np.ndarray, np.ndarray]:
         axis = np.linspace(-1.0, 1.0, _PATCH_PX, dtype=np.float32)
@@ -121,13 +114,16 @@ class IngestOkadaSource:
         envelope = np.exp(-(xx * xx + yy * yy) / (2.0 * 0.18 * 0.18))
         los_m = slip_m * envelope
         wrap = np.pi
-        phase = np.mod(los_m * (4.0 * np.pi / 0.0555) + wrap, 2.0 * wrap) - wrap
+        phase = (
+            np.mod(los_m * (4.0 * np.pi / float(_WAVELENGTH_M)) + wrap, 2.0 * wrap)
+            - wrap
+        )
         coherence = np.full((_PATCH_PX, _PATCH_PX), 0.85, dtype=np.float32)
         return phase.astype(np.float32), coherence
 
     @staticmethod
-    def _iter_samples() -> Iterator[Dict]:
-        for index in range(_MAX_DEFORMATION_SAMPLES):
+    def _iter_samples(max_samples: int) -> Iterator[Dict]:
+        for index in range(max_samples):
             slip_m = 0.0 if index % 5 == 0 else 0.4 + 0.05 * index
             source = TrainingDeformationSource(
                 source=TrainingDeformationSourceType.OKADA,

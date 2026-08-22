@@ -12,3 +12,4 @@ class IngestRequest(BaseModel):
     """Request model for running ingest job"""
 
     source: TrainingSampleSource
+    max_samples: int = 5

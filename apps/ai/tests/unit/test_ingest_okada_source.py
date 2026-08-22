@@ -35,10 +35,10 @@ def test_forward_phase_zero_slip_is_flat():
 
 
 def test_iter_samples_unique_sources_and_labels():
-    samples = list(IngestOkadaSource._iter_samples())
-    assert len(samples) == 10
+    samples = list(IngestOkadaSource._iter_samples(max_samples=5))
+    assert len(samples) == 5
     ids = {sample["source"].id for sample in samples}
-    assert len(ids) == 10
+    assert len(ids) == 5
     negatives = [
         sample
         for sample in samples
@@ -50,18 +50,15 @@ def test_iter_samples_unique_sources_and_labels():
     )
 
 
-def test_run_flushes_sources_before_interferograms():
-    samples = list(IngestOkadaSource._iter_samples())[:2]
-    order = []
+def test_run_upserts_okada_page():
+    samples = list(IngestOkadaSource._iter_samples(max_samples=2))
 
-    def _record_interferograms(rows):
-        order.append(("interferograms", len(rows)))
-        assert isinstance(rows[0], TrainingInterferogram)
-        assert rows[0].deformation_source_id == samples[0]["source"].id
-
-    def _record_sources(rows):
-        order.append(("sources", len(rows)))
-        assert isinstance(rows[0], TrainingDeformationSource)
+    def _record_page(sources, interferograms):
+        assert len(sources) == 2
+        assert len(interferograms) == 2
+        assert isinstance(sources[0], TrainingDeformationSource)
+        assert isinstance(interferograms[0], TrainingInterferogram)
+        assert interferograms[0].deformation_source_id == samples[0]["source"].id
 
     with (
         patch.object(IngestOkadaSource, "_iter_samples", return_value=samples),
@@ -69,13 +66,9 @@ def test_run_flushes_sources_before_interferograms():
             "integrations.ingest.services.okada_source.IngestPersistService.upsert_ingest"
         ) as upsert_ingest,
         patch(
-            "integrations.ingest.services.okada_source.IngestPersistService.upsert_deformation_sources",
-            side_effect=_record_sources,
-        ),
-        patch(
-            "integrations.ingest.services.okada_source.IngestPersistService.upsert_interferograms",
-            side_effect=_record_interferograms,
-        ),
+            "integrations.ingest.services.okada_source.IngestPersistService.upsert_okada_page",
+            side_effect=_record_page,
+        ) as upsert_okada_page,
         patch(
             "integrations.ingest.services.okada_source.IngestPersistService.npz_bytes",
             return_value=b"npz",
@@ -85,9 +78,9 @@ def test_run_flushes_sources_before_interferograms():
             return_value="okada/abc.npz",
         ),
     ):
-        count = IngestOkadaSource.run("ingest-okada")
+        count = IngestOkadaSource.run("ingest-okada", max_samples=2)
     assert count == 2
-    assert order == [("sources", 2), ("interferograms", 2)]
+    upsert_okada_page.assert_called_once()
     assert upsert_ingest.call_args_list[-1].args[0].status == TrainingStatus.COMPLETED
     assert upsert_ingest.call_args_list[-1].args[0].source == TrainingSampleSource.OKADA
 
@@ -102,5 +95,18 @@ def test_run_marks_failed_and_reraises():
         ) as upsert_ingest,
     ):
         with pytest.raises(RuntimeError, match="synth"):
-            IngestOkadaSource.run("ingest-okada")
+            IngestOkadaSource.run("ingest-okada", max_samples=1)
     assert upsert_ingest.call_args_list[-1].args[0].status == TrainingStatus.FAILED
+
+
+def test_run_clamps_max_samples():
+    with (
+        patch.object(
+            IngestOkadaSource, "_iter_samples", return_value=[]
+        ) as iter_samples,
+        patch(
+            "integrations.ingest.services.okada_source.IngestPersistService.upsert_ingest"
+        ),
+    ):
+        IngestOkadaSource.run("ingest-okada", max_samples=50)
+    iter_samples.assert_called_once_with(5)

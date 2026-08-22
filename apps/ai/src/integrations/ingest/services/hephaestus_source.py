@@ -25,9 +25,9 @@ logger = logging.get_logger(__name__)
 
 HF_STREAM_TOKEN = config.get("HF_STREAM_TOKEN")
 
-_MAX_DEFORMATION_SAMPLES = 10
 _HF_ID = "orion-ai-lab/Thalia"
 _HF_SPLIT = "train"
+_HF_REVISION = "543216fef7483825e786b3da96caeb1ee197befc"
 _PHASE_KEYS = ("insar_difference",)
 _COHERENCE_KEYS = ("insar_coherence",)
 
@@ -36,8 +36,9 @@ class IngestHephaestusSource:
     """Stream Hephaestus frames to unrefined R2 and catalog interferograms"""
 
     @classmethod
-    def run(cls, ingest_id: str) -> int:
-        """Downlaod pathes, store unrefined samples, upsert interferograms; return asset_count"""
+    def run(cls, ingest_id: str, max_samples: int = 5) -> int:
+        """Download pathes, store unrefined samples, upsert interferograms; return asset_count"""
+        max_samples = min(max_samples, 5)
         started_at = datetime.now(timezone.utc)
         IngestPersistService.upsert_ingest(
             DatasetIngest(
@@ -51,7 +52,7 @@ class IngestHephaestusSource:
         page: List[TrainingInterferogram] = []
         asset_count = 0
         try:
-            for sample in cls._iter_samples():
+            for sample in cls._iter_samples(max_samples):
                 body = IngestPersistService.npz_bytes(
                     sample["phase"], sample["coherence"]
                 )
@@ -73,7 +74,7 @@ class IngestHephaestusSource:
                 if len(page) >= TRAINING_DB_PAGE_SIZE:
                     IngestPersistService.upsert_interferograms(page)
                     page.clear()
-                if asset_count >= _MAX_DEFORMATION_SAMPLES:
+                if asset_count >= max_samples:
                     break
             if page:
                 IngestPersistService.upsert_interferograms(page)
@@ -108,8 +109,10 @@ class IngestHephaestusSource:
     @staticmethod
     def _cast_height_width(array: np.ndarray) -> np.ndarray:
         array = np.asarray(array, dtype=np.float32)
-        while array.ndim > 2:
-            array = array[-1]
+        array = np.squeeze(array)
+        if array.ndim == 3:
+            channel_axis = int(np.argmin(array.shape))
+            array = np.take(array, -1, axis=channel_axis)
         if array.ndim != 2:
             raise ValueError("expected (H, W) InSAR channel")
         return array
@@ -158,14 +161,18 @@ class IngestHephaestusSource:
         return TrainingDeformationLabel.UNCERTAIN
 
     @staticmethod
-    def _iter_samples() -> Iterator[Dict[str, Any]]:
+    def _iter_samples(max_samples: int) -> Iterator[Dict[str, Any]]:
         """Yield unrefined phase/coherence plus catalog fields"""
         if not HF_STREAM_TOKEN or not isinstance(HF_STREAM_TOKEN, str):
             raise error("HF_STREAM_TOKEN not configured")
         dataset = load_dataset(
-            _HF_ID, split=_HF_SPLIT, token=HF_STREAM_TOKEN, streaming=True
+            _HF_ID,
+            split=_HF_SPLIT,
+            revision=_HF_REVISION,
+            token=HF_STREAM_TOKEN,
+            streaming=True,
         )
-        dataset = dataset.take(_MAX_DEFORMATION_SAMPLES)
+        dataset = dataset.take(max_samples)
         for sample in dataset:
             channels = IngestHephaestusSource._channels_from_interferogram(sample)
             if channels is None:

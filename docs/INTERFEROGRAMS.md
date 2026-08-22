@@ -2,6 +2,28 @@
 
 Last updated: **August 2026**
 
+## Supported Sources
+
+`Interferograms` sources include:
+
+- [**`Hephaestus`**](https://arxiv.org/abs/2204.09435) from the [`orion-ai-lab`](https://huggingface.co/orion-ai-lab)
+- [**`Okada model`**](https://www.clawpack.org/v5.5.x/okada.html) for ground deformation
+
+`Ingest` functions are requested via `/api/ingest`:
+
+```python
+class IngestRequest(BaseModel):
+    """Request model for running ingest job"""
+
+    source: TrainingSampleSource
+    max_samples: int = 10
+
+class IngestResponse(BaseModel):
+    """Response model for running ingest job"""
+
+    job_ids: List[str]
+```
+
 ## Feature Enforcement
 
 The current **pixel contract** is:
@@ -93,3 +115,41 @@ To prevent `training-serving skew` across the pipeline:
 - `.npz` unrefined samples only serve as a cache
 - Members use `format_version` instead of `transform_hash`
 - Dataset integrity by `content_hash` in `r2_s3`
+
+## Samples Dataset
+
+### Streaming Data
+
+Using **Hugging Face** [`datasets`](https://huggingface.co/docs/datasets/en/index):
+
+- Read `MAX_DEFORMATION_SAMPLES` with `load_dataset`
+- Take `MAX_DEFORMATION_SAMPLES` with `dataset.take`
+- Iterate and process each `interferogram`
+- Idempotently `execute_values` by `TRAINING_DB_PAGE_SIZE`
+
+Processing for each `interferogram`:
+
+- Read `insar_difference` and `insar_coherence` (clipped)
+- Assign `TrainingDeformationLabel` from `flags`
+- Yield the unrefined catalog fields
+
+### Synthetic Fringes
+
+To generate synthetic fringe fields:
+
+- Iter `index` from `MAX_DEFORMATION_SAMPLES`
+- Compute geographic numerical fields from `index`
+- Compute `channels` by [`Okada forward phase`](https://www.clawpack.org/geoclaw/Okada.htmlv)
+
+### Data Citation
+
+Data credits:
+
+- **Dataset:** [huggingface.co/datasets/orion-ai-lab/Thalia](https://huggingface.co/datasets/orion-ai-lab/Thalia)
+- **Codebase:** [github.com/Orion-AI-Lab/Thalia](https://github.com/Orion-AI-Lab/Thalia)
+
+There is one required `.env` variable to stream data:
+
+```python
+HF_STREAM_TOKEN # read-only fine-grained token from Hugging Face
+```

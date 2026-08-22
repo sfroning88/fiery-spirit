@@ -53,7 +53,7 @@ class ModelMetric(BaseFiery):
     value: Decimal
     artifact_id: str
 
-    def prepare_for_storage(self, include_id: bool = False) -> tuple:
+    def prepare_for_storage(self, include_id: bool = False) -> dict:
         """Composite PK table has no id column"""
         return super().prepare_for_storage(include_id=False)
 

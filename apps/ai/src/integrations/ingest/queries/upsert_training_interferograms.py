@@ -36,6 +36,8 @@ QUERY = sql.SQL("""
         coherence_mean = EXCLUDED.coherence_mean,
         is_augmented = EXCLUDED.is_augmented,
         storage_path = EXCLUDED.storage_path,
+        deformation_source_id = EXCLUDED.deformation_source_id,
+        volcano_id = EXCLUDED.volcano_id,
         updated_at = NOW()
 """).format(table=sql.Identifier(*TRAINING_INTERFEROGRAM_TABLE))
 

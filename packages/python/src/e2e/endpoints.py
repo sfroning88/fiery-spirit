@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Created Date: 8.17.2026
+Created Date: 8.21.2026
 Centralized route registry and endpoint test factories
 """
 
@@ -30,24 +30,9 @@ def worker_url(domain: str) -> str:
 BACKEND_URL = worker_url("backend")
 AI_URL = worker_url("ai")
 
-# -- Shuffle (served by apps/ai) --
-SHUFFLE_PATH = "/api/shuffle"
-SHUFFLE_URL = f"{AI_URL}{SHUFFLE_PATH}"
-
-# -- Train (served by apps/ai) --
-TRAIN_PATH = "/api/train"
-
-# -- Predict (served by apps/backend) --
-PREDICT_PATH = "/api/predict"
-
-
-def build_testing_url(
-    prediction_type: str,
-    root_url: str,
-    root_path: str,
-) -> str:
-    """Build {root_path}/{prediction_type} URL for train or predict integration tests"""
-    return f"{root_url}{root_path}/{prediction_type}"
+# -- Ingest (served by apps/ai) --
+INGEST_PATH = "/api/ingest"
+INGEST_URL = f"{AI_URL}{INGEST_PATH}"
 
 
 # -- Model registry (served by apps/backend) --

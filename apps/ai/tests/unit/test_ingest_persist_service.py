@@ -113,3 +113,60 @@ def test_upsert_deformation_sources_execute_values():
     inserted = execute_values.call_args.args[2]
     assert inserted[0]["id"] == source.deterministic_id()
     assert inserted[0]["source"] == TrainingDeformationSourceType.OKADA.value
+
+
+def test_upsert_okada_page_runs_both_on_one_cursor():
+    source = TrainingDeformationSource(
+        source=TrainingDeformationSourceType.OKADA,
+        latitude=-38.0,
+        longitude=-71.0,
+        depth_km=5.0,
+        los_incidence_deg=37.0,
+        los_heading_deg=-10.0,
+        wavelength_m=0.0555,
+        noise_model=TrainingNoiseModel.NONE,
+    )
+    source.id = source.deterministic_id()
+    interferogram = TrainingInterferogram(
+        source=TrainingSampleSource.OKADA,
+        split=TrainingSplit.TRAIN,
+        label=TrainingDeformationLabel.POSITIVE,
+        storage_path="okada/abc.npz",
+        deformation_source_id=source.id,
+    )
+    cursor = MagicMock()
+    with (
+        patch(
+            "integrations.ingest.services.persist_service.db_pool.get_cursor"
+        ) as get_cursor,
+        patch(
+            "integrations.ingest.services.persist_service.execute_values"
+        ) as execute_values,
+        patch(
+            "integrations.ingest.services.persist_service.UPSERT_DEFORMATION_SOURCES.as_string",
+            return_value="SOURCES",
+        ),
+        patch(
+            "integrations.ingest.services.persist_service.UPSERT_DEFORMATION_SOURCES_TEMPLATE.as_string",
+            return_value="SOURCE_TEMPLATE",
+        ),
+        patch(
+            "integrations.ingest.services.persist_service.UPSERT_INTERFEROGRAMS.as_string",
+            return_value="INTERFEROGRAMS",
+        ),
+        patch(
+            "integrations.ingest.services.persist_service.UPSERT_INTERFEROGRAMS_TEMPLATE.as_string",
+            return_value="INTERFEROGRAM_TEMPLATE",
+        ),
+    ):
+        get_cursor.return_value.__enter__.return_value = cursor
+        IngestPersistService.upsert_okada_page([source], [interferogram])
+    assert get_cursor.call_count == 1
+    assert execute_values.call_count == 2
+    assert execute_values.call_args_list[0].args[1] == "SOURCES"
+    assert execute_values.call_args_list[1].args[1] == "INTERFEROGRAMS"
+    assert execute_values.call_args_list[0].args[2][0]["id"] == source.id
+    assert (
+        execute_values.call_args_list[1].args[2][0]["deformation_source_id"]
+        == source.id
+    )

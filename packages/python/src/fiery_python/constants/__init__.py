@@ -1,6 +1,7 @@
 from .dataset import (
     DATASET_INGEST_TABLE,
     DATASET_VERSION_TABLE,
+    DATASET_BLOBS_BUCKET,
 )
 from .model import (
     MODEL_REGISTRY_SLOTS,
@@ -54,6 +55,7 @@ from .volcano import (
 __all__ = [
     "DATASET_INGEST_TABLE",
     "DATASET_VERSION_TABLE",
+    "DATASET_BLOBS_BUCKET",
     "MODEL_REGISTRY_SLOTS",
     "MODEL_TIER_ENUM",
     "MODEL_ROLE_ENUM",

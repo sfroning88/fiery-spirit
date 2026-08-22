@@ -46,9 +46,11 @@ async def ingest_source(request: Request, payload: IngestRequest) -> IngestRespo
     if not ingest_available:
         raise error("Ingest service unavailable", status_code=503)
 
+    ingest_id = str(uuid4())
+
     try:
         ingest = DatasetIngest(
-            id=str(uuid4()),
+            id=ingest_id,
             source=payload.source,
             status=TrainingStatus.PENDING,
         )
@@ -60,7 +62,7 @@ async def ingest_source(request: Request, payload: IngestRequest) -> IngestRespo
         specs = [
             {
                 "func": IngestBackgroundJobs.background_ingest_source,
-                "args": (payload.source, ingest.id),
+                "args": (payload.source, ingest.id, payload.max_samples),
                 "job_id": f"ingest_source_{payload.source.value}_{ingest.id}",
                 "job_timeout": 6000,
             }
@@ -69,6 +71,13 @@ async def ingest_source(request: Request, payload: IngestRequest) -> IngestRespo
         return IngestResponse(job_ids=[job.id for job in jobs])
 
     except Exception as err:
+        ingest = DatasetIngest(
+            id=ingest_id,
+            source=payload.source,
+            status=TrainingStatus.PENDING,
+        )
+        db_pool.run(UPSERT_INGEST, ingest.prepare_for_storage(include_id=True))
+
         logger.error(
             "ingest_source_enqueue_failed",
             source=payload.source.value,

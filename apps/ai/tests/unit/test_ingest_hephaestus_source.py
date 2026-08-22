@@ -85,11 +85,19 @@ def test_iter_samples_skips_bad_rows():
         },
     ]
     fake_dataset = MagicIter(rows)
-    with patch(
-        "integrations.ingest.services.hephaestus_source.load_dataset",
-        return_value=fake_dataset,
+    with (
+        patch(
+            "integrations.ingest.services.hephaestus_source.load_dataset",
+            return_value=fake_dataset,
+        ),
+        patch(
+            "integrations.ingest.services.hephaestus_source.HF_STREAM_TOKEN",
+            "test-token",
+        ),
     ):
-        samples = list(IngestHephaestusSource._iter_samples())
+        samples = list(IngestHephaestusSource._iter_samples(max_samples=3))
+    assert fake_dataset.taken == 3
+    assert len(samples) == 1
     assert len(samples) == 1
     assert samples[0]["label"] == TrainingDeformationLabel.POSITIVE
     assert samples[0]["frame_id"] == "f1"
@@ -127,7 +135,7 @@ def test_run_upserts_completed_and_returns_count():
             return_value="hephaestus/abc.npz",
         ),
     ):
-        count = IngestHephaestusSource.run("ingest-1")
+        count = IngestHephaestusSource.run("ingest-1", max_samples=1)
     assert count == 1
     assert upsert_ingest.call_args_list[0].args[0].status == TrainingStatus.EXECUTING
     assert upsert_ingest.call_args_list[-1].args[0].status == TrainingStatus.COMPLETED
@@ -148,15 +156,30 @@ def test_run_marks_failed_and_reraises():
         ) as upsert_ingest,
     ):
         with pytest.raises(RuntimeError, match="hf down"):
-            IngestHephaestusSource.run("ingest-1")
+            IngestHephaestusSource.run("ingest-1", max_samples=1)
     assert upsert_ingest.call_args_list[-1].args[0].status == TrainingStatus.FAILED
+
+
+def test_run_clamps_max_samples():
+    with (
+        patch.object(
+            IngestHephaestusSource, "_iter_samples", return_value=[]
+        ) as iter_samples,
+        patch(
+            "integrations.ingest.services.hephaestus_source.IngestPersistService.upsert_ingest"
+        ),
+    ):
+        IngestHephaestusSource.run("ingest-1", max_samples=50)
+    iter_samples.assert_called_once_with(5)
 
 
 class MagicIter:
     def __init__(self, rows):
         self._rows = rows
+        self.taken = None
 
-    def take(self, _n):
+    def take(self, n):
+        self.taken = n
         return self
 
     def __iter__(self):
