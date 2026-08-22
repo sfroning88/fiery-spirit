@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Created Date: 8.17.2026
+Created Date: 8.21.2026
 Shared utility helpers for tests
 """
 
@@ -15,8 +15,7 @@ from ..fiery_python import queue
 
 TESTS_DIR = os.path.dirname(__file__)
 
-TRAIN_PRESET_PATH = os.path.join(TESTS_DIR, "presets", "train.txt")
-PREDICT_PRESET_PATH = os.path.join(TESTS_DIR, "presets", "predict.txt")
+INGEST_PRESET_PATH = os.path.join(TESTS_DIR, "presets", "ingest.txt")
 
 
 def wait_for_job_completion(job_id: str, timeout: int = 60) -> bool:

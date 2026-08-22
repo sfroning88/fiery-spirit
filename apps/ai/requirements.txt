@@ -6,8 +6,16 @@
 #
 -e ../../packages/python
     # via -r requirements.in
+aiohappyeyeballs==2.7.1
+    # via aiohttp
+aiohttp==3.14.3
+    # via fsspec
+aiosignal==1.4.0
+    # via aiohttp
 annotated-doc==0.0.4
-    # via fastapi
+    # via
+    #   fastapi
+    #   typer
 annotated-types==0.7.0
     # via pydantic
 anyio==3.7.1
@@ -15,6 +23,8 @@ anyio==3.7.1
     #   -c constraints.txt
     #   httpx
     #   starlette
+attrs==26.1.0
+    # via aiohttp
 boto3==1.43.6
     # via fiery-python
 botocore==1.43.6
@@ -34,25 +44,51 @@ click==8.3.1
     #   rq
 croniter==1.4.1
     # via rq
+datasets==5.0.1
+    # via -r requirements.in
 deprecated==1.3.1
     # via limits
+dill==0.4.1
+    # via
+    #   datasets
+    #   multiprocess
 fastapi==0.121.2
     # via
     #   -c constraints.txt
     #   fiery-python
+filelock==3.32.3
+    # via
+    #   datasets
+    #   huggingface-hub
+frozenlist==1.8.0
+    # via
+    #   aiohttp
+    #   aiosignal
+fsspec[http]==2026.6.0
+    # via
+    #   datasets
+    #   huggingface-hub
 h11==0.16.0
     # via
     #   -c constraints.txt
     #   httpcore
+hf-xet==1.6.0
+    # via huggingface-hub
 httpcore==1.0.9
     # via httpx
 httpx==0.28.1
-    # via fiery-python
+    # via
+    #   datasets
+    #   fiery-python
+    #   huggingface-hub
+huggingface-hub==1.16.1
+    # via datasets
 idna==3.11
     # via
     #   anyio
     #   httpx
     #   requests
+    #   yarl
 jmespath==1.1.0
     # via
     #   boto3
@@ -61,16 +97,38 @@ joblib==1.5.3
     # via fiery-python
 limits==5.8.0
     # via slowapi
+markdown-it-py==4.2.0
+    # via rich
+mdurl==0.1.2
+    # via markdown-it-py
+multidict==6.7.1
+    # via
+    #   aiohttp
+    #   yarl
+multiprocess==0.70.19
+    # via datasets
 numpy==2.4.4
     # via
+    #   datasets
     #   fiery-python
     #   pandas
 packaging==26.2
-    # via limits
+    # via
+    #   datasets
+    #   huggingface-hub
+    #   limits
 pandas==3.0.5
-    # via fiery-python
+    # via
+    #   datasets
+    #   fiery-python
+propcache==0.5.2
+    # via
+    #   aiohttp
+    #   yarl
 psycopg2-binary==2.9.11
     # via fiery-python
+pyarrow==25.0.1
+    # via datasets
 pydantic==2.12.4
     # via
     #   -c constraints.txt
@@ -78,6 +136,8 @@ pydantic==2.12.4
     #   fiery-python
 pydantic-core==2.41.5
     # via pydantic
+pygments==2.21.0
+    # via rich
 python-dateutil==2.9.0.post0
     # via
     #   botocore
@@ -85,16 +145,26 @@ python-dateutil==2.9.0.post0
     #   pandas
 python-dotenv==1.2.1
     # via fiery-python
+pyyaml==6.0.3
+    # via
+    #   datasets
+    #   huggingface-hub
 redis==7.0.1
     # via
     #   fiery-python
     #   rq
 requests==2.32.5
-    # via fiery-python
+    # via
+    #   datasets
+    #   fiery-python
+rich==15.0.0
+    # via typer
 rq==2.6.0
     # via fiery-python
 s3transfer==0.17.0
     # via boto3
+shellingham==1.5.4
+    # via typer
 six==1.17.0
     # via python-dateutil
 slowapi==0.1.9
@@ -109,10 +179,17 @@ starlette==0.49.3
     #   fastapi
 structlog==25.5.0
     # via fiery-python
+tqdm==4.70.0
+    # via
+    #   datasets
+    #   huggingface-hub
+typer==0.27.1
+    # via huggingface-hub
 typing-extensions==4.15.0
     # via
     #   -c constraints.txt
     #   fastapi
+    #   huggingface-hub
     #   limits
     #   pydantic
     #   pydantic-core
@@ -125,3 +202,7 @@ urllib3==2.5.0
     #   requests
 wrapt==2.2.1
     # via deprecated
+xxhash==4.0.1
+    # via datasets
+yarl==1.24.5
+    # via aiohttp

@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
 """
 Author: Sean Froning
-Created Date: 8.17.2026
+Created Date: 8.21.2026
 Unified test orchestrator for worker pipelines
 
-Usage: python3 -m src.tests.orchestrator <train|predict>
+Usage: python3 -m src.tests.orchestrator <ingest|registry>
 
 Notes:
 - Tests run against the real Supabase project (tables + storage buckets).
-  Property and snapshot rows are read-only; only new training batches,
-  model rows, and stored model artifacts are created.
-- Postgres + buckets are Supabase. Only Redis runs locally for the RQ queue.
+  Tests run against the real Cloudlfare workspace (storage buckets).
+  Tests run against the real Modal environment (app workspace).
+- Postgres + buckets are Supabase/Cloudflare.
+  Only Redis runs locally via Docker for the RQ queue.
 
 Setup Steps:
 1) pnpm use:local
 2) pnpm redis:up
 3) cd packages/python
-4) python -m src.e2e.orchestrator <train|predict>
+4) python -m src.e2e.orchestrator <ingest|registry>
 
 If Creating or Activating venv:
 1) python3 -m venv .venv
@@ -78,8 +79,8 @@ class WorkerSpec:
 
 
 WORKFLOW_WORKERS: Dict[str, Tuple[WorkerSpec, ...]] = {
-    "train": (WorkerSpec(domain="ai", needs_rq_worker=True),),
-    "predict": (WorkerSpec(domain="backend", needs_rq_worker=False),),
+    "ingest": (WorkerSpec(domain="ai", needs_rq_worker=True),),
+    "registry": (WorkerSpec(domain="backend", needs_rq_worker=False),),
 }
 
 
@@ -165,20 +166,14 @@ def _await_workers_ready(specs: Tuple[WorkerSpec, ...]) -> None:
 
 def _run_workflow(workflow: str) -> None:
     """Dispatch to the script matching the workflow"""
-    if workflow == "train":
-        from .scripts.train import run_training_tests
+    if workflow == "ingest":
+        from .scripts.ingest import run_ingest_test
 
-        run_training_tests()
-    elif workflow == "predict":
-        from .scripts.predict import (
-            _load_predict_preset,
-            run_prediction_tests,
-            run_reload_test,
-        )
+        run_ingest_test()
+    elif workflow == "registry":
+        from .scripts.registry import run_reload_test
 
-        _property_id, multi_enabled = _load_predict_preset()
-        model_ids_by_type = run_reload_test(multi_enabled=multi_enabled)
-        run_prediction_tests(model_ids_by_type)
+        run_reload_test()
     else:
         raise ValueError(f"Unknown workflow: {workflow}")
 

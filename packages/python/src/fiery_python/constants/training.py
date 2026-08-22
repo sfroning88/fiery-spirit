@@ -4,9 +4,16 @@ Created Date: 8.19.2026
 Definitions for Training structures
 """
 
+TRAINING_DB_FETCH_SIZE = 10
+TRAINING_DB_PAGE_SIZE = 100
+TRAINING_SPLIT_ENUM = ("ai", "training_split")
+TRAINING_SAMPLE_SOURCE_ENUM = ("ai", "training_sample_source")
 TRAINING_STATUS_ENUM = ("ai", "training_status")
 TRAINING_STAGE_ENUM = ("ai", "training_stage")
 TRAINING_PRECISION_ENUM = ("ai", "training_precision")
+TRAINING_DEFORMATION_LABEL_ENUM = ("ai", "training_deformation_label")
+TRAINING_DEFORMATION_SOURCE_TYPE_ENUM = ("ai", "training_deformation_source_type")
+TRAINING_NOISE_MODEL_ENUM = ("ai", "training_noise_model")
 TRAINING_DEFORMATION_CLASS_TABLE = ("ai", "training_deformation_class")
 TRAINING_SEISMIC_CLASS_TABLE = ("ai", "training_seismic_class")
 TRAINING_DEFORMATION_SOURCE_TABLE = ("ai", "training_deformation_source")

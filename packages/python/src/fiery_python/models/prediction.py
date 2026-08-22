@@ -24,7 +24,7 @@ class PredictionDeformation(BaseFiery):
     artifact_id: str
     interferogram_id: str
 
-    def prepare_for_storage(self, include_id: bool = False) -> tuple:
+    def prepare_for_storage(self, include_id: bool = False) -> dict:
         """Composite PK table has no id column"""
         return super().prepare_for_storage(include_id=False)
 
@@ -39,6 +39,6 @@ class PredictionSeismic(BaseFiery):
     artifact_id: str
     seismic_event_id: str
 
-    def prepare_for_storage(self, include_id: bool = False) -> tuple:
+    def prepare_for_storage(self, include_id: bool = False) -> dict:
         """Composite PK table has no id column"""
         return super().prepare_for_storage(include_id=False)

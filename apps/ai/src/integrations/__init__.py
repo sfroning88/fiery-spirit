@@ -1,5 +1,5 @@
-from .training import router as TrainingRouter
+from .ingest import router as IngestRouter
 
 __all__ = [
-    "TrainingRouter",
+    "IngestRouter",
 ]
