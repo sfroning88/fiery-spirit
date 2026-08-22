@@ -4,7 +4,7 @@ Author: Sean Froning
 Created Date: 8.21.2026
 Unified test orchestrator for worker pipelines
 
-Usage: python3 -m src.tests.orchestrator <train|predict>
+Usage: python3 -m src.tests.orchestrator <ingest|registry>
 
 Notes:
 - Tests run against the real Supabase project (tables + storage buckets).

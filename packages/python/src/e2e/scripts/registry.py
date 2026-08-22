@@ -1,7 +1,7 @@
 """
 Author: Sean Froning
 Created Date: 8.21.2026
-Predict from models testing script
+Model registry testing script
 """
 
 from typing import Any, Dict, Tuple

@@ -160,7 +160,7 @@ def test_run_marks_failed_and_reraises():
     assert upsert_ingest.call_args_list[-1].args[0].status == TrainingStatus.FAILED
 
 
-def test_run_clamps_max_samples():
+def test_run_floors_max_samples():
     with (
         patch.object(
             IngestHephaestusSource, "_iter_samples", return_value=[]
@@ -169,8 +169,10 @@ def test_run_clamps_max_samples():
             "integrations.ingest.services.hephaestus_source.IngestPersistService.upsert_ingest"
         ),
     ):
+        IngestHephaestusSource.run("ingest-1", max_samples=1)
         IngestHephaestusSource.run("ingest-1", max_samples=50)
-    iter_samples.assert_called_once_with(5)
+    assert iter_samples.call_args_list[0].args == (5,)
+    assert iter_samples.call_args_list[1].args == (50,)
 
 
 class MagicIter:

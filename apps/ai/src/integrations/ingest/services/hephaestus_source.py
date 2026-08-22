@@ -38,7 +38,7 @@ class IngestHephaestusSource:
     @classmethod
     def run(cls, ingest_id: str, max_samples: int = 5) -> int:
         """Download pathes, store unrefined samples, upsert interferograms; return asset_count"""
-        max_samples = min(max_samples, 5)
+        max_samples = max(max_samples, 5)
         started_at = datetime.now(timezone.utc)
         IngestPersistService.upsert_ingest(
             DatasetIngest(
