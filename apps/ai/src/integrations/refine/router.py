@@ -6,6 +6,7 @@ Core AI API orchestration
 
 from fastapi import APIRouter, Depends, Request
 from fiery_python import (
+    db_pool,
     dependency,
     error,
     logging,
@@ -48,6 +49,8 @@ async def refine_shards(request: Request, payload: RefineRequest) -> RefineRespo
     """Refine dataset shards"""
     if not refine_available:
         raise error("Refine service unavailable", status_code=503)
+
+    version = None
 
     try:
         deformation = RefinePersistService.select_deformation(payload.contract_id)
@@ -92,7 +95,7 @@ async def refine_shards(request: Request, payload: RefineRequest) -> RefineRespo
                 manifest_path=manifest_path,
                 shard_count=0,
                 sample_count=0,
-                status=TrainingStatus.EXECUTING,
+                status=TrainingStatus.PENDING,
                 contract_id=payload.contract_id,
             )
             version.id = version.deterministic_id()
@@ -118,6 +121,10 @@ async def refine_shards(request: Request, payload: RefineRequest) -> RefineRespo
         )
 
     except Exception as err:
+        if version is not None:
+            version.status = TrainingStatus.FAILED
+            RefinePersistService.upsert_version(version)
+
         logger.error(
             "refine_source_enqueue_failed",
             contract_id=payload.contract_id,

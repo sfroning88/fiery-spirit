@@ -11,4 +11,3 @@ class RefineRequest(BaseModel):
     """Request model for running refine job"""
 
     contract_id: str
-    force: bool = False

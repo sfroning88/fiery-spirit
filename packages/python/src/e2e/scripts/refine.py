@@ -4,7 +4,7 @@ Created Date: 8.22.2026
 Refine shards testing script
 """
 
-from typing import Any, Dict, List
+from typing import Any, List
 
 from ...fiery_python import TrainingSampleSource
 
@@ -33,7 +33,7 @@ def run_refine_test() -> None:
         payload={"contract_id": _TRAINING_CONTRACT_ID},
     )
 
-    job_ids = List[str] = list(response.get("job_ids") or [])
+    job_ids: List[str] = list(response.get("job_ids") or [])
     if not job_ids:
         raise RuntimeError(f"Refine endpoint returned no job_ids")
 

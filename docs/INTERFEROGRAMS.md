@@ -34,7 +34,7 @@ class IngestResponse(BaseModel):
 class RefineRequest(BaseModel):
     """Request model for running refine job"""
     contract_id: str
-    force: bool = False
+
 class RefineResponse(BaseModel):
     """Response model for running refine job"""
     job_ids: List[str]

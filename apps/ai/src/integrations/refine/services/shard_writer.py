@@ -8,6 +8,7 @@ import numpy as np
 from typing import Any, Dict, List, Optional, Tuple
 from fiery_python import error, logging
 from fiery_python import (
+    TRAINING_DB_FETCH_SIZE,
     BlobStorageServices,
     DatasetVersion,
     Shard,
@@ -26,6 +27,7 @@ logger = logging.get_logger(__name__)
 _FORMAT_VERSION = 1
 _TARGET_SHARD_BYTES = 200 * 1024 * 1024
 _LABEL_OVERHEAD = 256
+_BASE_ID = "00000000-0000-0000-0000-000000000000"
 
 
 class RefineShardWriter:
@@ -113,7 +115,12 @@ class RefineShardWriter:
         approx_bytes = 0
         shard_index = 0
         kept = 0
-        interferograms = RefinePersistService.select_interferograms(split) or []
+        interferograms = (
+            RefinePersistService.select_interferograms(
+                split, _BASE_ID, TRAINING_DB_FETCH_SIZE
+            )
+            or []
+        )
         for interferogram in interferograms:
             sample = cls._transform_interferogram(interferogram, deformation, manifest)
             if sample is None:

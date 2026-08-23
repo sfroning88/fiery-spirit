@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import numpy as np
 from fiery_python import (
+    TRAINING_DB_FETCH_SIZE,
     DatasetVersion,
     PoolFetch,
     TrainingDeformationLabel,
@@ -115,8 +116,15 @@ def test_select_interferograms_maps_rows():
         "integrations.refine.services.persist_service.db_pool.run",
         return_value=rows,
     ) as run:
-        interferograms = RefinePersistService.select_interferograms(TrainingSplit.TRAIN)
-    assert run.call_args.args[1] == (TrainingSplit.TRAIN,)
+        interferograms = RefinePersistService.select_interferograms(
+            TrainingSplit.TRAIN,
+            "00000000-0000-0000-0000-000000000000",
+        )
+    assert run.call_args.args[1] == (
+        TrainingSplit.TRAIN,
+        "00000000-0000-0000-0000-000000000000",
+        TRAINING_DB_FETCH_SIZE,
+    )
     assert run.call_args.kwargs["fetch"] is PoolFetch.ALL
     assert len(interferograms) == 1
     assert interferograms[0].id == "ifg-1"
@@ -124,12 +132,18 @@ def test_select_interferograms_maps_rows():
     assert interferograms[0].label is TrainingDeformationLabel.POSITIVE
 
 
-def test_select_interferograms_returns_none_when_empty():
+def test_select_interferograms_returns_empty_when_missing():
     with patch(
         "integrations.refine.services.persist_service.db_pool.run",
         return_value=None,
     ):
-        assert RefinePersistService.select_interferograms(TrainingSplit.TEST) is None
+        assert (
+            RefinePersistService.select_interferograms(
+                TrainingSplit.TEST,
+                "00000000-0000-0000-0000-000000000000",
+            )
+            == []
+        )
 
 
 def test_upsert_version_passes_storage_dict():

@@ -9,6 +9,7 @@ import numpy as np
 from typing import List, Optional
 from fiery_python import db_pool, logging
 from fiery_python import (
+    TRAINING_DB_FETCH_SIZE,
     PoolFetch,
     DatasetVersion,
     TrainingSplit,
@@ -75,16 +76,18 @@ class RefinePersistService:
         )
 
     @staticmethod
-    def select_interferograms(split: TrainingSplit) -> List[TrainingInterferogram]:
+    def select_interferograms(
+        split: TrainingSplit, after_id: str, limit: int = TRAINING_DB_FETCH_SIZE
+    ) -> List[TrainingInterferogram]:
         rows = db_pool.run(
             SELECT_INTERFEROGRAMS,
-            (split,),
+            (split, after_id, limit),
             fetch=PoolFetch.ALL,
             error_event="fetch_training_interferograms_failed",
         )
         if not rows:
             logger.warning("fetch_training_interferograms_empty")
-            return None
+            return []
         interferograms: List[TrainingInterferogram] = []
         for row in rows:
             interferograms.append(
