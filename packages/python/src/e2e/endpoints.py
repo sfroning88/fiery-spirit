@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Created Date: 8.21.2026
+Created Date: 8.22.2026
 Centralized route registry and endpoint test factories
 """
 
@@ -33,6 +33,11 @@ AI_URL = worker_url("ai")
 # -- Ingest (served by apps/ai) --
 INGEST_PATH = "/api/ingest"
 INGEST_URL = f"{AI_URL}{INGEST_PATH}"
+
+
+# -- Refine (served by apps/ai) --
+REFINE_PATH = "/api/refine"
+REFINE_URL = f"{AI_URL}{REFINE_PATH}"
 
 
 # -- Model registry (served by apps/backend) --

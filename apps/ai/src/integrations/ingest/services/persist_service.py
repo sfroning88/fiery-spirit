@@ -27,7 +27,7 @@ from ..queries.upsert_training_deformation_sources import (
 
 
 class IngestPersistService:
-    """Persist ingest, deformation_source, interferograms, unrefined npz bytes"""
+    """Persist ingest, deformation_source, interferograms; unrefined npz bytes"""
 
     @staticmethod
     def npz_bytes(phase: np.ndarray, coherence: np.ndarray) -> bytes:

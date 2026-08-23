@@ -6,7 +6,7 @@ tone_instructions: "Be extremely concise and direct. No fluff. The less words yo
 early_access: false
 
 reviews:
-  profile: "chill"
+  profile: "quiet"
   high_level_summary: false
   auto_title_placeholder: "@coderabbitai"
   review_status: false
