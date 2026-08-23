@@ -69,3 +69,15 @@ class ModelStorageServices:
             raise RuntimeError(f"Model artifact HMAC verification failed for {key!r}")
         logger.info("model_loaded", key=key, bytes=len(body))
         return joblib.load(io.BytesIO(body))
+
+    @classmethod
+    def head_hmac(cls, key: str) -> str:
+        """HEAD models bucket; return artifact-hmac-sha256 or raise"""
+        obj = models_s3.head_object(MODEL_BUCKET_NAME, key)
+        meta = obj.get("Metadata") or {}
+        expected = meta.get(_ARTIFACT_HMAC_META_KEY)
+        if not expected:
+            raise RuntimeError(
+                f"Model object {key!r} missing {_ARTIFACT_HMAC_META_KEY} metadata",
+            )
+        return expected

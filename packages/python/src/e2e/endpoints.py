@@ -40,6 +40,11 @@ REFINE_PATH = "/api/refine"
 REFINE_URL = f"{AI_URL}{REFINE_PATH}"
 
 
+# -- Train (served by apps/ai) --
+TRAIN_PATH = "/api/train"
+TRAIN_URL = f"{AI_URL}{TRAIN_PATH}"
+
+
 # -- Model registry (served by apps/backend) --
 ML_PATH = "/api/ml"
 ML_RELOAD_PATH = f"{ML_PATH}/reload"

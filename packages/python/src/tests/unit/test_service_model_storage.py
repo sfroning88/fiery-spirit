@@ -118,3 +118,17 @@ def test_load_refuses_hmac_mismatch(monkeypatch):
     with patch.object(models_s3, "get_object", return_value=obj):
         with pytest.raises(RuntimeError, match="HMAC verification failed"):
             ModelStorageServices.load("tampered.pkl")
+
+
+def test_head_hmac_returns_metadata_digest():
+    obj = {"Metadata": {HMAC_META_KEY: "a" * 64}}
+    with patch.object(models_s3, "head_object", return_value=obj) as head_object:
+        digest = ModelStorageServices.head_hmac("cloud/screener/art-1.pkl")
+    assert digest == "a" * 64
+    head_object.assert_called_once_with(MODEL_BUCKET_NAME, "cloud/screener/art-1.pkl")
+
+
+def test_head_hmac_refuses_missing_metadata():
+    with patch.object(models_s3, "head_object", return_value={"Metadata": {}}):
+        with pytest.raises(RuntimeError, match="missing artifact-hmac-sha256"):
+            ModelStorageServices.head_hmac("missing.pkl")

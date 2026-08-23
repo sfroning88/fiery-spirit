@@ -9,7 +9,9 @@
 aiohappyeyeballs==2.7.1
     # via aiohttp
 aiohttp==3.14.3
-    # via fsspec
+    # via
+    #   fsspec
+    #   modal
 aiosignal==1.4.0
     # via aiohttp
 annotated-doc==0.0.4
@@ -23,6 +25,7 @@ anyio==3.7.1
     #   -c constraints.txt
     #   httpx
     #   starlette
+    #   watchfiles
 attrs==26.1.0
     # via aiohttp
 boto3==1.43.6
@@ -31,16 +34,20 @@ botocore==1.43.6
     # via
     #   boto3
     #   s3transfer
+cbor2==6.1.4
+    # via modal
 certifi==2025.11.12
     # via
     #   httpcore
     #   httpx
+    #   modal
     #   requests
 charset-normalizer==3.4.4
     # via requests
 click==8.3.1
     # via
     #   -c constraints.txt
+    #   modal
     #   rq
 croniter==1.4.1
     # via rq
@@ -68,12 +75,18 @@ fsspec[http]==2026.6.0
     # via
     #   datasets
     #   huggingface-hub
+grpclib==0.4.9
+    # via modal
 h11==0.16.0
     # via
     #   -c constraints.txt
     #   httpcore
+h2==4.4.1
+    # via grpclib
 hf-xet==1.6.0
     # via huggingface-hub
+hpack==4.2.0
+    # via h2
 httpcore==1.0.9
     # via httpx
 httpx==0.28.1
@@ -83,6 +96,8 @@ httpx==0.28.1
     #   huggingface-hub
 huggingface-hub==1.16.1
     # via datasets
+hyperframe==6.1.0
+    # via h2
 idna==3.11
     # via
     #   anyio
@@ -101,9 +116,12 @@ markdown-it-py==4.2.0
     # via rich
 mdurl==0.1.2
     # via markdown-it-py
+modal==1.5.4
+    # via -r requirements.in
 multidict==6.7.1
     # via
     #   aiohttp
+    #   grpclib
     #   yarl
 multiprocess==0.70.19
     # via datasets
@@ -125,6 +143,8 @@ propcache==0.5.2
     # via
     #   aiohttp
     #   yarl
+protobuf==6.33.6
+    # via modal
 psycopg2-binary==2.9.11
     # via fiery-python
 pyarrow==25.0.1
@@ -158,7 +178,9 @@ requests==2.32.5
     #   datasets
     #   fiery-python
 rich==15.0.0
-    # via typer
+    # via
+    #   modal
+    #   typer
 rq==2.6.0
     # via fiery-python
 s3transfer==0.17.0
@@ -179,20 +201,30 @@ starlette==0.49.3
     #   fastapi
 structlog==25.5.0
     # via fiery-python
+synchronicity==0.12.5
+    # via modal
+toml==0.10.2
+    # via modal
 tqdm==4.70.0
     # via
     #   datasets
     #   huggingface-hub
 typer==0.27.1
     # via huggingface-hub
+types-certifi==2021.10.8.3
+    # via modal
+types-toml==0.10.8.20260518
+    # via modal
 typing-extensions==4.15.0
     # via
     #   -c constraints.txt
     #   fastapi
     #   huggingface-hub
     #   limits
+    #   modal
     #   pydantic
     #   pydantic-core
+    #   synchronicity
     #   typing-inspection
 typing-inspection==0.4.2
     # via pydantic
@@ -200,6 +232,8 @@ urllib3==2.5.0
     # via
     #   botocore
     #   requests
+watchfiles==1.2.0
+    # via modal
 wrapt==2.2.1
     # via deprecated
 xxhash==4.0.1

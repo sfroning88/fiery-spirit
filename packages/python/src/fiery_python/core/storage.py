@@ -118,12 +118,24 @@ class _S3ClientStorage:
         finally:
             body.close()
 
+    def head_object(self, bucket: str, key: str) -> dict[str, Any]:
+        """HEAD the object; return the raw S3 response (Metadata)"""
+        if not key:
+            raise ValueError("Storage key is required")
+        try:
+            return self.get_client().head_object(Bucket=bucket, Key=key)
+        except Exception as err:
+            logger.warning(
+                "storage_head_failed", bucket=bucket, key=key, error=str(err)
+            )
+            raise
+
     def exists(self, bucket: str, key: str) -> bool:
         """Return True if the object exists"""
         if not key:
             raise ValueError("Storage key is required")
         try:
-            self.get_client().head_object(Bucket=bucket, Key=key)
+            self.head_object(bucket, key)
             return True
         except ClientError as err:
             code = str(err.response.get("Error", {}).get("Code", ""))

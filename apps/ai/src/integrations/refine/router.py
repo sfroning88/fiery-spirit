@@ -6,7 +6,6 @@ Core AI API orchestration
 
 from fastapi import APIRouter, Depends, Request
 from fiery_python import (
-    db_pool,
     dependency,
     error,
     logging,
@@ -108,7 +107,7 @@ async def refine_shards(request: Request, payload: RefineRequest) -> RefineRespo
             {
                 "func": RefineBackgroundJobs.background_refine_shards,
                 "args": (payload.contract_id, version.id),
-                "job_id": f"refine_source_{payload.contract_id}_{version.id}",
+                "job_id": f"refine_shards_{payload.contract_id}_{version.id}",
                 "job_timeout": 6000,
             }
         ]
@@ -126,8 +125,8 @@ async def refine_shards(request: Request, payload: RefineRequest) -> RefineRespo
             RefinePersistService.upsert_version(version)
 
         logger.error(
-            "refine_source_enqueue_failed",
+            "refine_shards_enqueue_failed",
             contract_id=payload.contract_id,
             error=str(err),
         )
-        raise error("Refine source failed", status_code=500)
+        raise error("Refine shards failed", status_code=500)
