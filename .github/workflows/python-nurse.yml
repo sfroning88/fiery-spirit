@@ -44,8 +44,9 @@ jobs:
       matrix:
         worker: ${{ fromJSON(needs.changes.outputs.workers) }}
     steps:
-      - uses: sfroning88/python-nurse@3317a6d4e69d16c2293fa18c6f6a4973a8bce683
+      - uses: sfroning88/python-nurse@35acbf37f25a91717207fe464a89f1adcc2b4cd9
         with:
           app-path: ${{ matrix.worker == 'python' && 'packages/python' || format('apps/{0}', matrix.worker) }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           score-preset: structure
+          vulture-ignore-names: request
