@@ -15,7 +15,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from fiery_python import config, exception, logging, middleware, limiter
 from core import health, lifespan
-from integrations import IngestRouter, RefineRouter
+from integrations import IngestRouter, RefineRouter, TrainRouter
 
 # Setup structured logging
 logging.setup_structured_logging()
@@ -44,6 +44,7 @@ app.add_middleware(SlowAPIMiddleware)
 app.include_router(health.router)
 app.include_router(IngestRouter.router)
 app.include_router(RefineRouter.router)
+app.include_router(TrainRouter.router)
 
 
 # Root endpoint

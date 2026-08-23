@@ -3,3 +3,6 @@
 
 # Hugging Face
 datasets>=4.0.0
+
+# Model training
+modal>=1.5.4

@@ -55,6 +55,17 @@ def test_put_bytes_forwards_metadata():
     )
 
 
+def test_head_object_returns_metadata():
+    client = MagicMock()
+    client.head_object.return_value = {
+        "Metadata": {"artifact-hmac-sha256": "abc"},
+    }
+    with patch.object(models_s3, "get_client", return_value=client):
+        obj = models_s3.head_object("models", "art.pkl")
+    client.head_object.assert_called_once_with(Bucket="models", Key="art.pkl")
+    assert obj["Metadata"]["artifact-hmac-sha256"] == "abc"
+
+
 def test_exists_false_on_missing_object():
     client = MagicMock()
     client.head_object.side_effect = ClientError(
