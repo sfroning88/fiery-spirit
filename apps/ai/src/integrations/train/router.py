@@ -140,7 +140,7 @@ async def train_spawn(request: Request, payload: TrainRequest) -> TrainResponse:
             cached=False,
         )
 
-    except error or Exception as err:
+    except Exception as err:
         if session is not None:
             session.status = TrainingStatus.FAILED
             session.error_message = str(err)

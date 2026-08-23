@@ -45,7 +45,7 @@ class TrainModalSpawn:
             raise error("No job spec was built")
         call_id, error_message = cls._spawn_modal_function(spec)
         if not call_id:
-            cls._fail_spawn(session, error_message)
+            cls._fail_spawn(session, error_message or "[system] uncaught spawn error")
             raise error("Modal spawn failed")
         return call_id
 

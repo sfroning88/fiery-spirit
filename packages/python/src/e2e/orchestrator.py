@@ -4,7 +4,7 @@ Author: Sean Froning
 Created Date: 8.22.2026
 Unified test orchestrator for worker pipelines
 
-Usage: python3 -m src.tests.orchestrator <workflow>
+Usage: python3 -m src.e2e.orchestrator <workflow>
 Workflows: ingest|refine|train|registry
 
 Notes:
