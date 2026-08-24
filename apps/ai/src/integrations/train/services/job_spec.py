@@ -8,6 +8,9 @@ from typing import Any, Dict, Optional
 from fiery_python import config, error
 from fiery_python import (
     DatasetVersion,
+    ModelTier,
+    ModelRole,
+    TrainingPrecision,
     TrainingTargetModules,
     TrainingHyperparameterLora,
     TrainingSession,
@@ -53,6 +56,9 @@ class TrainJobSpec:
                     "output": modules.output,
                 },
             },
-            "callback_url": f"{ai_api_url.rstrip('/')}/api/callbacks/train",
+            "callback_url": f"{ai_api_url.rstrip('/')}/api/callback/train",
             "nonce": nonce,
+            "tier": ModelTier.CLOUD.value,
+            "role": ModelRole.SCREENER.value,
+            "precision": TrainingPrecision.FP32.value,
         }

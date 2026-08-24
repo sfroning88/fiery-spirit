@@ -7,7 +7,10 @@ Unit tests for TrainJobSpec
 import pytest
 from fiery_python import (
     DatasetVersion,
+    ModelRole,
+    ModelTier,
     TrainingHyperparameterLora,
+    TrainingPrecision,
     TrainingSession,
     TrainingSignal,
     TrainingStage,
@@ -67,8 +70,11 @@ def test_build_lora_job_spec_payload(monkeypatch):
     assert spec["manifest_path"] == "contract-1/abc/manifest.json"
     assert spec["lora"]["id"] == "lora-1"
     assert spec["lora"]["target_modules"]["query"] is True
-    assert spec["callback_url"] == "https://ai.example/api/callbacks/train"
+    assert spec["callback_url"] == "https://ai.example/api/callback/train"
     assert spec["nonce"] == "nonce-1"
+    assert spec["tier"] == ModelTier.CLOUD.value
+    assert spec["role"] == ModelRole.SCREENER.value
+    assert spec["precision"] == TrainingPrecision.FP32.value
 
 
 def test_build_lora_job_spec_requires_api_url(monkeypatch):

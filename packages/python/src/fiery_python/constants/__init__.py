@@ -5,6 +5,7 @@ from .dataset import (
 )
 from .model import (
     MODEL_REGISTRY_SLOTS,
+    MODEL_DB_PAGE_SIZE,
     MODEL_TIER_ENUM,
     MODEL_ROLE_ENUM,
     MODEL_METRIC_NAME_ENUM,
@@ -71,6 +72,7 @@ __all__ = [
     "DATASET_VERSION_TABLE",
     "DATASET_BLOBS_BUCKET",
     "MODEL_REGISTRY_SLOTS",
+    "MODEL_DB_PAGE_SIZE",
     "MODEL_TIER_ENUM",
     "MODEL_ROLE_ENUM",
     "MODEL_METRIC_NAME_ENUM",

@@ -32,6 +32,28 @@ The trained `model` (`.pkl`) is persisted as a **self-consistent artifact** to `
 The `pickle` bundle contains the model itself, `job_spec`, and metadata.
 The `model` is logged via `model ModelArtifact` and queried by the `model_registry`.
 
+### Artifact Verification
+
+First, artifacts received in `/callback/train` check for **Body MAC:**
+
+```python
+secret = ModelStorageServices._artifact_hmac_secret()
+canonical = json.dumps(payload)
+expected = hmac.new(
+    secret, canonical.encode("utf-8"), hashlib.sha256
+).hexdigest()
+if not hmac.compare_digest(expected, request_hmac):
+    raise error
+```
+
+Second, artifacts received in `/callback/train` check for **Object HEAD:**
+
+```python
+stored = ModelStorageServices.head_hmac(storage_path)
+if not hmac.compare_digest(stored, signature):
+    raise error
+```
+
 ### Schema Versioning
 
 The `training_contract` is logged by database versioning:
