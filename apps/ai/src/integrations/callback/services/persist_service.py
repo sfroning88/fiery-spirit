@@ -5,13 +5,15 @@ Operations pertaining to Callback persistence
 """
 
 from psycopg2.extras import execute_values
-from typing import List
+from typing import List, Optional
 from fiery_python import db_pool, logging
 from fiery_python import (
+    PoolFetch,
     MODEL_DB_PAGE_SIZE,
     ModelArtifact,
     ModelMetric,
 )
+from ..queries.select_model_artifact import QUERY as SELECT_ARTIFACT
 from ..queries.upsert_model_artifact import QUERY as UPSERT_ARTIFACT
 from ..queries.upsert_model_metrics import (
     QUERY as UPSERT_METRICS,
@@ -23,6 +25,35 @@ logger = logging.get_logger(__name__)
 
 class CallbackPersistService:
     """Persist artifact, metrics"""
+
+    @staticmethod
+    def select_artifact(artifact_id: str) -> Optional[ModelArtifact]:
+        row = db_pool.run(
+            SELECT_ARTIFACT,
+            (artifact_id,),
+            fetch=PoolFetch.ONE,
+            error_event="fetch_model_artifact_failed",
+        )
+        if not row:
+            logger.warning("fetch_model_artifact_empty", artifact_id=artifact_id)
+            return None
+        return ModelArtifact(
+            id=artifact_id,
+            tier=row.get("tier"),
+            role=row.get("role"),
+            stage=row.get("stage"),
+            precision=row.get("precision"),
+            architecture=row.get("architecture"),
+            param_count=row.get("param_count"),
+            sparsity=row.get("sparsity"),
+            storage_path=row.get("storage_path"),
+            signature=row.get("signature"),
+            signed_at=row.get("signed_at"),
+            promoted=row.get("promoted"),
+            promoted_at=row.get("promoted_at"),
+            session_id=row.get("session_id"),
+            parent_id=row.get("parent_id"),
+        )
 
     @staticmethod
     def upsert_artifact(artifact: ModelArtifact) -> None:

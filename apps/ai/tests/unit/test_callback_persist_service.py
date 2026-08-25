@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 
 from fiery_python import (
     MODEL_DB_PAGE_SIZE,
+    PoolFetch,
     ModelArtifact,
     ModelMetric,
     ModelMetricName,
@@ -38,6 +39,52 @@ def _artifact() -> ModelArtifact:
         promoted=False,
         session_id="22222222-2222-2222-2222-222222222222",
     )
+
+
+def test_select_artifact_maps_row():
+    signed_at = datetime(2026, 8, 24, tzinfo=timezone.utc)
+    row = {
+        "tier": ModelTier.CLOUD.value,
+        "role": ModelRole.SCREENER.value,
+        "stage": TrainingStage.LORA.value,
+        "precision": TrainingPrecision.FP32.value,
+        "architecture": "vit-small",
+        "param_count": 22000000,
+        "sparsity": Decimal("0"),
+        "storage_path": "cloud/screener/art-1.pkl",
+        "signature": "a" * 64,
+        "signed_at": signed_at,
+        "promoted": False,
+        "promoted_at": None,
+        "session_id": "22222222-2222-2222-2222-222222222222",
+        "parent_id": None,
+    }
+    with patch(
+        "integrations.callback.services.persist_service.db_pool.run",
+        return_value=row,
+    ) as run:
+        artifact = CallbackPersistService.select_artifact("art-1")
+    assert run.call_args.args[1] == ("art-1",)
+    assert run.call_args.kwargs["fetch"] is PoolFetch.ONE
+    assert artifact.id == "art-1"
+    assert artifact.tier is ModelTier.CLOUD
+    assert artifact.role is ModelRole.SCREENER
+    assert artifact.stage is TrainingStage.LORA
+    assert artifact.precision is TrainingPrecision.FP32
+    assert artifact.architecture == "vit-small"
+    assert artifact.param_count == 22000000
+    assert artifact.storage_path == "cloud/screener/art-1.pkl"
+    assert artifact.session_id == "22222222-2222-2222-2222-222222222222"
+    assert artifact.promoted is False
+    assert artifact.parent_id is None
+
+
+def test_select_artifact_returns_none_when_empty():
+    with patch(
+        "integrations.callback.services.persist_service.db_pool.run",
+        return_value=None,
+    ):
+        assert CallbackPersistService.select_artifact("art-1") is None
 
 
 def test_upsert_artifact_passes_storage_dict():

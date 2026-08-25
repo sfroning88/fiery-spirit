@@ -122,7 +122,7 @@ async def callback_train(
 
         logger.error(
             "callback_train_failed",
-            session_id=session.id,
+            session_id=payload.session_id,
             error=str(err),
         )
         raise error("Callback train failed", status_code=500)
