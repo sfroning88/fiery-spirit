@@ -15,7 +15,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from fiery_python import config, exception, logging, middleware, limiter
 from core import health, lifespan
-from integrations import PredictionsRouter
+from integrations import InferenceRouter
 from ml import router as ModelsRouter
 
 # Setup structured logging
@@ -43,7 +43,7 @@ app.add_middleware(SlowAPIMiddleware)
 
 # Include routers
 app.include_router(health.router)
-app.include_router(PredictionsRouter.router)
+app.include_router(InferenceRouter.router)
 app.include_router(ModelsRouter.router)
 
 

@@ -6,7 +6,7 @@ Core backend API orchestration
 
 from fastapi import APIRouter, Depends, Request
 from fiery_python import dependency, error, logging
-from .schemas import PredictionRequest, PredictionResponse
+from .schemas import InferenceRequest, InferenceResponse
 
 logger = logging.get_logger(__name__)
 
@@ -16,30 +16,30 @@ router = APIRouter(
 )
 
 
-predictions_available: bool = False
+inference_available: bool = False
 try:
 
-    predictions_available = True
+    inference_available = True
 except ImportError as err:
-    predictions_available = False
+    inference_available = False
     logger.error("Failed to import Inference", error=str(err))
 except Exception as err:
-    predictions_available = False
-    logger.error("Failed to boot up Predictions", error=str(err))
+    inference_available = False
+    logger.error("Failed to boot up Inferences", error=str(err))
 
 
 @router.post("/predict", dependencies=[Depends(dependency.get_token_header)])
 async def model_predict(
-    request: Request, payload: PredictionRequest
-) -> PredictionResponse:
+    request: Request, payload: InferenceRequest
+) -> InferenceResponse:
     """Retrieve prediction(s) from the latest training batch"""
-    if not predictions_available:
-        raise error("Predictions service unavailable", status_code=503)
+    if not inference_available:
+        raise error("Inferences service unavailable", status_code=503)
 
     logging.bind_job_context(volcano_id=None)
     try:
         # code
-        return PredictionResponse()
+        return InferenceResponse()
     except ValueError as err:
         logger.warning("model_prediction_rejected", error=str(err))
         raise error(str(err), status_code=404)

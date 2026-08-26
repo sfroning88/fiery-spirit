@@ -63,3 +63,51 @@ The `training_contract` is logged by database versioning:
 - **`model ModelArtifact`** records each individual `model` artifact metadata
 
 This creates an **indisputable and reproducible** in-code control of each `session`.
+
+### Challenger Promotion
+
+Via **CRON Job** any new `challengers` are evaluated for promotion over an `incumbent`.
+The promotion can occur per `MODEL_REGISTRY_SLOT` from `/api/ml/promote`:
+
+```python
+MODEL_REGISTRY_SLOTS = [
+    (ModelTier.CLOUD, ModelRole.SCREENER),
+    (ModelTier.CLOUD, ModelRole.TEACHER),
+    (ModelTier.EDGE, ModelRole.STUDENT),
+]
+```
+
+First, the challenger must pass the `gate_check`:
+
+```python
+if not incumbent or challenger_metric_scores > incumbent_metric_scores:
+    promote(challenger)
+```
+
+Depending on the `MODEL_REGISTRY_SLOT`, different metrics are checked:
+
+```python
+match MODEL_REGISTRY_SLOT:
+    case (CLOUD, SCREENER):
+        metrics = [RECALL, ABSTENTION_RATE]
+    case (CLOUD, TEACHER):
+        metrics = [MACRO_F1_SCORE]
+    case (EDGE, STUDENT):
+        metrics = [ACCURACY]
+```
+
+Second, the challenger must pass the `budget_check`:
+
+```python
+if challenger is CLOUD:
+    return passed = True
+if (
+    flash_kb < flash_budget_kb
+    and peak_ram_kb < peak_ram_budget_kb
+    and macs < macs_budget
+):
+    return passed = True
+return passed = False
+```
+
+The logged `model ModelBudget` is persisted to record each individual evaluation.
