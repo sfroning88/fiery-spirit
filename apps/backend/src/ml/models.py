@@ -7,7 +7,7 @@ Inference-side in-memory model
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
 from pydantic import BaseModel
 from fiery_python import (
     ModelTier,
@@ -15,6 +15,19 @@ from fiery_python import (
     TrainingStage,
     TrainingPrecision,
 )
+
+
+class EvaluatedModel(BaseModel):
+    """In-memory representation of a evaluated model artifact"""
+
+    artifact_id: str
+    tier: ModelTier
+    role: ModelRole
+    evaluated_at: datetime
+    promoted: bool
+    promoted_at: Optional[datetime] = None
+    denied_reason: Optional[str] = None
+    ready: bool
 
 
 class LoadedModel(BaseModel):

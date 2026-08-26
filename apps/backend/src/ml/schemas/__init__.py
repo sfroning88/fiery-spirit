@@ -1,7 +1,9 @@
-from .requests import ModelRequest
-from .responses import ModelResponse
+from .requests import ModelPromoteRequest, ModelRefreshRequest
+from .responses import ModelPromoteResponse, ModelRefreshResponse
 
 __all__ = [
-    "ModelRequest",
-    "ModelResponse",
+    "ModelPromoteRequest",
+    "ModelRefreshRequest",
+    "ModelPromoteResponse",
+    "ModelRefreshResponse",
 ]

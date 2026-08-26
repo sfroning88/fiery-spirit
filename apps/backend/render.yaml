@@ -21,16 +21,35 @@ services:
     - key: AI_API_URL
       value: https://fiery-ai-api.onrender.com
       previewValue: https://fiery-ai-api-staging.onrender.com
-    - key: TRAINER_API_URL
-      value: https://fiery-trainer-api.modal.run
-      previewValue: https://fiery-trainer-api-staging.modal.run
     - key: JOB_DOMAIN
-      value: predictions
+      value: inference
+
+- type: cron
+  runtime: docker
+  name: fiery-backend-model-promote
+  schedule: "0 */6 * * *"
+  plan: free
+  dockerfilePath: apps/backend/Dockerfile
+  buildFilter:
+    paths:
+      - apps/backend/**
+      - packages/python/**
+  dockerCommand: python -m src.jobs.dispatch_model_promote
+  envVars:
+    - fromGroup: Fiery-Environment
+    - key: BACKEND_API_URL
+      value: https://fiery-backend-api.onrender.com
+      previewValue: https://fiery-backend-api-staging.onrender.com
+    - key: AI_API_URL
+      value: https://fiery-ai-api.onrender.com
+      previewValue: https://fiery-ai-api-staging.onrender.com
+    - key: JOB_DOMAIN
+      value: registry
 
 - type: cron
   runtime: docker
   name: fiery-backend-model-reload
-  schedule: "0 */6 * * *"
+  schedule: "30 */6 * * *"
   plan: free
   dockerfilePath: apps/backend/Dockerfile
   buildFilter:
@@ -46,8 +65,5 @@ services:
     - key: AI_API_URL
       value: https://fiery-ai-api.onrender.com
       previewValue: https://fiery-ai-api-staging.onrender.com
-    - key: TRAINER_API_URL
-      value: https://fiery-trainer-api.modal.run
-      previewValue: https://fiery-trainer-api-staging.modal.run
     - key: JOB_DOMAIN
-      value: predictions
+      value: registry

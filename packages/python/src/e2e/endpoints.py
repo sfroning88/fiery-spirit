@@ -45,9 +45,12 @@ TRAIN_PATH = "/api/train"
 TRAIN_URL = f"{AI_URL}{TRAIN_PATH}"
 
 
+# -- Model evaluator (served by apps/backend) --
+ML_PROMOTE_PATH = f"/api/ml/promote"
+ML_PROMOTE_URL = f"{BACKEND_URL}{ML_PROMOTE_PATH}"
+
 # -- Model registry (served by apps/backend) --
-ML_PATH = "/api/ml"
-ML_RELOAD_PATH = f"{ML_PATH}/reload"
+ML_RELOAD_PATH = f"/api/ml/reload"
 ML_RELOAD_URL = f"{BACKEND_URL}{ML_RELOAD_PATH}"
 
 

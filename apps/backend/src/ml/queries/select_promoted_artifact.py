@@ -22,7 +22,7 @@ QUERY = sql.SQL("""
         promoted,
         promoted_at,
         session_id::text,
-        parent_id
+        parent_id::text
     FROM {table}
     WHERE tier = %s::{tier_enum}
         AND role = %s::{role_enum}
