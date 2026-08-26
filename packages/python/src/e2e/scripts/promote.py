@@ -27,10 +27,11 @@ def run_promote_test() -> List[str]:
     artifact_ids: List[str] = []
     if evaluated_models:
         for evaluated_model in evaluated_models:
-            if evaluated_model.artifact_id:
-                artifact_ids.append(evaluated_model.id)
+            artifact_id = evaluated_model.get("artifact_id")
+            if artifact_id:
+                artifact_ids.append(artifact_id)
                 print(
-                    f"artifact_id={evaluated_model.id!r} promoted={evaluated_model.promoted or False}"
+                    f"artifact_id={artifact_id!r} promoted={evaluated_model.get("promoted", False)}"
                 )
 
     if not evaluated_models:

@@ -206,7 +206,7 @@ def test_run_records_unknown_slot_instead_of_dropping_it():
     upsert.assert_not_called()
 
 
-def test_run_promotes_winning_screener_and_demotes_incumbent():
+def test_run_promotes_winning_screener():
     challenger = _artifact()
     incumbent = _artifact(
         artifact_id="66666666-6666-6666-6666-666666666666",
@@ -245,14 +245,61 @@ def test_run_promotes_winning_screener_and_demotes_incumbent():
     assert results[0].promoted is True
     assert results[0].ready is False
     assert results[0].denied_reason is None
-    assert upsert_artifact.call_count == 2
-    demoted = upsert_artifact.call_args_list[0][0][0]
-    promoted = upsert_artifact.call_args_list[1][0][0]
-    assert demoted.id == incumbent.id
-    assert demoted.promoted is False
+    upsert_artifact.assert_called_once()
+    promoted = upsert_artifact.call_args[0][0]
     assert promoted.id == challenger.id
     assert promoted.promoted is True
+    assert incumbent.promoted is True
     upsert_budget.assert_not_called()
+
+
+def test_run_can_promote_multiple_challengers_without_demoting_incumbent():
+    first = _artifact()
+    second = _artifact(
+        artifact_id="99999999-9999-9999-9999-999999999999",
+        session_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    )
+    incumbent = _artifact(
+        artifact_id="66666666-6666-6666-6666-666666666666",
+        session_id="77777777-7777-7777-7777-777777777777",
+    )
+    incumbent.promoted = True
+    winning = [
+        _metric(ModelMetricName.RECALL, Decimal("0.90")),
+        _metric(ModelMetricName.ABSTENTION_RATE, Decimal("0.05")),
+    ]
+    incumbent_metrics = [
+        _metric(ModelMetricName.RECALL, Decimal("0.70")),
+        _metric(ModelMetricName.ABSTENTION_RATE, Decimal("0.10")),
+    ]
+
+    def fake_incumbent(key):
+        if key == SCREENER_KEY:
+            return incumbent
+        return None
+
+    def fake_metrics(artifact_id, limit=10):
+        if artifact_id == incumbent.id:
+            return incumbent_metrics
+        return winning
+
+    with (
+        patch.object(
+            _ModelEvaluator, "_fetch_challengers", return_value=[first, second]
+        ),
+        patch.object(_ModelEvaluator, "_fetch_incumbent", side_effect=fake_incumbent),
+        patch.object(_ModelEvaluator, "_fetch_metrics", side_effect=fake_metrics),
+        patch.object(_ModelEvaluator, "_upsert_artifact") as upsert_artifact,
+        patch.object(_ModelEvaluator, "_upsert_budget"),
+    ):
+        results = model_evaluator.run()
+
+    assert [row.promoted for row in results] == [True, True]
+    assert upsert_artifact.call_count == 2
+    upserted_ids = [call[0][0].id for call in upsert_artifact.call_args_list]
+    assert upserted_ids == [first.id, second.id]
+    assert all(call[0][0].promoted is True for call in upsert_artifact.call_args_list)
+    assert incumbent.promoted is True
 
 
 def test_run_denies_student_that_fails_budget_after_winning_gate():

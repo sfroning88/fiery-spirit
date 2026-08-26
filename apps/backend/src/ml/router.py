@@ -51,7 +51,7 @@ async def promote_artifact(
         for model in evaluated_models:
             if model.promoted:
                 key = (model.tier, model.role)
-                model_registry.load(key, force=True)
+                await run_in_threadpool(model_registry.load, key, force=True)
                 model.ready = model_registry.is_ready(key)
 
         return ModelPromoteResponse(evaluted_models=evaluated_models)

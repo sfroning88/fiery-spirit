@@ -31,7 +31,8 @@ QUERY = sql.SQL("""
     WHERE model_artifact.tier = %s::{tier_enum}
         AND model_artifact.role = %s::{role_enum}
         AND training_session.status = 'completed'::{status_enum}
-    ORDER BY model_artifact.created_at DESC
+        AND promoted = TRUE
+    ORDER BY model_artifact.promoted_at DESC
     LIMIT 1
 """).format(
     artifact_table=sql.Identifier(*MODEL_ARTIFACT_TABLE),

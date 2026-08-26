@@ -28,8 +28,7 @@ QUERY = sql.SQL("""
     FROM {artifact_table} model_artifact
     INNER JOIN {session_table} training_session
         ON model_artifact.session_id = training_session.id
-    WHERE model_artifact.id = %s::uuid
-        AND model_artifact.promoted = false
+    WHERE model_artifact.promoted = false
         AND training_session.status = 'completed'::{status_enum}
     ORDER BY model_artifact.created_at DESC
     LIMIT %s

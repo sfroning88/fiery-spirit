@@ -12,7 +12,6 @@ QUERY = sql.SQL("""
         artifact_id::text
     FROM {table}
     WHERE artifact_id = %s::uuid
-    LIMIT %s
 """).format(
     table=sql.Identifier(*MODEL_METRIC_TABLE),
     name_enum=sql.Identifier(*MODEL_METRIC_NAME_ENUM),

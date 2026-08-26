@@ -14,7 +14,6 @@ class ModelPromoteResponse(BaseModel):
     """Response model for promoting model artifact"""
 
     evaluated_models: List[EvaluatedModel]
-    promoted_model_ids: List[str]
 
 
 class ModelRefreshResponse(BaseModel):

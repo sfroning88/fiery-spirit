@@ -50,9 +50,9 @@ class _ModelEvaluator:
         challengers = cls._fetch_challengers(MODEL_DB_FETCH_SIZE)
         incumbents = {key: cls._fetch_incumbent(key) for key in MODEL_REGISTRY_SLOTS}
         incumbent_metrics = {
-            incumbent.id: cls._fetch_metrics(incumbent.id, MODEL_DB_FETCH_SIZE)
+            incumbent.id: cls._fetch_metrics(incumbent.id)
             for key, incumbent in incumbents.items()
-            if incumbents[key] and incumbent.id
+            if incumbents[key] and incumbent and incumbent.id
         }
         evaluated_at = datetime.now(timezone.utc)
         for challenger in challengers:
@@ -75,14 +75,6 @@ class _ModelEvaluator:
                         if cls._budget_check(challenger, evaluated_at):
                             promoted = True
                             promoted_at = evaluated_at
-                            if (
-                                incumbent
-                                and incumbent.id
-                                and incumbent.id != challenger.id
-                            ):
-                                incumbent.promoted = False
-                                incumbent.promoted_at = None
-                                cls._upsert_artifact(incumbent)
                             challenger.promoted = True
                             challenger.promoted_at = evaluated_at
                             cls._upsert_artifact(challenger)
@@ -96,6 +88,8 @@ class _ModelEvaluator:
                     artifact_id=challenger.id,
                     error=str(err),
                 )
+                promoted = False
+                promoted_at = None
                 denied_reason = str(err)
             evaluated_models.append(
                 EvaluatedModel(
@@ -120,7 +114,7 @@ class _ModelEvaluator:
         key = (challenger.tier, challenger.role)
         if not challenger.id:
             return False
-        challenger_metrics = cls._fetch_metrics(challenger.id, MODEL_DB_FETCH_SIZE)
+        challenger_metrics = cls._fetch_metrics(challenger.id)
         if not challenger_metrics:
             return False
         match key:
@@ -271,12 +265,10 @@ class _ModelEvaluator:
         )
 
     @staticmethod
-    def _fetch_metrics(
-        artifact_id: str, limit: int = MODEL_DB_FETCH_SIZE
-    ) -> List[ModelMetric]:
+    def _fetch_metrics(artifact_id: str) -> List[ModelMetric]:
         rows = db_pool.run(
             SELECT_METRICS,
-            (artifact_id, limit),
+            (artifact_id,),
             fetch=PoolFetch.ALL,
             error_event="fetch_model_metrics_failed",
         )
