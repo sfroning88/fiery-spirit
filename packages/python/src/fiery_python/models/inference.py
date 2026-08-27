@@ -40,7 +40,7 @@ class InferenceDeformation(BaseFiery):
 class InferenceSeismic(BaseFiery):
     """Normalized Inference Seismic"""
 
-    label: TrainingSeismicLabel
+    label: Optional[TrainingSeismicLabel] = None
     probabilities: List[Decimal]
     class_order: List[TrainingSeismicLabel]
     threshold_used: Decimal
@@ -76,7 +76,11 @@ class InferenceFeedback(BaseFiery):
         if not self.artifact_id:
             return None
         if self.interferogram_id and not self.seismic_event_id:
-            return UuidUtils.deterministic_uuid(self.artifact_id, self.interferogram_id)
+            return UuidUtils.deterministic_uuid(
+                self.artifact_id, self.interferogram_id, self.user_id
+            )
         if not self.interferogram_id and self.seismic_event_id:
-            return UuidUtils.deterministic_uuid(self.artifact_id, self.seismic_event_id)
+            return UuidUtils.deterministic_uuid(
+                self.artifact_id, self.seismic_event_id, self.user_id
+            )
         return None

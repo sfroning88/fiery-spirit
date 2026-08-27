@@ -13,5 +13,5 @@ class InferenceAbstainReason(str, Enum):
     LOW_COHERENCE = "low_coherence"
     LOW_SNR = "low_snr"
     TRANSFORM_REJECTED = "transform_rejected"
-    CONRACT_MISMATCH = "contract_mismatch"
+    CONTRACT_MISMATCH = "contract_mismatch"
     LOW_CONFIDENCE = "low_confidence"
