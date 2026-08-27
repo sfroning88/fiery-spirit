@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Created Date: 8.21.2026
+Created Date: 8.27.2026
 Main entrypoint for Fiery AI/ML API
 """
 
@@ -11,12 +11,90 @@ from typing import Dict
 sys.path.insert(0, str(Path(__file__)))
 
 from fiery_python import logging
+from fiery_python import ModelStorageServices
+from .build_loaders import build_loaders
+from .build_job import build_job
+from .train_model import train_model
+from .score_model import score_model
+from .send_callback import send_callback
 
 # Setup structured logging
 logging.setup_structured_logging()
 logger = logging.get_logger(__name__)
 
+_MAX_TRAINING_ATTEMPTS = 2
 
-# Training endpoint
+
+# Training deformation endpoint
 def train_deformation(spec: Dict) -> Dict:
-    return {"ok": True, "spec": spec}
+    storage_path = None
+    signature = None
+    param_count = None
+    architecture = None
+    metrics = None
+    for attempt in range(_MAX_TRAINING_ATTEMPTS):
+        try:
+            seed = spec["seed"]
+            if seed is None or not isinstance(seed, int):
+                raise RuntimeError("Missing seed from spec")
+            _seed(seed)
+            loaders = build_loaders(spec)
+            if not loaders or "train" not in loaders:
+                raise RuntimeError("Failed to load dataset")
+            model = build_job(spec)
+            if model is None:
+                raise RuntimeError("Failed to build model")
+            model = model.to("cuda")
+            train_model(model, loaders, spec)
+            metrics = score_model(spec, model, loaders)
+            if not metrics:
+                raise RuntimeError("Failed to score metrics")
+            architecture = "vit-small"
+            storage_path = f"{spec['tier']}/{spec['role']}/{spec['session_id']}.pkl"
+            payload = {
+                "model": model.cpu(),
+                "spec": spec,
+                "architecture": architecture,
+            }
+            ModelStorageServices.save(payload, storage_path)
+            signature = ModelStorageServices.head_hmac(storage_path)
+            param_count = sum(param.numel() for param in model.parameters())
+            break
+        except Exception as err:
+            logger.warning(
+                "train_deformation_failed",
+                spec=spec["session_id"],
+                attempt=attempt,
+                error=str(err),
+            )
+    if storage_path and signature and architecture and param_count and metrics:
+        send_callback(
+            spec,
+            storage_path=storage_path,
+            signature=signature,
+            param_count=param_count,
+            architecture=architecture,
+            metrics=metrics,
+        )
+        return {
+            "ok": True,
+            "spec": spec["session_id"],
+            "storage_path": spec["storage_path"],
+        }
+    else:
+        return {
+            "ok": False,
+            "spec": spec["session_id"],
+            "storage_path": spec["storage_path"],
+        }
+
+
+def _seed(seed: int) -> None:
+    import random
+    import numpy as np
+    import torch
+
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
