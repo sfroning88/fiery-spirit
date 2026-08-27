@@ -27,7 +27,9 @@ class CallbackVerifyArtifact:
         canonical = json.dumps(
             {
                 "architecture": payload.architecture,
+                "abstention_band": str(payload.abstention_band),
                 "nonce": payload.nonce or "",
+                "op_version": payload.op_version,
                 "param_count": payload.param_count,
                 "precision": payload.precision.value,
                 "role": payload.role.value,
@@ -35,7 +37,9 @@ class CallbackVerifyArtifact:
                 "signature": payload.signature,
                 "sparsity": str(payload.sparsity),
                 "storage_path": payload.storage_path,
+                "threshold": str(payload.threshold),
                 "tier": payload.tier.value,
+                "transform_hash": payload.transform_hash,
             },
             separators=(",", ":"),
             sort_keys=True,

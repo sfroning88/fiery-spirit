@@ -5,7 +5,10 @@ Inference-side cache of trained models
 """
 
 import threading
+import timm
+import torch.nn as nn
 from decimal import Decimal
+from peft import LoraConfig, get_peft_model
 from typing import Any, Dict, Optional, Tuple
 from fiery_python import db_pool, logging, SyncLazyResource
 from fiery_python import (
@@ -145,14 +148,14 @@ class _ModelRegistry:
 
     def _load_model_entry(
         self, row: Dict[str, Any], artifact_id: str
-    ) -> tuple[Optional[LoadedModel], Optional[Any]]:
+    ) -> tuple[Optional[LoadedModel], Optional[nn.Module]]:
         """Load one S3 artifact; returns (LoadedModel, artifact) or (None, None) on failure"""
         storage_path = str(row.get("storage_path")) if row.get("storage_path") else None
         if not storage_path:
             logger.error("missing required storage_path")
             return None, None
         try:
-            payload = ModelStorageServices.load(storage_path)
+            state_dict, sidecar = ModelStorageServices.load_artifact(storage_path)
         except Exception as err:
             logger.error(
                 "registry_load_failed",
@@ -160,6 +163,18 @@ class _ModelRegistry:
                 error=str(err),
             )
             return None, None
+        try:
+            model = self._materialize_screener(sidecar)
+            model.load_state_dict(state_dict, strict=True)
+            model.eval()
+        except Exception as err:
+            logger.error(
+                "registry_materialize_failed",
+                key=storage_path,
+                error=str(err),
+            )
+            return None, None
+        decision = sidecar.get("decision") or {}
         entry = LoadedModel(
             artifact_id=artifact_id,
             tier=ModelTier(row.get("tier")),
@@ -176,15 +191,36 @@ class _ModelRegistry:
             promoted_at=row.get("promoted_at"),
             session_id=str(row.get("session_id")),
             parent_id=str(row.get("parent_id")) if row.get("parent_id") else None,
+            preprocessing=decision,
         )
-        artifact = payload.get("model")
-        if artifact is None:
-            logger.error(
-                "registry_payload_missing_model",
-                key=storage_path,
-            )
-            return None, None
-        return entry, artifact
+        return entry, model
+
+    @staticmethod
+    def _materialize_screener(sidecar: dict) -> nn.Module:
+        lora = sidecar.get("lora") or (sidecar.get("spec") or {}).get("lora")
+        if not lora:
+            raise RuntimeError("sidecar missing lora")
+        modules = lora.get("target_modules") or {}
+        targets = []
+        if modules.get("query") or modules.get("key") or modules.get("value"):
+            targets.append("qkv")
+        if modules.get("output"):
+            targets.append("proj")
+        if not targets:
+            raise RuntimeError("Empty LoRA target modules")
+        backbone = timm.create_model(
+            sidecar.get("architecture") or "vit_small_patch16_224",
+            pretrained=True,
+            num_classes=2,
+        )
+        config = LoraConfig(
+            r=lora["rank"],
+            lora_alpha=lora["alpha"],
+            lora_dropout=lora["dropout"],
+            target_modules=targets,
+            bias="none",
+        )
+        return get_peft_model(backbone, config)
 
     @staticmethod
     def _fetch_promoted_artifact(

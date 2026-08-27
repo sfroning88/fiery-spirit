@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 from decimal import Decimal
 from typing import List, Optional, Tuple
 from fiery_python import (
+    STORAGE_OP_VERSION,
     ModelTier,
     ModelRole,
     ModelMetricName,
@@ -26,7 +27,7 @@ def score_model(
     spec: dict,
     model: nn.Module,
     loaders: dict[str, DataLoader],
-) -> List[ModelMetric]:
+) -> Tuple[List[ModelMetric], dict]:
     session_id = spec["session_id"]
     if not session_id or not isinstance(session_id, str):
         raise RuntimeError("Missing session_id from spec")
@@ -49,7 +50,7 @@ def score_model(
             ModelTier.CLOUD.value,
             ModelRole.SCREENER.value,
         ):
-            return _score_screener_model(model, loaders, artifact_id)
+            return _score_screener_model(model, loaders, artifact_id, spec)
         case (
             TrainingStage.PRETRAIN.value,
             ModelTier.CLOUD.value,
@@ -76,7 +77,8 @@ def _score_screener_model(
     model: nn.Module,
     loaders: dict[str, DataLoader],
     artifact_id: str,
-) -> List[ModelMetric]:
+    spec: dict,
+) -> Tuple[List[ModelMetric], dict]:
     device = next(model.parameters()).device
     model.eval()
     validate = loaders.get(TrainingSplit.VALIDATE.value)
@@ -90,13 +92,27 @@ def _score_screener_model(
         if not loader:
             continue
         probs, labels = _collect_positive_probs(model, loader, device)
-        recall, abstention_rate = _screener_scores(probs, labels, threshold)
+        recall, precision, fpr, abstention_rate = _screener_scores(
+            probs, labels, threshold
+        )
         metrics.extend(
             [
                 ModelMetric(
                     name=ModelMetricName.RECALL,
                     split=split,
                     value=Decimal(str(round(recall, 6))),
+                    artifact_id=artifact_id,
+                ),
+                ModelMetric(
+                    name=ModelMetricName.PRECISION,
+                    split=split,
+                    value=Decimal(str(round(precision, 6))),
+                    artifact_id=artifact_id,
+                ),
+                ModelMetric(
+                    name=ModelMetricName.FALSE_POSITIVE_RATE,
+                    split=split,
+                    value=Decimal(str(round(fpr, 6))),
                     artifact_id=artifact_id,
                 ),
                 ModelMetric(
@@ -109,7 +125,16 @@ def _score_screener_model(
         )
     if not metrics:
         raise RuntimeError("Missing test or holdout loader")
-    return metrics
+    transform_hash = spec["shard_prefix"].rstrip("/").rsplit("/", 1)[-1]
+    if not transform_hash or not isinstance(transform_hash, str):
+        raise RuntimeError("Invalid compiled transform_hash")
+    decision = {
+        "threshold": round(threshold, 5),
+        "abstention_band": "0.00000",
+        "transform_hash": transform_hash,
+        "op_version": STORAGE_OP_VERSION,
+    }
+    return metrics, decision
 
 
 def _collect_positive_probs(
@@ -132,28 +157,21 @@ def _collect_positive_probs(
 
 def _screener_scores(
     probs: Tensor, labels: Tensor, threshold: float
-) -> Tuple[float, float]:
+) -> Tuple[float, float, float, float]:
     predicted_positive = probs >= threshold
     num_labels = int(labels.numel())
     if num_labels == 0:
         raise RuntimeError("Empty split while scoring")
     abstention_rate = float((~predicted_positive).sum().item()) / num_labels
     positives = int((labels == 1).sum().item())
-    if positives == 0:
-        recall = 0.0
-    else:
-        true_positive = int(((labels == 1) & predicted_positive).sum().item())
-        recall = true_positive / positives
-    return recall, abstention_rate
-
-
-def _committed_precision(probs: Tensor, labels: Tensor, threshold: float) -> float:
-    predicted_positive = probs >= threshold
-    predicted_count = int(predicted_positive.sum().item())
-    if predicted_count == 0:
-        return 0.0
+    negatives = int((labels == 0).sum().item())
     true_positive = int(((labels == 1) & predicted_positive).sum().item())
-    return true_positive / predicted_count
+    false_positive = int(((labels == 0) & predicted_positive).sum().item())
+    predicted_count = int(predicted_positive.sum().item())
+    recall = 0.0 if positives == 0 else true_positive / positives
+    precision = 0.0 if predicted_count == 0 else true_positive / predicted_count
+    fpr = 0.0 if negatives == 0 else false_positive / negatives
+    return recall, precision, fpr, abstention_rate
 
 
 def _tune_screener_threshold(probs: Tensor, labels: Tensor) -> float:
@@ -164,8 +182,9 @@ def _tune_screener_threshold(probs: Tensor, labels: Tensor) -> float:
     fallback = (float("-inf"), float("-inf"), float("inf"), 0.50)
     for threshold in candidates:
         value = float(threshold)
-        recall, abstention_rate = _screener_scores(probs, labels, value)
-        precision = _committed_precision(probs, labels, value)
+        recall, precision, _fpr, abstention_rate = _screener_scores(
+            probs, labels, value
+        )
         if precision >= _SCREENER_MIN_PRECISION:
             candidate = (recall, abstention_rate, value)
             if (

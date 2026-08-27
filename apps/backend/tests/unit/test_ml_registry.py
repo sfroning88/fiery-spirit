@@ -24,10 +24,10 @@ def _artifact_row(**overrides):
         "role": ModelRole.SCREENER.value,
         "stage": TrainingStage.LORA.value,
         "precision": TrainingPrecision.FP32.value,
-        "architecture": "vit-small",
+        "architecture": "vit_small_patch16_224",
         "param_count": 22_000_000,
         "sparsity": "0.0",
-        "storage_path": "models/cloud/screener/art-1.pt",
+        "storage_path": "cloud/screener/art-1.safetensors",
         "signature": "sig-art-1",
         "signed_at": NOW,
         "promoted": True,
@@ -46,10 +46,10 @@ def _loaded(artifact_id: str = "art-1") -> LoadedModel:
         role=ModelRole.SCREENER,
         stage=TrainingStage.LORA,
         precision=TrainingPrecision.FP32,
-        architecture="vit-small",
+        architecture="vit_small_patch16_224",
         param_count=22_000_000,
         sparsity=Decimal("0.0"),
-        storage_path="models/cloud/screener/art-1.pt",
+        storage_path="cloud/screener/art-1.safetensors",
         signature="sig-art-1",
         signed_at=NOW,
         promoted=True,
@@ -209,8 +209,8 @@ def test_load_caches_model_and_metadata():
     metadata = registry.get_metadata(KEY)
     assert metadata["tier"] == ModelTier.CLOUD
     assert metadata["role"] == ModelRole.SCREENER
-    assert metadata["architecture"] == "vit-small"
-    assert metadata["storage_path"] == "models/cloud/screener/art-1.pt"
+    assert metadata["architecture"] == "vit_small_patch16_224"
+    assert metadata["storage_path"] == "cloud/screener/art-1.safetensors"
     assert metadata["signature"] == "sig-art-1"
     assert metadata["promoted"] is True
     assert metadata["session_id"] == "session-1"
@@ -241,7 +241,7 @@ def test_load_model_entry_returns_none_when_storage_load_fails():
     registry = _ModelRegistry()
 
     with patch(
-        "ml.registry.ModelStorageServices.load",
+        "ml.registry.ModelStorageServices.load_artifact",
         side_effect=RuntimeError("s3 unavailable"),
     ):
         entry, artifact = registry._load_model_entry(_artifact_row(), "art-1")
@@ -250,10 +250,22 @@ def test_load_model_entry_returns_none_when_storage_load_fails():
     assert artifact is None
 
 
-def test_load_model_entry_returns_none_when_payload_missing_model():
+def test_load_model_entry_returns_none_when_materialize_fails():
     registry = _ModelRegistry()
+    state_dict = {"weight": object()}
+    sidecar = {"lora": {"rank": 8, "alpha": 16, "dropout": 0.1, "target_modules": {}}}
 
-    with patch("ml.registry.ModelStorageServices.load", return_value={}):
+    with (
+        patch(
+            "ml.registry.ModelStorageServices.load_artifact",
+            return_value=(state_dict, sidecar),
+        ),
+        patch.object(
+            registry,
+            "_materialize_screener",
+            side_effect=RuntimeError("sidecar missing lora"),
+        ),
+    ):
         entry, artifact = registry._load_model_entry(_artifact_row(), "art-1")
 
     assert entry is None
@@ -264,21 +276,43 @@ def test_load_model_entry_builds_loaded_model():
     registry = _ModelRegistry()
     artifact = MagicMock(name="weights")
     row = _artifact_row(parent_id="parent-9")
+    state_dict = {"weight": object()}
+    sidecar = {
+        "architecture": "vit_small_patch16_224",
+        "lora": {
+            "rank": 8,
+            "alpha": 16,
+            "dropout": 0.1,
+            "target_modules": {"query": True, "output": True},
+        },
+        "decision": {
+            "threshold": 0.5,
+            "abstention_band": "0.00000",
+            "transform_hash": "a" * 64,
+            "op_version": 1,
+        },
+    }
 
-    with patch(
-        "ml.registry.ModelStorageServices.load",
-        return_value={"model": artifact},
+    with (
+        patch(
+            "ml.registry.ModelStorageServices.load_artifact",
+            return_value=(state_dict, sidecar),
+        ),
+        patch.object(registry, "_materialize_screener", return_value=artifact),
     ):
         entry, loaded = registry._load_model_entry(row, "art-1")
 
+    artifact.load_state_dict.assert_called_once_with(state_dict, strict=True)
+    artifact.eval.assert_called_once()
     assert loaded is artifact
     assert entry is not None
     assert entry.artifact_id == "art-1"
     assert entry.parent_id == "parent-9"
     assert entry.param_count == 22_000_000
     assert entry.sparsity == Decimal("0.0")
-    assert entry.storage_path == "models/cloud/screener/art-1.pt"
+    assert entry.storage_path == "cloud/screener/art-1.safetensors"
     assert entry.signature == "sig-art-1"
     assert entry.signed_at == NOW
     assert entry.promoted is True
     assert entry.session_id == "session-1"
+    assert entry.preprocessing["threshold"] == 0.5

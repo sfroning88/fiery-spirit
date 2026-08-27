@@ -30,10 +30,10 @@ def _payload(**overrides) -> CallbackRequest:
         "tier": ModelTier.CLOUD,
         "role": ModelRole.SCREENER,
         "precision": TrainingPrecision.FP32,
-        "storage_path": "cloud/screener/art-1.pkl",
+        "storage_path": "cloud/screener/art-1.safetensors",
         "signature": "b" * 64,
         "param_count": 22000000,
-        "architecture": "vit-small",
+        "architecture": "vit_small_patch16_224",
         "sparsity": Decimal("0"),
         "metrics": [
             ModelMetric(
@@ -44,6 +44,10 @@ def _payload(**overrides) -> CallbackRequest:
             )
         ],
         "nonce": "nonce-1",
+        "threshold": Decimal("0.5"),
+        "abstention_band": Decimal("0.00000"),
+        "transform_hash": "a" * 64,
+        "op_version": 1,
     }
     data.update(overrides)
     return CallbackRequest(**data)
@@ -53,7 +57,9 @@ def _body_hmac(payload: CallbackRequest, secret: bytes) -> str:
     canonical = json.dumps(
         {
             "architecture": payload.architecture,
+            "abstention_band": str(payload.abstention_band),
             "nonce": payload.nonce or "",
+            "op_version": payload.op_version,
             "param_count": payload.param_count,
             "precision": payload.precision.value,
             "role": payload.role.value,
@@ -61,7 +67,9 @@ def _body_hmac(payload: CallbackRequest, secret: bytes) -> str:
             "signature": payload.signature,
             "sparsity": str(payload.sparsity),
             "storage_path": payload.storage_path,
+            "threshold": str(payload.threshold),
             "tier": payload.tier.value,
+            "transform_hash": payload.transform_hash,
         },
         separators=(",", ":"),
         sort_keys=True,
@@ -115,9 +123,9 @@ def test_verify_object_metadata_accepts_matching_head():
         return_value="b" * 64,
     ) as head_hmac:
         CallbackVerifyArtifact.verify_object_metadata(
-            "cloud/screener/art-1.pkl", "b" * 64
+            "cloud/screener/art-1.safetensors", "b" * 64
         )
-    head_hmac.assert_called_once_with("cloud/screener/art-1.pkl")
+    head_hmac.assert_called_once_with("cloud/screener/art-1.safetensors")
 
 
 def test_verify_object_metadata_raises_when_object_missing():
@@ -127,7 +135,7 @@ def test_verify_object_metadata_raises_when_object_missing():
     ):
         with pytest.raises(AppError, match="Artifact object not found") as err:
             CallbackVerifyArtifact.verify_object_metadata(
-                "cloud/screener/art-1.pkl", "b" * 64
+                "cloud/screener/art-1.safetensors", "b" * 64
             )
     assert err.value.status_code == 403
 
@@ -139,6 +147,6 @@ def test_verify_object_metadata_raises_when_digest_mismatch():
     ):
         with pytest.raises(AppError, match="artifact-hmac-sha256") as err:
             CallbackVerifyArtifact.verify_object_metadata(
-                "cloud/screener/art-1.pkl", "b" * 64
+                "cloud/screener/art-1.safetensors", "b" * 64
             )
     assert err.value.status_code == 403

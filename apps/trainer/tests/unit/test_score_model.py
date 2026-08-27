@@ -12,6 +12,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 from fiery_python import (
+    STORAGE_OP_VERSION,
     ModelMetricName,
     ModelRole,
     ModelTier,
@@ -51,6 +52,7 @@ def _score_spec(**overrides) -> dict:
         "stage": TrainingStage.LORA.value,
         "tier": ModelTier.CLOUD.value,
         "role": ModelRole.SCREENER.value,
+        "shard_prefix": "contract-1/" + ("a" * 64) + "/",
     }
     data.update(overrides)
     return data
@@ -85,16 +87,20 @@ def test_score_model_rejects_unimplemented_slots():
 def test_screener_scores_counts_abstain_as_miss():
     probs = torch.tensor([0.9, 0.1, 0.8])
     labels = torch.tensor([1, 1, 0])
-    recall, abstention = _screener_scores(probs, labels, 0.5)
+    recall, precision, fpr, abstention = _screener_scores(probs, labels, 0.5)
     assert recall == pytest.approx(0.5)
+    assert precision == pytest.approx(0.5)
+    assert fpr == pytest.approx(1.0)
     assert abstention == pytest.approx(1 / 3)
 
 
 def test_screener_scores_zero_recall_without_positives():
     probs = torch.tensor([0.2, 0.1])
     labels = torch.tensor([0, 0])
-    recall, abstention = _screener_scores(probs, labels, 0.5)
+    recall, precision, fpr, abstention = _screener_scores(probs, labels, 0.5)
     assert recall == 0.0
+    assert precision == 0.0
+    assert fpr == pytest.approx(0.0)
     assert abstention == pytest.approx(1.0)
 
 
@@ -107,7 +113,7 @@ def test_tune_screener_threshold_keeps_lowest_when_precision_already_holds():
     probs = torch.tensor([0.9, 0.9, 0.2])
     labels = torch.tensor([1, 1, 0])
     threshold = _tune_screener_threshold(probs, labels)
-    recall, _abstention = _screener_scores(probs, labels, threshold)
+    recall, _precision, _fpr, _abstention = _screener_scores(probs, labels, threshold)
     assert recall == pytest.approx(1.0)
     assert threshold == pytest.approx(0.50)
 
@@ -117,7 +123,7 @@ def test_tune_screener_threshold_raises_until_precision_floor():
     labels = torch.tensor([1, 1, 0])
     threshold = _tune_screener_threshold(probs, labels)
     assert threshold > 0.62
-    recall, _abstention = _screener_scores(probs, labels, threshold)
+    recall, _precision, _fpr, _abstention = _screener_scores(probs, labels, threshold)
     assert recall == pytest.approx(1.0)
 
 
@@ -127,17 +133,24 @@ def test_score_model_emits_recall_and_abstention_for_test_and_holdout():
         TrainingSplit.TEST.value: _loader([1, 1, 0]),
         TrainingSplit.HOLDOUT.value: _loader([1, 0]),
     }
-    metrics = score_model(_score_spec(), _ConstLogits(10.0), loaders)
+    metrics, decision = score_model(_score_spec(), _ConstLogits(10.0), loaders)
     artifact_id = UuidUtils.deterministic_uuid("sess-1")
     names = {(metric.name, metric.split) for metric in metrics}
     assert names == {
         (ModelMetricName.RECALL, TrainingSplit.TEST),
+        (ModelMetricName.PRECISION, TrainingSplit.TEST),
+        (ModelMetricName.FALSE_POSITIVE_RATE, TrainingSplit.TEST),
         (ModelMetricName.ABSTENTION_RATE, TrainingSplit.TEST),
         (ModelMetricName.RECALL, TrainingSplit.HOLDOUT),
+        (ModelMetricName.PRECISION, TrainingSplit.HOLDOUT),
+        (ModelMetricName.FALSE_POSITIVE_RATE, TrainingSplit.HOLDOUT),
         (ModelMetricName.ABSTENTION_RATE, TrainingSplit.HOLDOUT),
     }
     assert all(metric.artifact_id == artifact_id for metric in metrics)
     assert all(isinstance(metric.value, Decimal) for metric in metrics)
+    assert decision["transform_hash"] == "a" * 64
+    assert decision["op_version"] == STORAGE_OP_VERSION
+    assert decision["abstention_band"] == "0.00000"
 
 
 def test_score_model_requires_validate_loader():
@@ -159,7 +172,7 @@ def test_score_model_requires_test_or_holdout():
 
 
 def test_score_model_dispatches_screener():
-    expected = [object()]
+    expected = ([object()], {"op_version": 1})
     with patch("src.score_model._score_screener_model", return_value=expected) as score:
         result = score_model(_score_spec(), _ConstLogits(1.0), {})
     assert result is expected

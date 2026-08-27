@@ -32,31 +32,38 @@ def train_deformation(spec: Dict) -> Dict:
     param_count = None
     architecture = None
     metrics = None
+    decision = None
     for attempt in range(_MAX_TRAINING_ATTEMPTS):
         try:
             seed = spec["seed"]
             if seed is None or not isinstance(seed, int):
                 raise RuntimeError("Missing seed from spec")
             _seed(seed)
+            storage_path = (
+                f"{spec['tier']}/{spec['role']}/{spec['session_id']}.safetensors"
+            )
             loaders = build_loaders(spec)
             if not loaders or "train" not in loaders:
-                raise RuntimeError("Failed to load dataset")
+                raise RuntimeError("Failed to build dataset")
             model = build_job(spec)
             if model is None:
-                raise RuntimeError("Failed to build model")
+                raise RuntimeError("Failed to build job")
             model = model.to("cuda")
             train_model(model, loaders, spec)
-            metrics = score_model(spec, model, loaders)
-            if not metrics:
-                raise RuntimeError("Failed to score metrics")
-            architecture = "vit-small"
-            storage_path = f"{spec['tier']}/{spec['role']}/{spec['session_id']}.pkl"
-            payload = {
-                "model": model.cpu(),
-                "spec": spec,
+            metrics, decision = score_model(spec, model, loaders)
+            if not metrics or not decision:
+                raise RuntimeError("Failed to score model")
+            architecture = "vit_small_patch16_224"
+            cpu_model = model.cpu()
+            sidecar = {
                 "architecture": architecture,
+                "spec": spec,
+                "decision": decision,
+                "lora": spec["lora"],
             }
-            ModelStorageServices.save(payload, storage_path)
+            ModelStorageServices.save_artifact(
+                cpu_model.state_dict(), sidecar, storage_path
+            )
             signature = ModelStorageServices.head_hmac(storage_path)
             param_count = sum(param.numel() for param in model.parameters())
             break
@@ -67,7 +74,14 @@ def train_deformation(spec: Dict) -> Dict:
                 attempt=attempt,
                 error=str(err),
             )
-    if storage_path and signature and architecture and param_count and metrics:
+    if (
+        storage_path
+        and signature
+        and architecture
+        and param_count
+        and metrics
+        and decision
+    ):
         send_callback(
             spec,
             storage_path=storage_path,
@@ -75,6 +89,7 @@ def train_deformation(spec: Dict) -> Dict:
             param_count=param_count,
             architecture=architecture,
             metrics=metrics,
+            decision=decision,
         )
         return {
             "ok": True,

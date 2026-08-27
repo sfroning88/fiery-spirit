@@ -53,8 +53,8 @@ def train_deformation(spec):
     model = build_job(spec)
     model = model.to("cuda")
     train_model(model, loaders, spec)
-    metrics = score_model(spec, model, loaders)
-    save(payload, storage_path)
+    metrics, decision = score_model(spec, model, loaders)
+    save_artifact(state_dict, sidecar, storage_path)
     signature = head_hmac(storage_path)
     send_callback(spec, payload)
 ```
@@ -67,7 +67,8 @@ For applying `Low-Rank Adaption (LoRA)` with `AdamW`:
 def train_lora_model(model, loader, lora):
     model.train()
     optimizer = torch.optim.AdamW(
-        model.parameters(), learning_rate
+        (param for param in model.parameters() if param.requires_grad),
+        learning_rate
     )
     loss_fn = nn.CrossEntropyLoss()
     for _ in range(epochs):
@@ -80,8 +81,8 @@ def train_lora_model(model, loader, lora):
 
 ### Artifact Persistence
 
-The trained `model` (`.pkl`) is persisted as a **self-consistent artifact** to `s3`.
-The `pickle` bundle contains the model itself, `job_spec`, and metadata.
+The trained `model` (`.safetensors`) is persisted with a JSON sidecar (`decision`, `lora`, `spec`) to `s3`.
+`ModelStorageServices.save_artifact` writes weights plus sidecar; `head_hmac` is taken on the weights key.
 The `model` is logged via `model ModelArtifact` and queried by the `model_registry`.
 
 ### Artifact Verification
@@ -90,7 +91,26 @@ First, artifacts received in `/callback/train` check for **Body MAC:**
 
 ```python
 secret = ModelStorageServices._artifact_hmac_secret()
-canonical = json.dumps(payload)
+canonical = json.dumps(
+    {
+        "architecture",
+        "abstention_band",
+        "nonce",
+        "op_version",
+        "param_count",
+        "precision",
+        "role",
+        "session_id",
+        "signature",
+        "sparsity",
+        "storage_path",
+        "threshold",
+        "tier",
+        "transform_hash",
+    },
+    separators=(",", ":"),
+    sort_keys=True,
+)
 expected = hmac.new(
     secret, canonical.encode("utf-8"), hashlib.sha256
 ).hexdigest()
@@ -143,11 +163,11 @@ Depending on the `MODEL_REGISTRY_SLOT`, different metrics are checked:
 ```python
 match MODEL_REGISTRY_SLOT:
     case (CLOUD, SCREENER):
-        metrics = [RECALL, ABSTENTION_RATE]
+        _screener_gate # RECALL, PRECISION, FALSE_POSITIVE_RATE
     case (CLOUD, TEACHER):
-        metrics = [MACRO_F1_SCORE]
+        _teacher_gate # MACRO_F1_SCORE
     case (EDGE, STUDENT):
-        metrics = [ACCURACY]
+        _student_gate # ACCURACY
 ```
 
 Second, the challenger must pass the `budget_check`:

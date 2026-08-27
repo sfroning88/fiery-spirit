@@ -23,6 +23,7 @@ def send_callback(
     param_count: int,
     architecture: str,
     metrics: List[ModelMetric],
+    decision: dict,
 ) -> None:
     import hashlib
     import hmac
@@ -45,11 +46,17 @@ def send_callback(
         "sparsity": "0",
         "metrics": [metric.model_dump(mode="json") for metric in metrics],
         "nonce": spec.get("nonce") or "",
+        "threshold": decision["threshold"],
+        "abstention_band": decision["abstention_band"],
+        "transform_hash": decision["transform_hash"],
+        "op_version": decision["op_version"],
     }
     canonical = json.dumps(
         {
             "architecture": architecture,
+            "abstention_band": str(decision["abstention_band"]),
             "nonce": spec.get("nonce") or "",
+            "op_version": decision["op_version"],
             "param_count": param_count,
             "precision": spec["precision"],
             "role": spec["role"],
@@ -57,7 +64,9 @@ def send_callback(
             "signature": signature,
             "sparsity": "0",
             "storage_path": storage_path,
+            "threshold": str(decision["threshold"]),
             "tier": spec["tier"],
+            "transform_hash": decision["transform_hash"],
         },
         separators=(",", ":"),
         sort_keys=True,
