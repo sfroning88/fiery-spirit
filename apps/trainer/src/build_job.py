@@ -31,7 +31,7 @@ def build_job(spec: dict) -> Optional[nn.Module]:
 
 def _build_lora_job(lora: dict) -> Optional[PeftModel]:
     import timm
-    from peft import LoraConfig, TaskType, get_peft_model
+    from peft import LoraConfig, get_peft_model
 
     targets = _peft_targets(lora["target_modules"])
     if not targets:
@@ -47,7 +47,6 @@ def _build_lora_job(lora: dict) -> Optional[PeftModel]:
         lora_dropout=lora["dropout"],
         target_modules=targets,
         bias="none",
-        task_type=TaskType.FEATURE_EXTRACTION,
     )
     return get_peft_model(backbone, config)
 

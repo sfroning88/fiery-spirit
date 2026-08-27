@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from fiery_python import TrainingStage
-from src.model import _peft_targets, build_job
+from src.build_job import _peft_targets, build_job
 
 
 def _lora(**overrides) -> dict:

@@ -19,7 +19,7 @@ from fiery_python import (
     TrainingPrecision,
     TrainingSplit,
 )
-from src.callback import send_callback
+from src.send_callback import send_callback
 
 
 def _metrics() -> list[ModelMetric]:
@@ -112,7 +112,7 @@ def test_send_callback_retries_then_succeeds():
             return_value=secret,
         ),
         patch("httpx.post", side_effect=[failed, ok]) as post,
-        patch("src.callback.time.sleep") as sleep,
+        patch("src.send_callback.time.sleep") as sleep,
     ):
         send_callback(
             _spec(),

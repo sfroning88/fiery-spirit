@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch import Tensor, device
 from torch.utils.data import DataLoader
 from decimal import Decimal
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from fiery_python import (
     ModelTier,
     ModelRole,
@@ -18,6 +18,8 @@ from fiery_python import (
     ModelMetric,
     UuidUtils,
 )
+
+_SCREENER_MIN_PRECISION = 0.80
 
 
 def score_model(
@@ -145,16 +147,36 @@ def _screener_scores(
     return recall, abstention_rate
 
 
+def _committed_precision(probs: Tensor, labels: Tensor, threshold: float) -> float:
+    predicted_positive = probs >= threshold
+    predicted_count = int(predicted_positive.sum().item())
+    if predicted_count == 0:
+        return 0.0
+    true_positive = int(((labels == 1) & predicted_positive).sum().item())
+    return true_positive / predicted_count
+
+
 def _tune_screener_threshold(probs: Tensor, labels: Tensor) -> float:
     import torch
 
     candidates = torch.linspace(0.50, 0.95, steps=10)
-    best = (float("-inf"), float("inf"), 0.50)
+    feasible: Optional[Tuple[float, float, float]] = None
+    fallback = (float("-inf"), float("-inf"), float("inf"), 0.50)
     for threshold in candidates:
-        recall, abstention_rate = _screener_scores(probs, labels, threshold)
-        candidate = (recall, abstention_rate, float(threshold))
-        if candidate[0] > best[0] or (
-            candidate[0] == best[0] and candidate[1] < best[1]
-        ):
-            best = candidate
-    return best[2]
+        value = float(threshold)
+        recall, abstention_rate = _screener_scores(probs, labels, value)
+        precision = _committed_precision(probs, labels, value)
+        if precision >= _SCREENER_MIN_PRECISION:
+            candidate = (recall, abstention_rate, value)
+            if (
+                feasible is None
+                or candidate[0] > feasible[0]
+                or (candidate[0] == feasible[0] and candidate[1] < feasible[1])
+            ):
+                feasible = candidate
+        ranked = (precision, recall, -abstention_rate, value)
+        if ranked[:-1] > fallback[:-1]:
+            fallback = ranked
+    if feasible is not None:
+        return feasible[2]
+    return fallback[3]

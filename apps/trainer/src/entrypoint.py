@@ -5,8 +5,6 @@ Main entrypoint for Fiery AI/ML API
 """
 
 import sys
-import torch.nn as nn
-from torch.utils.data import DataLoader
 from pathlib import Path
 from typing import Dict
 
@@ -14,10 +12,11 @@ sys.path.insert(0, str(Path(__file__)))
 
 from fiery_python import logging
 from fiery_python import ModelStorageServices
-from .callback import send_callback
-from .data import build_loaders
-from .evaluate import score_model
-from .model import build_job
+from .build_loaders import build_loaders
+from .build_job import build_job
+from .train_model import train_model
+from .score_model import score_model
+from .send_callback import send_callback
 
 # Setup structured logging
 logging.setup_structured_logging()
@@ -36,7 +35,7 @@ def train_deformation(spec: Dict) -> Dict:
     for attempt in range(_MAX_TRAINING_ATTEMPTS):
         try:
             seed = spec["seed"]
-            if not seed or not isinstance(seed, int):
+            if seed is None or not isinstance(seed, int):
                 raise RuntimeError("Missing seed from spec")
             _seed(seed)
             loaders = build_loaders(spec)
@@ -46,12 +45,12 @@ def train_deformation(spec: Dict) -> Dict:
             if model is None:
                 raise RuntimeError("Failed to build model")
             model = model.to("cuda")
-            _train_lora_model(model, loaders["train"], spec["lora"])
+            train_model(model, loaders, spec)
             metrics = score_model(spec, model, loaders)
             if not metrics:
                 raise RuntimeError("Failed to score metrics")
             architecture = "vit-small"
-            storage_path = f"{spec["tier"]}/{spec["role"]}/{spec["session_id"]}.pkl"
+            storage_path = f"{spec['tier']}/{spec['role']}/{spec['session_id']}.pkl"
             payload = {
                 "model": model.cpu(),
                 "spec": spec,
@@ -77,11 +76,17 @@ def train_deformation(spec: Dict) -> Dict:
             architecture=architecture,
             metrics=metrics,
         )
-    return {
-        "ok": True,
-        "spec": spec["session_id"],
-        "storage_path": spec["storage_path"],
-    }
+        return {
+            "ok": True,
+            "spec": spec["session_id"],
+            "storage_path": spec["storage_path"],
+        }
+    else:
+        return {
+            "ok": False,
+            "spec": spec["session_id"],
+            "storage_path": spec["storage_path"],
+        }
 
 
 def _seed(seed: int) -> None:
@@ -93,23 +98,3 @@ def _seed(seed: int) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-
-
-def _train_lora_model(model: nn.Module, loader: DataLoader, lora: dict) -> None:
-    import torch
-
-    device = next(model.parameters()).device
-    model.train()
-    optimizer = torch.optim.AdamW(
-        (param for param in model.parameters() if param.requires_grad),
-        lr=lora["learning_rate"],
-    )
-    loss_fn = nn.CrossEntropyLoss()
-    for _ in range(lora["epochs"]):
-        for images, targets in loader:
-            images = images.to(device)
-            targets = targets.to(device)
-            optimizer.zero_grad()
-            loss = loss_fn(model(images), targets)
-            loss.backward()
-            optimizer.step()

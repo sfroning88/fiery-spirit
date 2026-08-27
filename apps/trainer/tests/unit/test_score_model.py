@@ -19,7 +19,7 @@ from fiery_python import (
     TrainingSplit,
     UuidUtils,
 )
-from src.evaluate import (
+from src.score_model import (
     _screener_scores,
     _tune_screener_threshold,
     score_model,
@@ -103,13 +103,22 @@ def test_screener_scores_rejects_empty_split():
         _screener_scores(torch.tensor([]), torch.tensor([]), 0.5)
 
 
-def test_tune_screener_threshold_prefers_recall():
+def test_tune_screener_threshold_keeps_lowest_when_precision_already_holds():
     probs = torch.tensor([0.9, 0.9, 0.2])
     labels = torch.tensor([1, 1, 0])
     threshold = _tune_screener_threshold(probs, labels)
     recall, _abstention = _screener_scores(probs, labels, threshold)
     assert recall == pytest.approx(1.0)
-    assert threshold >= 0.5
+    assert threshold == pytest.approx(0.50)
+
+
+def test_tune_screener_threshold_raises_until_precision_floor():
+    probs = torch.tensor([0.91, 0.91, 0.62])
+    labels = torch.tensor([1, 1, 0])
+    threshold = _tune_screener_threshold(probs, labels)
+    assert threshold > 0.62
+    recall, _abstention = _screener_scores(probs, labels, threshold)
+    assert recall == pytest.approx(1.0)
 
 
 def test_score_model_emits_recall_and_abstention_for_test_and_holdout():
@@ -151,7 +160,7 @@ def test_score_model_requires_test_or_holdout():
 
 def test_score_model_dispatches_screener():
     expected = [object()]
-    with patch("src.evaluate._score_screener_model", return_value=expected) as score:
+    with patch("src.score_model._score_screener_model", return_value=expected) as score:
         result = score_model(_score_spec(), _ConstLogits(1.0), {})
     assert result is expected
     score.assert_called_once()

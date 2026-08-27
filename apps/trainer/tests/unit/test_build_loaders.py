@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 import torch
 from fiery_python import TrainingDeformationLabel, TrainingStage, TrainingSplit
-from src.data import (
+from src.build_loaders import (
     _BATCH_SIZE,
     _VIT_PX,
     _build_lora_loaders,
@@ -114,7 +114,7 @@ def test_build_lora_loaders_caps_train_and_skips_empty_splits():
     }
     with (
         patch(
-            "src.data.r2_s3.get_bytes",
+            "src.build_loaders.r2_s3.get_bytes",
             return_value=json.dumps(manifest).encode("utf-8"),
         ),
         patch("fiery_python.BlobStorageServices.get_shard", return_value=b"tar"),
@@ -139,7 +139,7 @@ def test_build_lora_loaders_raises_when_manifest_missing():
 def test_build_lora_loaders_raises_when_train_empty():
     manifest = {"splits": {TrainingSplit.TRAIN.value: {"shards": []}}}
     with patch(
-        "src.data.r2_s3.get_bytes",
+        "src.build_loaders.r2_s3.get_bytes",
         return_value=json.dumps(manifest).encode("utf-8"),
     ):
         with pytest.raises(RuntimeError, match="Empty train split"):
@@ -150,7 +150,7 @@ def test_build_lora_loaders_raises_when_train_empty():
 
 def test_build_loaders_dispatches_lora():
     expected = {"train": object()}
-    with patch("src.data._build_lora_loaders", return_value=expected) as build:
+    with patch("src.build_loaders._build_lora_loaders", return_value=expected) as build:
         result = build_loaders({"stage": TrainingStage.LORA.value})
     assert result is expected
     build.assert_called_once_with({"stage": TrainingStage.LORA.value})

@@ -52,7 +52,7 @@ def train_deformation(spec):
     loaders = build_loaders(spec)
     model = build_job(spec)
     model = model.to("cuda")
-    train_lora_model(model, loaders["train"], spec["lora"])
+    train_model(model, loaders, spec)
     metrics = score_model(spec, model, loaders)
     save(payload, storage_path)
     signature = head_hmac(storage_path)

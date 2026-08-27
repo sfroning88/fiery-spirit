@@ -9,7 +9,6 @@ from unittest.mock import patch
 
 import torch
 from torch import nn
-from torch.utils.data import DataLoader, TensorDataset
 from fiery_python import (
     ModelMetric,
     ModelMetricName,
@@ -19,7 +18,7 @@ from fiery_python import (
     TrainingSplit,
     TrainingStage,
 )
-from src.entrypoint import _seed, _train_lora_model, train_deformation
+from src.entrypoint import _seed, train_deformation
 
 
 class _TinyModel(nn.Module):
@@ -76,7 +75,7 @@ def test_train_deformation_saves_then_callbacks():
     with (
         patch("src.entrypoint.build_loaders", return_value=loaders),
         patch("src.entrypoint.build_job", return_value=model),
-        patch("src.entrypoint._train_lora_model"),
+        patch("src.entrypoint.train_model"),
         patch("src.entrypoint.score_model", return_value=metrics),
         patch("src.entrypoint.ModelStorageServices.save") as save,
         patch(
@@ -93,11 +92,15 @@ def test_train_deformation_saves_then_callbacks():
     assert kwargs["signature"] == "b" * 64
     assert kwargs["architecture"] == "vit-small"
     assert kwargs["metrics"] is metrics
-    assert result["ok"] is True
-    assert result["spec"] == "sess-1"
+    assert result == {
+        "ok": True,
+        "spec": "sess-1",
+        "storage_path": "unused",
+    }
 
 
 def test_train_deformation_skips_callback_when_train_fails():
+    spec = _spec()
     with (
         patch(
             "src.entrypoint.build_loaders",
@@ -105,16 +108,10 @@ def test_train_deformation_skips_callback_when_train_fails():
         ),
         patch("src.entrypoint.send_callback") as callback,
     ):
-        result = train_deformation(_spec())
+        result = train_deformation(spec)
     callback.assert_not_called()
-    assert result["ok"] is True
-
-
-def test_train_lora_model_runs_one_step():
-    model = nn.Linear(4, 2)
-    images = torch.randn(2, 4)
-    targets = torch.tensor([0, 1])
-    loader = DataLoader(TensorDataset(images, targets), batch_size=2)
-    before = model.weight.detach().clone()
-    _train_lora_model(model, loader, {"epochs": 1, "learning_rate": 1e-2})
-    assert not torch.equal(before, model.weight.detach())
+    assert result == {
+        "ok": False,
+        "spec": "sess-1",
+        "storage_path": "unused",
+    }
