@@ -22,4 +22,5 @@ export {
   ModelTier,
   ModelRole,
   ModelMetricName,
+  InferenceAbstainReason,
 } from "../prisma/src/generated/prisma";

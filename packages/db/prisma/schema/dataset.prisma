@@ -21,7 +21,7 @@ model DatasetIngest {
 
 model DatasetVersion {
     id                          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    transformHash               String @map("transform_hash")
+    transformHash               String @map("transform_hash") @db.VarChar(64)
     manifestPath                String @map("manifest_path")
     shardCount                  Int @map("shard_count")
     sampleCount                 Int @map("sample_count")

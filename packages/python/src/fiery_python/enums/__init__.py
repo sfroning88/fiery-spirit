@@ -1,3 +1,6 @@
+from .inference import (
+    InferenceAbstainReason,
+)
 from .model import (
     ModelTier,
     ModelRole,
@@ -31,6 +34,7 @@ from .volcano import (
 )
 
 __all__ = [
+    "InferenceAbstainReason",
     "ModelTier",
     "ModelRole",
     "ModelMetricName",

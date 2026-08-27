@@ -58,8 +58,9 @@ model ModelArtifact {
     children                    ModelArtifact[] @relation("ArtifactLineage")
     metrics                     ModelMetric[]
     budget                      ModelBudget?
-    deformationPredictions      PredictionDeformation[]
-    seismicPredictions          PredictionSeismic[]
+    deformationInferences       InferenceDeformation[]
+    seismicInferences           InferenceSeismic[]
+    feedback                    InferenceFeedback[]
 
     @@index([tier, role, promoted], map: "idx_model_artifact_by_promotion")
     @@index([tier, role, createdAt(sort: Desc)], map: "idx_model_artifact_by_registry_slot")

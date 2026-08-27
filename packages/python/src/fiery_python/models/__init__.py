@@ -8,14 +8,15 @@ from .dataset import (
     DatasetIngest,
     DatasetVersion,
 )
+from .inference import (
+    InferenceDeformation,
+    InferenceSeismic,
+    InferenceFeedback,
+)
 from .model import (
     ModelArtifact,
     ModelMetric,
     ModelBudget,
-)
-from .prediction import (
-    PredictionDeformation,
-    PredictionSeismic,
 )
 from .training import (
     TrainingDeformationClass,
@@ -44,11 +45,12 @@ __all__ = [
     "BasePrisma",
     "DatasetIngest",
     "DatasetVersion",
+    "InferenceDeformation",
+    "InferenceSeismic",
+    "InferenceFeedback",
     "ModelArtifact",
     "ModelMetric",
     "ModelBudget",
-    "PredictionDeformation",
-    "PredictionSeismic",
     "TrainingDeformationClass",
     "TrainingSeismicClass",
     "TrainingDeformationSource",
