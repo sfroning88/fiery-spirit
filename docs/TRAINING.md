@@ -18,6 +18,12 @@ The **training seed** is constant defined via `_TRAINING_SEED` per `TrainModalSp
 The seed is persisted throughout the `spec` to the [`Modal workspace`](https://modal.com/docs/guide/workspaces).
 The seed is used for model internal randomness (subsampling, bootstrapping, etc).
 
+### LoRA Techniques
+
+Currently the `optimizer` (`AdamW`) only adapts on parameters where `requires_grad`.
+Similarly adaption only occurs on `qkv` instead of full `attention projection`.
+Both of these choices help minimize the `cost` and `time` of `LoRA`.
+
 ## Training Methodology
 
 ### Spawned Jobs
@@ -25,6 +31,52 @@ The seed is used for model internal randomness (subsampling, bootstrapping, etc)
 Each `model TrainingSession` has its `training job` occur **asynchronously** off-worker.
 This is why each job builds the `spec` from scratch for a per-job `payload`.
 This is also why each transaction happens **atomically** with `caching`.
+
+To prevent **training-serving skew**, only `unpacking` happens within the [`Modal workspace`](https://modal.com/docs/guide/workspaces).
+The refinement process has already `wrapped`, `cropped`, `normalized` all shards.
+
+### Modal Instance
+
+For `train_deformation` jobs:
+
+1. Build the `training_dataset` from the `job_spec`
+2. Build the `training_job` from the `job_spec`
+3. Initialize the `cuda` model
+4. Apply `LoRA` adapation to the model
+5. Score the model to collect `metrics`
+6. Persist the model to `s3` bucket `models`
+7. Send the `callback` to `apps/ai`
+
+```python
+def train_deformation(spec):
+    loaders = build_loaders(spec)
+    model = build_job(spec)
+    model = model.to("cuda")
+    train_lora_model(model, loaders["train"], spec["lora"])
+    metrics = score_model(spec, model, loaders)
+    save(payload, storage_path)
+    signature = head_hmac(storage_path)
+    send_callback(spec, payload)
+```
+
+### Low-Rank Adapation
+
+For applying `Low-Rank Adaption (LoRA)` with `AdamW`:
+
+```python
+def train_lora_model(model, loader, lora):
+    model.train()
+    optimizer = torch.optim.AdamW(
+        model.parameters(), learning_rate
+    )
+    loss_fn = nn.CrossEntropyLoss()
+    for _ in range(epochs):
+        for images, targets in loader:
+            optimizer.zero_grad()
+            loss = loss_fn(model(images), targets)
+            loss.backward()
+            optimizer.step()
+```
 
 ### Artifact Persistence
 
@@ -71,9 +123,9 @@ The promotion can occur per `MODEL_REGISTRY_SLOT` from `/api/ml/promote`:
 
 ```python
 MODEL_REGISTRY_SLOTS = [
-    (ModelTier.CLOUD, ModelRole.SCREENER),
-    (ModelTier.CLOUD, ModelRole.TEACHER),
-    (ModelTier.EDGE, ModelRole.STUDENT),
+    (CLOUD, SCREENER),
+    (CLOUD, TEACHER),
+    (EDGE, STUDENT),
 ]
 ```
 
@@ -83,6 +135,8 @@ First, the challenger must pass the `gate_check`:
 if not incumbent or challenger_metric_scores > incumbent_metric_scores:
     promote(challenger)
 ```
+
+Models are scored within the [`Modal workspace`](https://modal.com/docs/guide/workspaces).
 
 Depending on the `MODEL_REGISTRY_SLOT`, different metrics are checked:
 

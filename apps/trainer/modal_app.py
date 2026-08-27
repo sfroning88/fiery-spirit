@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Created Date: 8.21.2026
+Created Date: 8.27.2026
 Modal app deployment
 """
 
@@ -9,9 +9,26 @@ from typing import Dict
 
 app = modal.App("fiery-trainer")
 
+
+def _download_vit_small() -> None:
+    import timm
+
+    timm.create_model(
+        "vit_small_patch16_224",
+        pretrained=True,
+        num_classes=2,
+    )
+
+
 image = (
     modal.Image.debian_slim(python_version="3.13")
-    .uv_pip_install("torch", "timm", "peft", "webdataset")
+    .uv_pip_install(
+        "torch==2.13.0",
+        "timm==1.0.28",
+        "peft==0.20.0",
+        "webdataset==1.0.2",
+    )
+    .run_function(_download_vit_small)
     .add_local_dir(
         "../../packages/python",
         remote_path="/opt/packages/python",

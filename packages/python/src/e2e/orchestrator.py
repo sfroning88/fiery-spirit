@@ -221,6 +221,11 @@ def main() -> None:
         print(f"Running {workflow} workflow")
         print(f"{'=' * 60}\n")
 
+        if workflow == "train":
+            from .helpers import ensure_trainer_deployed
+
+            ensure_trainer_deployed(root)
+
         _run_workflow(workflow)
 
         print(f"\n{'=' * 60}")

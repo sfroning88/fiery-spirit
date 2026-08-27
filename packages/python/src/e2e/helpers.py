@@ -5,7 +5,10 @@ Shared utility helpers for tests
 """
 
 import os
+import shutil
+import subprocess
 import time as Time
+from pathlib import Path
 from typing import List, Tuple
 
 import requests
@@ -101,3 +104,25 @@ def wait_for_jobs(job_ids: List[str], timeout: int = 600) -> None:
             failures.append(job_id)
     if failures:
         raise RuntimeError(f"{len(failures)} job(s) did not complete: {failures}")
+
+
+def ensure_trainer_deployed(root: str) -> None:
+    """Deploy apps/trainer so AI can Function.from_name + spawn"""
+    if os.environ.get("MODAL_SKIP_DEPLOY") == "1":
+        print("Skipping Modal deploy (MODAL_SKIP_DEPLOY=1)")
+        return
+    trainer_dir = os.path.join(root, "apps", "trainer")
+    modal = shutil.which("modal")
+    command = [modal, "deploy", "modal_app.py"]
+    print(f"Deploying fiery-trainer from {trainer_dir}")
+    result = subprocess.run(
+        command,
+        cwd=trainer_dir,
+        env=os.environ.copy(),
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            "Modal deploy failed; token, Fiery-Environment secret, "
+            "and modal CLI must already exist in this workspace"
+        )
