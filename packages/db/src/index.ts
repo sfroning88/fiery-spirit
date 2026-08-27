@@ -23,6 +23,7 @@ export {
   ModelTier,
   ModelRole,
   ModelMetricName,
+  InferenceAbstainReason,
 } from "../prisma/src/generated/prisma";
 export type {
   Prisma,
@@ -49,6 +50,7 @@ export type {
   ModelArtifact,
   ModelMetric,
   ModelBudget,
-  PredictionDeformation,
-  PredictionSeismic,
+  InferenceDeformation,
+  InferenceSeismic,
+  InferenceFeedback,
 } from "../prisma/src/generated/prisma";

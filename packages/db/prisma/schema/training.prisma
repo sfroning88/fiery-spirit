@@ -251,7 +251,7 @@ model TrainingInterferogram {
     createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
     updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-    predictions                 PredictionDeformation[]
+    inferences                  InferenceDeformation[]
 
     @@index([split, source, label], map: "idx_interferogram_by_split")
     @@index([coherenceMean], map: "idx_interferogram_by_coherence_mean")
@@ -278,7 +278,7 @@ model TrainingSeismicEvent {
     createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
     updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-    predictions                 PredictionSeismic[]
+    inferences                  InferenceSeismic[]
 
     @@index([split, source, label], map: "idx_seismic_event_by_split")
     @@index([station, recordedAt(sort: Desc)], map: "idx_seismic_event_by_station")
