@@ -163,7 +163,7 @@ Depending on the `MODEL_REGISTRY_SLOT`, different metrics are checked:
 ```python
 match MODEL_REGISTRY_SLOT:
     case (CLOUD, SCREENER):
-        _screener_gate # RECALL, PRECISION, FALSE_POSITIVE_RATE
+        _screener_gate # RECALL, PRECISION, FALSE_POSITIVE_RATE, ABSTENTION_RATE
     case (CLOUD, TEACHER):
         _teacher_gate # MACRO_F1_SCORE
     case (EDGE, STUDENT):

@@ -95,6 +95,10 @@ def _score_screener_model(
         recall, precision, fpr, abstention_rate = _screener_scores(
             probs, labels, threshold
         )
+        if fpr is None:
+            raise RuntimeError(
+                f"Unmeasured FPR: {split.value} split has no negative labels"
+            )
         metrics.extend(
             [
                 ModelMetric(
@@ -157,7 +161,7 @@ def _collect_positive_probs(
 
 def _screener_scores(
     probs: Tensor, labels: Tensor, threshold: float
-) -> Tuple[float, float, float, float]:
+) -> Tuple[float, float, Optional[float], float]:
     predicted_positive = probs >= threshold
     num_labels = int(labels.numel())
     if num_labels == 0:
@@ -170,7 +174,7 @@ def _screener_scores(
     predicted_count = int(predicted_positive.sum().item())
     recall = 0.0 if positives == 0 else true_positive / positives
     precision = 0.0 if predicted_count == 0 else true_positive / predicted_count
-    fpr = 0.0 if negatives == 0 else false_positive / negatives
+    fpr = None if negatives == 0 else false_positive / negatives
     return recall, precision, fpr, abstention_rate
 
 

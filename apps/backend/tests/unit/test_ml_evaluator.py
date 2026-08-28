@@ -89,11 +89,13 @@ def _screener_metrics(
     recall: str = "0.80",
     precision: str = "0.80",
     fpr: str = "0.02",
+    abstention_rate: str = "0.10",
 ) -> list[ModelMetric]:
     return [
         _metric(ModelMetricName.RECALL, Decimal(recall)),
         _metric(ModelMetricName.PRECISION, Decimal(precision)),
         _metric(ModelMetricName.FALSE_POSITIVE_RATE, Decimal(fpr)),
+        _metric(ModelMetricName.ABSTENTION_RATE, Decimal(abstention_rate)),
     ]
 
 
@@ -111,6 +113,20 @@ def test_gate_check_rejects_screener_missing_precision():
     challenger_metrics = [
         _metric(ModelMetricName.RECALL, Decimal("0.80")),
         _metric(ModelMetricName.FALSE_POSITIVE_RATE, Decimal("0.02")),
+    ]
+
+    with patch.object(
+        _ModelEvaluator, "_fetch_metrics", return_value=challenger_metrics
+    ):
+        assert model_evaluator._gate_check(challenger, []) is False
+
+
+def test_gate_check_rejects_screener_missing_fpr():
+    challenger = _artifact()
+    challenger_metrics = [
+        _metric(ModelMetricName.RECALL, Decimal("0.80")),
+        _metric(ModelMetricName.PRECISION, Decimal("0.80")),
+        _metric(ModelMetricName.ABSTENTION_RATE, Decimal("0.10")),
     ]
 
     with patch.object(
@@ -162,6 +178,30 @@ def test_gate_check_promotes_screener_when_recall_delta_holds():
             model_evaluator._gate_check(challenger, _screener_metrics(recall="0.80"))
             is True
         )
+
+
+def test_gate_check_promotes_screener_on_min_recall_delta_with_higher_abstention():
+    challenger = _artifact()
+    incumbent = _screener_metrics(recall="0.80", abstention_rate="0.10")
+
+    with patch.object(
+        _ModelEvaluator,
+        "_fetch_metrics",
+        return_value=_screener_metrics(recall="0.81", abstention_rate="0.20"),
+    ):
+        assert model_evaluator._gate_check(challenger, incumbent) is True
+
+
+def test_gate_check_rejects_screener_on_min_recall_delta_without_higher_abstention():
+    challenger = _artifact()
+    incumbent = _screener_metrics(recall="0.80", abstention_rate="0.10")
+
+    with patch.object(
+        _ModelEvaluator,
+        "_fetch_metrics",
+        return_value=_screener_metrics(recall="0.81", abstention_rate="0.10"),
+    ):
+        assert model_evaluator._gate_check(challenger, incumbent) is False
 
 
 def test_gate_check_rejects_teacher_below_min_macro_f1():

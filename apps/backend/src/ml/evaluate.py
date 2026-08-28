@@ -144,7 +144,15 @@ class _ModelEvaluator:
         recall = cls._metric_value(challenger_metrics, ModelMetricName.RECALL)
         precision = cls._metric_value(challenger_metrics, ModelMetricName.PRECISION)
         fpr = cls._metric_value(challenger_metrics, ModelMetricName.FALSE_POSITIVE_RATE)
-        if recall is None or precision is None or fpr is None:
+        abstention_rate = cls._metric_value(
+            challenger_metrics, ModelMetricName.ABSTENTION_RATE
+        )
+        if (
+            recall is None
+            or precision is None
+            or fpr is None
+            or abstention_rate is None
+        ):
             return False
         if (
             recall < _SCREENER_MIN_RECALL
@@ -155,7 +163,13 @@ class _ModelEvaluator:
         incumbent_recall = cls._metric_value(metrics_to_beat, ModelMetricName.RECALL)
         if incumbent_recall is None:
             return True
-        return recall - incumbent_recall >= _SCREENER_MIN_RECALL_DELTA
+        incumbent_abstention_rate = cls._metric_value(
+            metrics_to_beat, ModelMetricName.ABSTENTION_RATE
+        )
+        recall_delta = recall - incumbent_recall
+        if recall_delta == _SCREENER_MIN_RECALL_DELTA:
+            return abstention_rate > incumbent_abstention_rate
+        return recall_delta >= _SCREENER_MIN_RECALL_DELTA
 
     @classmethod
     def _teacher_gate(

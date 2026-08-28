@@ -210,7 +210,7 @@ class _ModelRegistry:
             raise RuntimeError("Empty LoRA target modules")
         backbone = timm.create_model(
             sidecar.get("architecture") or "vit_small_patch16_224",
-            pretrained=True,
+            pretrained=False,
             num_classes=2,
         )
         config = LoraConfig(

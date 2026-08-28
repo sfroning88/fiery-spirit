@@ -104,6 +104,16 @@ def test_screener_scores_zero_recall_without_positives():
     assert abstention == pytest.approx(1.0)
 
 
+def test_screener_scores_omits_fpr_without_negatives():
+    probs = torch.tensor([0.9, 0.8])
+    labels = torch.tensor([1, 1])
+    recall, precision, fpr, abstention = _screener_scores(probs, labels, 0.5)
+    assert recall == pytest.approx(1.0)
+    assert precision == pytest.approx(1.0)
+    assert fpr is None
+    assert abstention == pytest.approx(0.0)
+
+
 def test_screener_scores_rejects_empty_split():
     with pytest.raises(RuntimeError, match="Empty split while scoring"):
         _screener_scores(torch.tensor([]), torch.tensor([]), 0.5)
@@ -169,6 +179,15 @@ def test_score_model_requires_test_or_holdout():
             _ConstLogits(10.0),
             {TrainingSplit.VALIDATE.value: _loader([1, 0])},
         )
+
+
+def test_score_model_raises_when_scored_split_has_no_negatives():
+    loaders = {
+        TrainingSplit.VALIDATE.value: _loader([1, 0]),
+        TrainingSplit.TEST.value: _loader([1, 1]),
+    }
+    with pytest.raises(RuntimeError, match="Unmeasured FPR"):
+        score_model(_score_spec(), _ConstLogits(10.0), loaders)
 
 
 def test_score_model_dispatches_screener():
