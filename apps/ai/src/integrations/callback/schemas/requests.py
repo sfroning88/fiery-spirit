@@ -5,20 +5,21 @@ Request models for Callback
 """
 
 from decimal import Decimal
-from pydantic import BaseModel, Field
-from typing import List, Optional
+from pydantic import BaseModel, Field, AfterValidator
+from typing import Annotated, List, Optional
 from fiery_python import (
     ModelTier,
     ModelRole,
     TrainingPrecision,
     ModelMetric,
+    SchemaUtils,
 )
 
 
 class CallbackRequest(BaseModel):
     """Request model for receiving train callback"""
 
-    session_id: str
+    session_id: Annotated[str, AfterValidator(SchemaUtils.valid_uuid)]
     tier: ModelTier
     role: ModelRole
     precision: TrainingPrecision = Field(default=TrainingPrecision.FP32)

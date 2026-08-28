@@ -53,6 +53,10 @@ ML_PROMOTE_URL = f"{BACKEND_URL}{ML_PROMOTE_PATH}"
 ML_RELOAD_PATH = f"/api/ml/reload"
 ML_RELOAD_URL = f"{BACKEND_URL}{ML_RELOAD_PATH}"
 
+# -- Inference (served by apps/backend) --
+INFERENCE_SINGLE_PATH = "/api/inference/single"
+INFERENCE_SINGLE_URL = f"{BACKEND_URL}{INFERENCE_SINGLE_PATH}"
+
 
 def endpoint_test(
     url: str,

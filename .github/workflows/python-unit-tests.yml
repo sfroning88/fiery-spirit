@@ -11,6 +11,7 @@ on:
         - "packages/python/**"
         - "scripts/python-unit-tests.sh"
         - "scripts/setup-python-venvs.sh"
+        - "scripts/setup-pytest-in-venvs.sh"
         - ".github/workflows/python-unit-tests.yml"
 
 jobs:
@@ -33,6 +34,9 @@ jobs:
 
         -   name: Set up Python venvs
             run: bash scripts/setup-python-venvs.sh
+
+        -   name: Set up Pytest
+            run: bash scripts/setup-pytest-in-venvs.sh
 
         -   name: Run unit tests
             run: bash scripts/python-unit-tests.sh all

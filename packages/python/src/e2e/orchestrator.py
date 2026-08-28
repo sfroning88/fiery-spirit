@@ -5,7 +5,7 @@ Created Date: 8.26.2026
 Unified test orchestrator for worker pipelines
 
 Usage: python3 -m src.e2e.orchestrator <workflow>
-Workflows: ingest|refine|train|promote|registry
+Workflows: ingest|refine|train|promote|registry|inference
 
 Notes:
 - Tests run against the real Supabase project (tables + storage buckets).
@@ -85,6 +85,7 @@ WORKFLOW_WORKERS: Dict[str, Tuple[WorkerSpec, ...]] = {
     "train": (WorkerSpec(domain="ai", needs_rq_worker=True),),
     "promote": (WorkerSpec(domain="backend", needs_rq_worker=False),),
     "registry": (WorkerSpec(domain="backend", needs_rq_worker=False),),
+    "inference": (WorkerSpec(domain="backend", needs_rq_worker=False),),
 }
 
 
@@ -190,6 +191,10 @@ def _run_workflow(workflow: str) -> None:
         from .scripts.registry import run_reload_test
 
         run_reload_test()
+    elif workflow == "inference":
+        from .scripts.inference import run_inference_test
+
+        run_inference_test()
     else:
         raise ValueError(f"Unknown workflow: {workflow}")
 

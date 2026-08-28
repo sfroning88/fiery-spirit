@@ -4,9 +4,9 @@ Created Date: 8.28.2026
 Request models for Inferences
 """
 
-from pydantic import BaseModel
-from typing import List, Optional
-from fiery_python import ModelTier, ModelRole
+from pydantic import BaseModel, AfterValidator
+from typing import Annotated, List, Optional
+from fiery_python import ModelTier, ModelRole, SchemaUtils
 
 
 class InferenceSingleRequest(BaseModel):
@@ -14,8 +14,10 @@ class InferenceSingleRequest(BaseModel):
 
     tier: ModelTier
     role: ModelRole
-    interferogram_id: Optional[str] = None
-    volcano_id: Optional[str] = None
+    interferogram_id: Optional[
+        Annotated[str, AfterValidator(SchemaUtils.valid_uuid)]
+    ] = None
+    volcano_id: Optional[Annotated[str, AfterValidator(SchemaUtils.valid_uuid)]] = None
 
     def validate_payload(self) -> bool:
         if not self.interferogram_id and not self.volcano_id:

@@ -15,14 +15,10 @@ Last updated: **August 2026**
 
 ```python
 class IngestRequest(BaseModel):
-    """Request model for running ingest job"""
-
     source: TrainingSampleSource
     max_samples: int = 10
 
 class IngestResponse(BaseModel):
-    """Response model for running ingest job"""
-
     job_ids: List[str]
 ```
 
@@ -32,11 +28,9 @@ class IngestResponse(BaseModel):
 
 ```python
 class RefineRequest(BaseModel):
-    """Request model for running refine job"""
     contract_id: str
 
 class RefineResponse(BaseModel):
-    """Response model for running refine job"""
     job_ids: List[str]
     version_id: str
     transform_hash: str
