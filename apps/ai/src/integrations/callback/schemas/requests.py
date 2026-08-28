@@ -29,3 +29,7 @@ class CallbackRequest(BaseModel):
     sparsity: Decimal = Decimal("0")
     metrics: List[ModelMetric]
     nonce: Optional[str] = None
+    threshold: Decimal
+    abstention_band: Decimal
+    transform_hash: str
+    op_version: int

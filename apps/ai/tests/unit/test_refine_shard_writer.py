@@ -10,6 +10,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 from fiery_python import (
+    STORAGE_OP_VERSION,
     DatasetVersion,
     TrainingDeformation,
     TrainingDeformationLabel,
@@ -121,6 +122,7 @@ def test_transform_keeps_phase_and_label():
         "label": TrainingDeformationLabel.POSITIVE.value,
         "split": TrainingSplit.TRAIN.value,
         "format_version": 1,
+        "op_version": STORAGE_OP_VERSION,
     }
     assert manifest.sample_count() == 1
 
@@ -129,7 +131,16 @@ def test_flush_shard_puts_tar_and_records():
     manifest = RefineShardManifest("contract-1", "hash-1", _deformation())
     phase = np.ones((2, 2), dtype=np.float32)
     buffer = [
-        ("k1", phase, {"label": "positive", "split": "train", "format_version": 1})
+        (
+            "k1",
+            phase,
+            {
+                "label": "positive",
+                "split": "train",
+                "format_version": 1,
+                "op_version": STORAGE_OP_VERSION,
+            },
+        )
     ]
     with (
         patch(

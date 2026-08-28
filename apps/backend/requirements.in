@@ -1,2 +1,6 @@
 # Python package
 -e ../../packages/python
+
+# Model inference
+timm>=1.0.28
+peft>=0.20.0

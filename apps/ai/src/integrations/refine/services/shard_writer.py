@@ -8,6 +8,7 @@ import numpy as np
 from typing import Any, Dict, List, Optional, Tuple
 from fiery_python import error, logging
 from fiery_python import (
+    STORAGE_OP_VERSION,
     TRAINING_DB_FETCH_SIZE,
     BlobStorageServices,
     DatasetVersion,
@@ -181,6 +182,7 @@ class RefineShardWriter:
                 "label": interferogram.label.value,
                 "split": interferogram.split.value,
                 "format_version": _FORMAT_VERSION,
+                "op_version": STORAGE_OP_VERSION,
             },
         )
 

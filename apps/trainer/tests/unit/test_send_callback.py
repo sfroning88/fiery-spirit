@@ -21,6 +21,8 @@ from fiery_python import (
 )
 from src.send_callback import send_callback
 
+_WEIGHTS_KEY = "cloud/screener/sess-1.safetensors"
+
 
 def _metrics() -> list[ModelMetric]:
     return [
@@ -31,6 +33,15 @@ def _metrics() -> list[ModelMetric]:
             artifact_id="art-1",
         )
     ]
+
+
+def _decision() -> dict:
+    return {
+        "threshold": 0.5,
+        "abstention_band": "0.00000",
+        "transform_hash": "a" * 64,
+        "op_version": 1,
+    }
 
 
 def _spec(**overrides) -> dict:
@@ -46,33 +57,44 @@ def _spec(**overrides) -> dict:
     return data
 
 
+def _callback_kwargs(**overrides) -> dict:
+    data = {
+        "storage_path": _WEIGHTS_KEY,
+        "signature": "b" * 64,
+        "param_count": 10,
+        "architecture": "vit_small_patch16_224",
+        "metrics": _metrics(),
+        "decision": _decision(),
+    }
+    data.update(overrides)
+    return data
+
+
 def test_send_callback_raises_when_url_missing():
     with pytest.raises(RuntimeError, match="no_callback_url_in_spec"):
-        send_callback(
-            _spec(callback_url=""),
-            storage_path="cloud/screener/sess-1.pkl",
-            signature="b" * 64,
-            param_count=10,
-            architecture="vit-small",
-            metrics=_metrics(),
-        )
+        send_callback(_spec(callback_url=""), **_callback_kwargs())
 
 
 def test_send_callback_posts_hmac_header():
     secret = b"unit-secret"
     response = MagicMock()
+    decision = _decision()
     canonical = json.dumps(
         {
-            "architecture": "vit-small",
+            "architecture": "vit_small_patch16_224",
+            "abstention_band": str(decision["abstention_band"]),
             "nonce": "nonce-1",
+            "op_version": decision["op_version"],
             "param_count": 10,
             "precision": TrainingPrecision.FP32.value,
             "role": ModelRole.SCREENER.value,
             "session_id": "sess-1",
             "signature": "b" * 64,
             "sparsity": "0",
-            "storage_path": "cloud/screener/sess-1.pkl",
+            "storage_path": _WEIGHTS_KEY,
+            "threshold": str(decision["threshold"]),
             "tier": ModelTier.CLOUD.value,
+            "transform_hash": decision["transform_hash"],
         },
         separators=(",", ":"),
         sort_keys=True,
@@ -85,19 +107,14 @@ def test_send_callback_posts_hmac_header():
         ),
         patch("httpx.post", return_value=response) as post,
     ):
-        send_callback(
-            _spec(),
-            storage_path="cloud/screener/sess-1.pkl",
-            signature="b" * 64,
-            param_count=10,
-            architecture="vit-small",
-            metrics=_metrics(),
-        )
+        send_callback(_spec(), **_callback_kwargs())
     post.assert_called_once()
     kwargs = post.call_args.kwargs
     assert kwargs["headers"]["X-Callback-Hmac"] == digest
     assert kwargs["json"]["session_id"] == "sess-1"
-    assert kwargs["json"]["storage_path"] == "cloud/screener/sess-1.pkl"
+    assert kwargs["json"]["storage_path"] == _WEIGHTS_KEY
+    assert kwargs["json"]["threshold"] == decision["threshold"]
+    assert kwargs["json"]["op_version"] == 1
     response.raise_for_status.assert_called_once()
 
 
@@ -114,14 +131,7 @@ def test_send_callback_retries_then_succeeds():
         patch("httpx.post", side_effect=[failed, ok]) as post,
         patch("src.send_callback.time.sleep") as sleep,
     ):
-        send_callback(
-            _spec(),
-            storage_path="cloud/screener/sess-1.pkl",
-            signature="b" * 64,
-            param_count=10,
-            architecture="vit-small",
-            metrics=_metrics(),
-        )
+        send_callback(_spec(), **_callback_kwargs())
     assert post.call_count == 2
     sleep.assert_called_once()
     ok.raise_for_status.assert_called_once()

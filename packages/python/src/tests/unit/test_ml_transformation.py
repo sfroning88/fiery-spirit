@@ -8,7 +8,9 @@ from decimal import Decimal
 
 import numpy as np
 import pytest
+from unittest.mock import patch
 from fiery_python import (
+    STORAGE_OP_VERSION,
     TrainingDeformation,
     TrainingNormalize,
     Transformation,
@@ -115,3 +117,13 @@ def test_transform_hash_changes_when_patch_px_changes():
     assert Transformation.transform_hash(
         _params(patch_px=4)
     ) != Transformation.transform_hash(_params(patch_px=8))
+
+
+def test_transform_hash_includes_op_version():
+    hashed = Transformation.transform_hash(_params())
+    assert hashed == Transformation.transform_hash(_params())
+    with patch(
+        "fiery_python.ml.transformation.STORAGE_OP_VERSION",
+        STORAGE_OP_VERSION + 1,
+    ):
+        assert hashed != Transformation.transform_hash(_params())

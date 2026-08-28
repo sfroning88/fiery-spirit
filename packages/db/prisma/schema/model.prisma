@@ -23,6 +23,7 @@ enum ModelMetricName {
     accuracy
     recall
     precision
+    falsePositiveRate @map("false_positive_rate")
     abstentionRate @map("abstention_rate")
     f1Score @map("f1_score")
     macrof1Score @map("macro_f1_score")

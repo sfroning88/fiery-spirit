@@ -44,7 +44,7 @@ def _artifact(
         architecture="cnn",
         param_count=param_count,
         sparsity=sparsity,
-        storage_path="models/art.pkl",
+        storage_path="models/art.safetensors",
         signature="a" * 64,
         signed_at=NOW,
         promoted=False,
@@ -85,48 +85,126 @@ def test_metric_value_returns_none_when_name_missing():
     assert model_evaluator._metric_value(metrics, ModelMetricName.RECALL) is None
 
 
-def test_gate_check_promotes_screener_when_slot_empty():
-    challenger = _artifact()
-    challenger_metrics = [
-        _metric(ModelMetricName.RECALL, Decimal("0.80")),
-        _metric(ModelMetricName.ABSTENTION_RATE, Decimal("0.10")),
+def _screener_metrics(
+    recall: str = "0.80",
+    precision: str = "0.80",
+    fpr: str = "0.02",
+    abstention_rate: str = "0.10",
+) -> list[ModelMetric]:
+    return [
+        _metric(ModelMetricName.RECALL, Decimal(recall)),
+        _metric(ModelMetricName.PRECISION, Decimal(precision)),
+        _metric(ModelMetricName.FALSE_POSITIVE_RATE, Decimal(fpr)),
+        _metric(ModelMetricName.ABSTENTION_RATE, Decimal(abstention_rate)),
     ]
 
+
+def test_gate_check_promotes_screener_when_slot_empty():
+    challenger = _artifact()
+
     with patch.object(
-        _ModelEvaluator, "_fetch_metrics", return_value=challenger_metrics
+        _ModelEvaluator, "_fetch_metrics", return_value=_screener_metrics()
     ):
         assert model_evaluator._gate_check(challenger, []) is True
 
 
-def test_gate_check_rejects_screener_with_lower_recall():
+def test_gate_check_rejects_screener_missing_precision():
     challenger = _artifact()
-    challenger_metrics = [_metric(ModelMetricName.RECALL, Decimal("0.50"))]
-    incumbent_metrics = [_metric(ModelMetricName.RECALL, Decimal("0.80"))]
+    challenger_metrics = [
+        _metric(ModelMetricName.RECALL, Decimal("0.80")),
+        _metric(ModelMetricName.FALSE_POSITIVE_RATE, Decimal("0.02")),
+    ]
 
     with patch.object(
         _ModelEvaluator, "_fetch_metrics", return_value=challenger_metrics
     ):
-        assert model_evaluator._gate_check(challenger, incumbent_metrics) is False
+        assert model_evaluator._gate_check(challenger, []) is False
 
 
-def test_gate_check_promotes_screener_on_recall_tie_with_lower_abstention():
+def test_gate_check_rejects_screener_missing_fpr():
     challenger = _artifact()
     challenger_metrics = [
         _metric(ModelMetricName.RECALL, Decimal("0.80")),
-        _metric(ModelMetricName.ABSTENTION_RATE, Decimal("0.00")),
-    ]
-    incumbent_metrics = [
-        _metric(ModelMetricName.RECALL, Decimal("0.80")),
+        _metric(ModelMetricName.PRECISION, Decimal("0.80")),
         _metric(ModelMetricName.ABSTENTION_RATE, Decimal("0.10")),
     ]
 
     with patch.object(
         _ModelEvaluator, "_fetch_metrics", return_value=challenger_metrics
     ):
-        assert model_evaluator._gate_check(challenger, incumbent_metrics) is True
+        assert model_evaluator._gate_check(challenger, []) is False
 
 
-def test_gate_check_rejects_equal_primary_when_no_secondary():
+def test_gate_check_rejects_screener_with_high_fpr():
+    challenger = _artifact()
+
+    with patch.object(
+        _ModelEvaluator,
+        "_fetch_metrics",
+        return_value=_screener_metrics(fpr="0.10"),
+    ):
+        assert model_evaluator._gate_check(challenger, []) is False
+
+
+def test_gate_check_rejects_screener_with_lower_recall():
+    challenger = _artifact()
+    incumbent_metrics = _screener_metrics(recall="0.80")
+
+    with patch.object(
+        _ModelEvaluator,
+        "_fetch_metrics",
+        return_value=_screener_metrics(recall="0.50"),
+    ):
+        assert model_evaluator._gate_check(challenger, incumbent_metrics) is False
+
+
+def test_gate_check_rejects_screener_on_recall_tie():
+    challenger = _artifact()
+    metrics = _screener_metrics(recall="0.80")
+
+    with patch.object(_ModelEvaluator, "_fetch_metrics", return_value=metrics):
+        assert model_evaluator._gate_check(challenger, metrics) is False
+
+
+def test_gate_check_promotes_screener_when_recall_delta_holds():
+    challenger = _artifact()
+
+    with patch.object(
+        _ModelEvaluator,
+        "_fetch_metrics",
+        return_value=_screener_metrics(recall="0.82"),
+    ):
+        assert (
+            model_evaluator._gate_check(challenger, _screener_metrics(recall="0.80"))
+            is True
+        )
+
+
+def test_gate_check_promotes_screener_on_min_recall_delta_with_higher_abstention():
+    challenger = _artifact()
+    incumbent = _screener_metrics(recall="0.80", abstention_rate="0.25")
+
+    with patch.object(
+        _ModelEvaluator,
+        "_fetch_metrics",
+        return_value=_screener_metrics(recall="0.81", abstention_rate="0.20"),
+    ):
+        assert model_evaluator._gate_check(challenger, incumbent) is True
+
+
+def test_gate_check_rejects_screener_on_min_recall_delta_without_higher_abstention():
+    challenger = _artifact()
+    incumbent = _screener_metrics(recall="0.80", abstention_rate="0.10")
+
+    with patch.object(
+        _ModelEvaluator,
+        "_fetch_metrics",
+        return_value=_screener_metrics(recall="0.81", abstention_rate="0.10"),
+    ):
+        assert model_evaluator._gate_check(challenger, incumbent) is False
+
+
+def test_gate_check_rejects_teacher_below_min_macro_f1():
     challenger = _artifact(
         artifact_id="33333333-3333-3333-3333-333333333333",
         tier=ModelTier.CLOUD,
@@ -136,7 +214,7 @@ def test_gate_check_rejects_equal_primary_when_no_secondary():
     metrics = [_metric(ModelMetricName.MACRO_F1_SCORE, Decimal("0.70"))]
 
     with patch.object(_ModelEvaluator, "_fetch_metrics", return_value=metrics):
-        assert model_evaluator._gate_check(challenger, metrics) is False
+        assert model_evaluator._gate_check(challenger, []) is False
 
 
 def test_budget_check_passes_cloud_without_upsert():
@@ -213,14 +291,8 @@ def test_run_promotes_winning_screener():
         session_id="77777777-7777-7777-7777-777777777777",
     )
     incumbent.promoted = True
-    challenger_metrics = [
-        _metric(ModelMetricName.RECALL, Decimal("0.90")),
-        _metric(ModelMetricName.ABSTENTION_RATE, Decimal("0.05")),
-    ]
-    incumbent_metrics = [
-        _metric(ModelMetricName.RECALL, Decimal("0.70")),
-        _metric(ModelMetricName.ABSTENTION_RATE, Decimal("0.10")),
-    ]
+    challenger_metrics = _screener_metrics(recall="0.90")
+    incumbent_metrics = _screener_metrics(recall="0.70")
 
     def fake_incumbent(key):
         if key == SCREENER_KEY:
@@ -264,14 +336,8 @@ def test_run_can_promote_multiple_challengers_without_demoting_incumbent():
         session_id="77777777-7777-7777-7777-777777777777",
     )
     incumbent.promoted = True
-    winning = [
-        _metric(ModelMetricName.RECALL, Decimal("0.90")),
-        _metric(ModelMetricName.ABSTENTION_RATE, Decimal("0.05")),
-    ]
-    incumbent_metrics = [
-        _metric(ModelMetricName.RECALL, Decimal("0.70")),
-        _metric(ModelMetricName.ABSTENTION_RATE, Decimal("0.10")),
-    ]
+    winning = _screener_metrics(recall="0.90")
+    incumbent_metrics = _screener_metrics(recall="0.70")
 
     def fake_incumbent(key):
         if key == SCREENER_KEY:

@@ -28,6 +28,7 @@ class ModelMetricName(str, Enum):
     ACCURACY = "accuracy"
     RECALL = "recall"
     PRECISION = "precision"
+    FALSE_POSITIVE_RATE = "false_positive_rate"
     ABSTENTION_RATE = "abstention_rate"
     F1_SCORE = "f1_score"
     MACRO_F1_SCORE = "macro_f1_score"

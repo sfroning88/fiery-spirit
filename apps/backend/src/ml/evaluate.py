@@ -38,6 +38,14 @@ _BYTES_PER_PARAM = {
 _EDGE_FLASH_BUDGET_KB = Decimal("256")
 _EDGE_PEAK_RAM_BUDGET_KB = Decimal("256")
 _EDGE_MACS_BUDGET = 50_000_000
+_SCREENER_MIN_RECALL = Decimal("0.70")
+_SCREENER_MIN_PRECISION = Decimal("0.80")
+_SCREENER_MAX_FPR = Decimal("0.05")
+_SCREENER_MIN_RECALL_DELTA = Decimal("0.01")
+_TEACHER_MIN_MACRO_F1_SCORE = Decimal("0.75")
+_TEACHER_MIN_MACRO_F1_SCORE_DELTA = Decimal("0.02")
+_STUDENT_MIN_ACCURACY = Decimal("0.80")
+_STUDENT_MIN_ACCURACY_DELTA = Decimal("0.02")
 
 
 class _ModelEvaluator:
@@ -119,37 +127,92 @@ class _ModelEvaluator:
             return False
         match key:
             case (ModelTier.CLOUD, ModelRole.SCREENER):
-                primary, secondary = (
-                    ModelMetricName.RECALL,
-                    ModelMetricName.ABSTENTION_RATE,
-                )
+                return cls._screener_gate(challenger_metrics, metrics_to_beat)
             case (ModelTier.CLOUD, ModelRole.TEACHER):
-                primary, secondary = ModelMetricName.MACRO_F1_SCORE, None
+                return cls._teacher_gate(challenger_metrics, metrics_to_beat)
             case (ModelTier.EDGE, ModelRole.STUDENT):
-                primary, secondary = ModelMetricName.ACCURACY, None
+                return cls._student_gate(challenger_metrics, metrics_to_beat)
             case _:
                 return False
-        challenger_primary = cls._metric_value(challenger_metrics, primary)
-        if challenger_primary is None:
+
+    @classmethod
+    def _screener_gate(
+        cls,
+        challenger_metrics: List[ModelMetric],
+        metrics_to_beat: List[ModelMetric],
+    ) -> bool:
+        recall = cls._metric_value(challenger_metrics, ModelMetricName.RECALL)
+        precision = cls._metric_value(challenger_metrics, ModelMetricName.PRECISION)
+        fpr = cls._metric_value(challenger_metrics, ModelMetricName.FALSE_POSITIVE_RATE)
+        abstention_rate = cls._metric_value(
+            challenger_metrics, ModelMetricName.ABSTENTION_RATE
+        )
+        if (
+            recall is None
+            or precision is None
+            or fpr is None
+            or abstention_rate is None
+        ):
             return False
-        if not metrics_to_beat:
-            return True
-        primary_metric_to_beat = cls._metric_value(metrics_to_beat, primary)
-        if primary_metric_to_beat is None:
-            return True
-        if challenger_primary < primary_metric_to_beat:
+        if (
+            recall < _SCREENER_MIN_RECALL
+            or precision < _SCREENER_MIN_PRECISION
+            or fpr > _SCREENER_MAX_FPR
+        ):
             return False
-        if challenger_primary > primary_metric_to_beat:
+        incumbent_recall = cls._metric_value(metrics_to_beat, ModelMetricName.RECALL)
+        if incumbent_recall is None:
             return True
-        if secondary is None:
+        incumbent_abstention_rate = cls._metric_value(
+            metrics_to_beat, ModelMetricName.ABSTENTION_RATE
+        )
+        recall_delta = recall - incumbent_recall
+        if recall_delta == _SCREENER_MIN_RECALL_DELTA:
+            if not incumbent_abstention_rate:
+                return True
+            return abstention_rate < incumbent_abstention_rate
+        return recall_delta >= _SCREENER_MIN_RECALL_DELTA
+
+    @classmethod
+    def _teacher_gate(
+        cls,
+        challenger_metrics: List[ModelMetric],
+        metrics_to_beat: List[ModelMetric],
+    ) -> bool:
+        macro_f1_score = cls._metric_value(
+            challenger_metrics, ModelMetricName.MACRO_F1_SCORE
+        )
+        if macro_f1_score is None:
             return False
-        challenger_secondary = cls._metric_value(challenger_metrics, secondary)
-        if challenger_secondary is None:
+        if macro_f1_score < _TEACHER_MIN_MACRO_F1_SCORE:
             return False
-        secondary_metric_to_beat = cls._metric_value(metrics_to_beat, secondary)
-        if secondary_metric_to_beat is None:
+        incumbent_macro_f1_score = cls._metric_value(
+            metrics_to_beat, ModelMetricName.MACRO_F1_SCORE
+        )
+        if incumbent_macro_f1_score is None:
             return True
-        return challenger_secondary < secondary_metric_to_beat
+        return (
+            macro_f1_score - incumbent_macro_f1_score
+            >= _TEACHER_MIN_MACRO_F1_SCORE_DELTA
+        )
+
+    @classmethod
+    def _student_gate(
+        cls,
+        challenger_metrics: List[ModelMetric],
+        metrics_to_beat: List[ModelMetric],
+    ) -> bool:
+        accuracy = cls._metric_value(challenger_metrics, ModelMetricName.ACCURACY)
+        if accuracy is None:
+            return False
+        if accuracy < _STUDENT_MIN_ACCURACY:
+            return False
+        incumbent_accuracy = cls._metric_value(
+            metrics_to_beat, ModelMetricName.ACCURACY
+        )
+        if incumbent_accuracy is None:
+            return True
+        return accuracy - incumbent_accuracy >= _STUDENT_MIN_ACCURACY_DELTA
 
     @staticmethod
     def _metric_value(

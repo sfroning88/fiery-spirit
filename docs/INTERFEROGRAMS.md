@@ -80,14 +80,11 @@ Refined shard `.tar` files are **layout-addressed:**
 
 ```python
 payload = {
+    "op_version", # STORAGE_OP_VERSION
     "patch_px", # crop size
     "wrap_rad", # wrap interval
     "normalize", # scale mode
     "coherence_min", # keep/drop
-    "apply", # pipeline source
-    "_split_channels", # stack layout
-    "_center_crop", # crop geometry
-    "_normalize", # scale function
 }
 transform_hash = sha256(sorted(payload))
 ```
@@ -132,7 +129,7 @@ To prevent `training-serving skew` across the pipeline:
 
 - Frozen `.tar` pixels are not `transformed` at train time
 - `.npz` unrefined samples only serve as a cache
-- Members use `format_version` instead of `transform_hash`
+- Members use `format_version` and `op_version` (`STORAGE_OP_VERSION`)
 - Dataset integrity by `content_hash` in `r2_s3`
 
 ## Samples Dataset

@@ -5,10 +5,10 @@ Deterministic interferogram preprocess for deformation shards
 """
 
 import hashlib
-import inspect
 import json
 import numpy as np
 from typing import Tuple, assert_never
+from ..constants import STORAGE_OP_VERSION
 from ..enums import TrainingNormalize
 from ..models import TrainingDeformation
 
@@ -86,14 +86,11 @@ class Transformation:
     def transform_hash(cls, training_deformation: TrainingDeformation) -> str:
         """SHA-256 of sorted deformation transformations and source of apply"""
         payload = {
+            "op_version": STORAGE_OP_VERSION,
             "patch_px": training_deformation.patch_px,
             "wrap_rad": str(training_deformation.wrap_rad),
             "normalize": training_deformation.normalize.value,
             "coherence_min": str(training_deformation.coherence_min),
-            "apply": inspect.getsource(cls.apply),
-            "_split_channels": inspect.getsource(cls._split_channels),
-            "_center_crop": inspect.getsource(cls._center_crop),
-            "_normalize": inspect.getsource(cls._normalize),
         }
         blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode(
             "utf-8"

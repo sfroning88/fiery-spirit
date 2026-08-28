@@ -44,6 +44,15 @@ def _metrics() -> list[ModelMetric]:
     ]
 
 
+def _decision() -> dict:
+    return {
+        "threshold": 0.5,
+        "abstention_band": "0.00000",
+        "transform_hash": "a" * 64,
+        "op_version": 1,
+    }
+
+
 def _spec(**overrides) -> dict:
     data = {
         "session_id": "sess-1",
@@ -70,28 +79,37 @@ def test_seed_sets_torch_rng():
 
 def test_train_deformation_saves_then_callbacks():
     metrics = _metrics()
+    decision = _decision()
     model = _TinyModel()
     loaders = {"train": object()}
+    spec = _spec()
     with (
         patch("src.entrypoint.build_loaders", return_value=loaders),
         patch("src.entrypoint.build_job", return_value=model),
         patch("src.entrypoint.train_model"),
-        patch("src.entrypoint.score_model", return_value=metrics),
-        patch("src.entrypoint.ModelStorageServices.save") as save,
+        patch("src.entrypoint.score_model", return_value=(metrics, decision)),
+        patch("src.entrypoint.ModelStorageServices.save_artifact") as save,
         patch(
             "src.entrypoint.ModelStorageServices.head_hmac",
             return_value="b" * 64,
         ),
         patch("src.entrypoint.send_callback") as callback,
     ):
-        result = train_deformation(_spec())
+        result = train_deformation(spec)
     save.assert_called_once()
+    weights_key = save.call_args[0][2]
+    sidecar = save.call_args[0][1]
+    assert weights_key == "cloud/screener/sess-1.safetensors"
+    assert sidecar["architecture"] == "vit_small_patch16_224"
+    assert sidecar["decision"] is decision
+    assert sidecar["lora"] == spec["lora"]
     callback.assert_called_once()
     kwargs = callback.call_args.kwargs
-    assert kwargs["storage_path"] == "cloud/screener/sess-1.pkl"
+    assert kwargs["storage_path"] == "cloud/screener/sess-1.safetensors"
     assert kwargs["signature"] == "b" * 64
-    assert kwargs["architecture"] == "vit-small"
+    assert kwargs["architecture"] == "vit_small_patch16_224"
     assert kwargs["metrics"] is metrics
+    assert kwargs["decision"] is decision
     assert result == {
         "ok": True,
         "spec": "sess-1",
