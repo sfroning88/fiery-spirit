@@ -6,7 +6,11 @@ Background functions for Ingest
 
 from fiery_python import logging
 from fiery_python import TrainingSampleSource
-from .services import IngestHephaestusSource, IngestOkadaSource
+from .services import (
+    IngestHephaestusSource,
+    IngestLlaimaSource,
+    IngestOkadaSource,
+)
 
 logger = logging.get_logger(__name__)
 
@@ -24,6 +28,8 @@ class IngestBackgroundJobs:
             match source:
                 case TrainingSampleSource.HEPHAESTUS:
                     asset_count = IngestHephaestusSource.run(ingest_id, max_samples)
+                case TrainingSampleSource.LLAIMA:
+                    asset_count = IngestLlaimaSource.run(ingest_id, max_samples)
                 case TrainingSampleSource.OKADA:
                     asset_count = IngestOkadaSource.run(ingest_id, max_samples)
                 case _:

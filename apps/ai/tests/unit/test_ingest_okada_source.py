@@ -70,7 +70,7 @@ def test_run_upserts_okada_page():
             side_effect=_record_page,
         ) as upsert_okada_page,
         patch(
-            "integrations.ingest.services.okada_source.IngestPersistService.npz_bytes",
+            "integrations.ingest.services.okada_source.IngestPersistService.interferogram_npz_bytes",
             return_value=b"npz",
         ),
         patch(
@@ -99,7 +99,7 @@ def test_run_marks_failed_and_reraises():
     assert upsert_ingest.call_args_list[-1].args[0].status == TrainingStatus.FAILED
 
 
-def test_run_floors_max_samples():
+def test_run_passes_max_samples_through():
     with (
         patch.object(
             IngestOkadaSource, "_iter_samples", return_value=[]
@@ -110,5 +110,12 @@ def test_run_floors_max_samples():
     ):
         IngestOkadaSource.run("ingest-okada", max_samples=1)
         IngestOkadaSource.run("ingest-okada", max_samples=50)
-    assert iter_samples.call_args_list[0].args == (5,)
+    assert iter_samples.call_args_list[0].args == (1,)
     assert iter_samples.call_args_list[1].args == (50,)
+
+
+def test_run_rejects_non_positive_max_samples():
+    with pytest.raises(ValueError, match="max_samples must be positive"):
+        IngestOkadaSource.run("ingest-okada", max_samples=0)
+    with pytest.raises(ValueError, match="max_samples must be positive"):
+        IngestOkadaSource.run("ingest-okada", max_samples=-1)

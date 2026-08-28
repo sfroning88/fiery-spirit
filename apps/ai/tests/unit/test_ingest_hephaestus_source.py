@@ -147,7 +147,7 @@ def test_iter_samples_skips_bad_rows():
             side_effect=load_dataset,
         ),
         patch(
-            "integrations.ingest.services.hephaestus_source.HF_STREAM_TOKEN",
+            "integrations.ingest.services.hephaestus_source.HF_TOKEN",
             "test-token",
         ),
     ):
@@ -178,7 +178,7 @@ def test_iter_samples_maps_hub_splits():
             side_effect=load_dataset,
         ) as load_ds,
         patch(
-            "integrations.ingest.services.hephaestus_source.HF_STREAM_TOKEN",
+            "integrations.ingest.services.hephaestus_source.HF_TOKEN",
             "test-token",
         ),
     ):
@@ -208,7 +208,7 @@ def test_iter_samples_stops_after_max_samples():
             side_effect=load_dataset,
         ),
         patch(
-            "integrations.ingest.services.hephaestus_source.HF_STREAM_TOKEN",
+            "integrations.ingest.services.hephaestus_source.HF_TOKEN",
             "test-token",
         ),
     ):
@@ -242,7 +242,7 @@ def test_run_upserts_completed_and_returns_count():
             "integrations.ingest.services.hephaestus_source.IngestPersistService.upsert_interferograms"
         ) as upsert_interferograms,
         patch(
-            "integrations.ingest.services.hephaestus_source.IngestPersistService.npz_bytes",
+            "integrations.ingest.services.hephaestus_source.IngestPersistService.interferogram_npz_bytes",
             return_value=b"npz",
         ),
         patch(
@@ -276,7 +276,7 @@ def test_run_marks_failed_and_reraises():
     assert upsert_ingest.call_args_list[-1].args[0].status == TrainingStatus.FAILED
 
 
-def test_run_floors_max_samples():
+def test_run_passes_max_samples_through():
     with (
         patch.object(
             IngestHephaestusSource, "_iter_samples", return_value=[]
@@ -287,8 +287,15 @@ def test_run_floors_max_samples():
     ):
         IngestHephaestusSource.run("ingest-1", max_samples=1)
         IngestHephaestusSource.run("ingest-1", max_samples=50)
-    assert iter_samples.call_args_list[0].args == (5,)
+    assert iter_samples.call_args_list[0].args == (1,)
     assert iter_samples.call_args_list[1].args == (50,)
+
+
+def test_run_rejects_non_positive_max_samples():
+    with pytest.raises(ValueError, match="max_samples must be positive"):
+        IngestHephaestusSource.run("ingest-1", max_samples=0)
+    with pytest.raises(ValueError, match="max_samples must be positive"):
+        IngestHephaestusSource.run("ingest-1", max_samples=-1)
 
 
 class MagicIter:

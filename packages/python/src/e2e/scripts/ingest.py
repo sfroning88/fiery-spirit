@@ -12,6 +12,7 @@ from ...fiery_python import TrainingSampleSource
 _DEFORMATION_SOURCES = (
     TrainingSampleSource.HEPHAESTUS,
     TrainingSampleSource.OKADA,
+    TrainingSampleSource.LLAIMA,
 )
 _MAX_SAMPLES = 20
 _JOB_TIMEOUT_SECONDS = 600

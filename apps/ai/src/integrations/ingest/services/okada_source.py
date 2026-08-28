@@ -35,7 +35,8 @@ class IngestOkadaSource:
     @classmethod
     def run(cls, ingest_id: str, max_samples: int = 5) -> int:
         """Augment interferograms; return asset_count"""
-        max_samples = max(max_samples, 5)
+        if max_samples <= 0:
+            raise ValueError("max_samples must be positive")
         started_at = datetime.now(timezone.utc)
         IngestPersistService.upsert_ingest(
             DatasetIngest(
@@ -52,7 +53,7 @@ class IngestOkadaSource:
         try:
             for sample in cls._iter_samples(max_samples):
                 deformation_source: TrainingDeformationSource = sample["source"]
-                body = IngestPersistService.npz_bytes(
+                body = IngestPersistService.interferogram_npz_bytes(
                     sample["phase"], sample["coherence"]
                 )
                 storage_path = BlobStorageServices.put_unrefined(

@@ -14,6 +14,7 @@ from fiery_python import (
     DatasetIngest,
     TrainingInterferogram,
     TrainingDeformationSource,
+    TrainingSeismicEvent,
 )
 from ..queries.upsert_dataset_ingest import QUERY as UPSERT_INGEST
 from ..queries.upsert_training_interferograms import (
@@ -24,14 +25,25 @@ from ..queries.upsert_training_deformation_sources import (
     QUERY as UPSERT_DEFORMATION_SOURCES,
     TEMPLATE as UPSERT_DEFORMATION_SOURCES_TEMPLATE,
 )
+from ..queries.upsert_training_seismic_events import (
+    QUERY as UPSERT_SEISMIC_EVENTS,
+    TEMPLATE as UPSERT_SEISMIC_EVENTS_TEMPLATE,
+)
 
 
 class IngestPersistService:
-    """Persist ingest, deformation_source, interferograms; unrefined npz bytes"""
+    """Persist ingest, deformation_source, interferograms, seismic_event; unrefined npz bytes"""
 
     @staticmethod
-    def npz_bytes(phase: np.ndarray, coherence: np.ndarray) -> bytes:
+    def interferogram_npz_bytes(phase: np.ndarray, coherence: np.ndarray) -> bytes:
         stack = np.stack([phase, coherence], axis=0).astype(np.float32)
+        buf = io.BytesIO()
+        np.savez_compressed(buf, data=stack)
+        return buf.getvalue()
+
+    @staticmethod
+    def waveform_npz_bytes(waveform: np.ndarray) -> bytes:
+        stack = waveform.astype(np.float32)
         buf = io.BytesIO()
         np.savez_compressed(buf, data=stack)
         return buf.getvalue()
@@ -72,6 +84,21 @@ class IngestPersistService:
                 UPSERT_INTERFEROGRAMS.as_string(cursor),
                 insert_values,
                 template=UPSERT_INTERFEROGRAMS_TEMPLATE.as_string(cursor),
+                page_size=TRAINING_DB_PAGE_SIZE,
+            )
+
+    @staticmethod
+    def upsert_seismic_events(seismic_events: List[TrainingSeismicEvent]) -> None:
+        insert_values = [
+            seismic_event.prepare_for_storage(include_id=True)
+            for seismic_event in seismic_events
+        ]
+        with db_pool.get_cursor() as cursor:
+            execute_values(
+                cursor,
+                UPSERT_SEISMIC_EVENTS.as_string(cursor),
+                insert_values,
+                template=UPSERT_SEISMIC_EVENTS_TEMPLATE.as_string(cursor),
                 page_size=TRAINING_DB_PAGE_SIZE,
             )
 

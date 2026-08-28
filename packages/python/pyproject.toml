@@ -37,6 +37,7 @@ dev = [
   "timm>=1.0.28",
   "peft>=0.20.0",
   "webdataset>=1.0.2",
+  "h5py>=3.14.0",
 ]
 
 [tool.setuptools.packages.find]

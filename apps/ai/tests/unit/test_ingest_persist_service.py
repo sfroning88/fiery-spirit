@@ -25,7 +25,7 @@ from integrations.ingest.services.persist_service import IngestPersistService
 def test_npz_bytes_stacks_phase_then_coherence():
     phase = np.ones((4, 4), dtype=np.float32)
     coherence = np.full((4, 4), 0.5, dtype=np.float32)
-    body = IngestPersistService.npz_bytes(phase, coherence)
+    body = IngestPersistService.interferogram_npz_bytes(phase, coherence)
     loaded = np.load(io.BytesIO(body))
     stack = loaded["data"]
     assert stack.shape == (2, 4, 4)
