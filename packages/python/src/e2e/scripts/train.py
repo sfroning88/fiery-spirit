@@ -4,17 +4,19 @@ Created Date: 8.23.2026
 Train spawn testing script
 """
 
+from decimal import Decimal
 from typing import Any, List
-
-from ...fiery_python import TrainingStage
-
 from ..endpoints import TRAIN_URL, endpoint_test
 from ..helpers import wait_for_jobs
+from ...fiery_python import (
+    Transformation,
+    TrainingStage,
+    TrainingNormalize,
+    TrainingDeformation,
+    UuidUtils,
+)
 
 _JOB_TIMEOUT_SECONDS = 600
-
-_TRAINING_CONTRACT_ID = ""
-_TRAINING_VERSION_ID = ""
 
 
 def run_train_test() -> None:
@@ -23,12 +25,25 @@ def run_train_test() -> None:
 
     print(f"\nAttempting train")
 
+    deformation = TrainingDeformation(
+        patch_px=8,
+        wrap_rad=Decimal("3.14159"),
+        normalize=TrainingNormalize.NONE,
+        coherence_min=Decimal("0.300"),
+        class_id="ignored-for-hash",
+    )
+    transform_hash = Transformation.transform_hash(deformation)
+    training_contract_id = UuidUtils.deterministic_uuid("deformation", 1)
+    dataset_version_id = UuidUtils.deterministic_uuid(
+        training_contract_id, transform_hash
+    )
+
     response: Any = endpoint_test(
         TRAIN_URL,
         name=f"train",
         payload={
-            "contract_id": _TRAINING_CONTRACT_ID,
-            "version_id": _TRAINING_VERSION_ID,
+            "contract_id": training_contract_id,
+            "version_id": dataset_version_id,
             "stage": TrainingStage.LORA,
         },
     )

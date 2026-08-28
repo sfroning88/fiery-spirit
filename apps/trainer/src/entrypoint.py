@@ -100,7 +100,6 @@ def train_deformation(spec: Dict) -> Dict:
         return {
             "ok": False,
             "spec": spec["session_id"],
-            "storage_path": spec["storage_path"],
         }
 
 

@@ -9,6 +9,8 @@ from typing import Dict
 
 app = modal.App("fiery-trainer")
 
+secrets = [modal.Secret.from_name("Fiery-Environment")]
+
 
 def _download_vit_small() -> None:
     import timm
@@ -29,7 +31,7 @@ image = (
         "peft==0.20.0",
         "webdataset==1.0.2",
     )
-    .run_function(_download_vit_small)
+    .run_function(_download_vit_small, secrets=secrets)
     .add_local_dir(
         "../../packages/python",
         remote_path="/opt/packages/python",
@@ -38,8 +40,6 @@ image = (
     .run_commands("uv pip install --system -e /opt/packages/python")
     .add_local_python_source("src")
 )
-
-secrets = [modal.Secret.from_name("Fiery-Environment")]
 
 
 @app.function(image=image, gpu="T4", timeout=3600, secrets=secrets)

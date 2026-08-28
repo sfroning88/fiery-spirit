@@ -131,5 +131,4 @@ def test_train_deformation_skips_callback_when_train_fails():
     assert result == {
         "ok": False,
         "spec": "sess-1",
-        "storage_path": "unused",
     }

@@ -5,7 +5,6 @@ Model registry testing script
 """
 
 from typing import Any, Dict, Tuple
-
 from ..endpoints import (
     ML_RELOAD_URL,
     endpoint_test,

@@ -21,8 +21,8 @@ def _reset_s3_clients():
 
 
 def test_r2_get_client_requires_credentials(monkeypatch):
-    monkeypatch.delenv("R2_KEY_ID", raising=False)
-    monkeypatch.delenv("R2_KEY_SECRET", raising=False)
+    monkeypatch.delenv("R2_BUCKET_KEY_ID", raising=False)
+    monkeypatch.delenv("R2_BUCKET_KEY_SECRET", raising=False)
 
     with pytest.raises(RuntimeError, match="R2 credentials"):
         r2_s3.get_client()
