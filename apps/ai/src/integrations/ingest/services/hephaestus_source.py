@@ -44,7 +44,8 @@ class IngestHephaestusSource:
     @classmethod
     def run(cls, ingest_id: str, max_samples: int = 5) -> int:
         """Download pathes, store unrefined samples, upsert interferograms; return asset_count"""
-        max_samples = max(max_samples, 5)
+        if max_samples <= 0:
+            raise ValueError("max_samples must be positive")
         started_at = datetime.now(timezone.utc)
         IngestPersistService.upsert_ingest(
             DatasetIngest(
@@ -119,7 +120,9 @@ class IngestHephaestusSource:
         if isinstance(value, dict) or hasattr(value, "shape"):
             return value
         if isinstance(value, (bytes, bytearray, memoryview)):
-            return torch.load(io.BytesIO(bytes(value)), map_location="cpu")
+            return torch.load(
+                io.BytesIO(bytes(value)), map_location="cpu", weights_only=True
+            )
         return value
 
     @staticmethod
@@ -165,6 +168,8 @@ class IngestHephaestusSource:
             return None
         phase: Optional[np.ndarray] = array[_PHASE_BAND]
         coherence: Optional[np.ndarray] = array[_COHERENCE_BAND]
+        if phase is None or coherence is None:
+            return None
         if phase.shape != coherence.shape:
             return None
         if float(np.nanmax(coherence)) > 1.0:

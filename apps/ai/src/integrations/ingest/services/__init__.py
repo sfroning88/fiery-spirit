@@ -5,7 +5,7 @@ from .persist_service import IngestPersistService
 
 __all__ = [
     "IngestHephaestusSource",
-    "IngestLlamaSource",
+    "IngestLlaimaSource",
     "IngestOkadaSource",
     "IngestPersistService",
 ]

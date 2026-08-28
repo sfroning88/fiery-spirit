@@ -48,7 +48,8 @@ class IngestLlaimaSource:
     @classmethod
     def run(cls, ingest_id: str, max_samples: int = 5) -> int:
         """Download dataset, store unrefined samples, upsert seismic_events; return asset_count"""
-        max_samples = max(max_samples, 5)
+        if max_samples <= 0:
+            raise ValueError("max_samples must be positive")
         started_at = datetime.now(timezone.utc)
         IngestPersistService.upsert_ingest(
             DatasetIngest(

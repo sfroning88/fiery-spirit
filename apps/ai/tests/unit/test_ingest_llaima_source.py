@@ -241,7 +241,7 @@ def test_run_marks_failed_and_reraises():
     assert upsert_ingest.call_args_list[-1].args[0].status == TrainingStatus.FAILED
 
 
-def test_run_floors_max_samples():
+def test_run_passes_max_samples_through():
     with (
         patch.object(
             IngestLlaimaSource, "_iter_samples", return_value=[]
@@ -252,5 +252,12 @@ def test_run_floors_max_samples():
     ):
         IngestLlaimaSource.run("ingest-1", max_samples=1)
         IngestLlaimaSource.run("ingest-1", max_samples=50)
-    assert iter_samples.call_args_list[0].args == (5,)
+    assert iter_samples.call_args_list[0].args == (1,)
     assert iter_samples.call_args_list[1].args == (50,)
+
+
+def test_run_rejects_non_positive_max_samples():
+    with pytest.raises(ValueError, match="max_samples must be positive"):
+        IngestLlaimaSource.run("ingest-1", max_samples=0)
+    with pytest.raises(ValueError, match="max_samples must be positive"):
+        IngestLlaimaSource.run("ingest-1", max_samples=-1)
