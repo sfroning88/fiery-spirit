@@ -23,6 +23,7 @@ def _download_vit_small() -> None:
 image = (
     modal.Image.debian_slim(python_version="3.13")
     .uv_pip_install(
+        "safetensors==0.8.0",
         "torch==2.13.0",
         "timm==1.0.28",
         "peft==0.20.0",

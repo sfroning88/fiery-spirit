@@ -26,7 +26,7 @@ from integrations.callback.services.verify_artifact import CallbackVerifyArtifac
 
 def _payload(**overrides) -> CallbackRequest:
     data = {
-        "session_id": "sess-1",
+        "session_id": "11111111-1111-1111-1111-111111111111",
         "tier": ModelTier.CLOUD,
         "role": ModelRole.SCREENER,
         "precision": TrainingPrecision.FP32,

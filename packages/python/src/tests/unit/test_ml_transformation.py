@@ -11,6 +11,7 @@ import pytest
 from unittest.mock import patch
 from fiery_python import (
     STORAGE_OP_VERSION,
+    InferenceAbstainReason,
     TrainingDeformation,
     TrainingNormalize,
     Transformation,
@@ -127,3 +128,17 @@ def test_transform_hash_includes_op_version():
         STORAGE_OP_VERSION + 1,
     ):
         assert hashed != Transformation.transform_hash(_params())
+
+
+def test_map_rejection_to_reason_low_coherence():
+    assert (
+        Transformation.map_rejection_to_reason("coherence below min")
+        is InferenceAbstainReason.LOW_COHERENCE
+    )
+
+
+def test_map_rejection_to_reason_transform_rejected():
+    assert (
+        Transformation.map_rejection_to_reason("expected array shape (2, H, W)")
+        is InferenceAbstainReason.TRANSFORM_REJECTED
+    )

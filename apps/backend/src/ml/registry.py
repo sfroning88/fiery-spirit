@@ -118,7 +118,7 @@ class _ModelRegistry:
                 role=role.value,
             )
 
-    def get(self, key: Tuple[ModelTier, ModelRole]) -> Any:
+    def get(self, key: Tuple[ModelTier, ModelRole]) -> nn.Module:
         """Return cached model artifact or raise if missing"""
         with self._lock:
             artifact = self._slot(key).get().model

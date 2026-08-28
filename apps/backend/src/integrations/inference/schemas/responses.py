@@ -1,13 +1,17 @@
 """
 Author: Sean Froning
-Created Date: 8.17.2026
+Created Date: 8.28.2026
 Response models for Inferences
 """
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
+from typing import List
+from ..models import InferenceOutcome
 
 
 class InferenceResponse(BaseModel):
-    """Response model for retrieving prediction"""
+    """Response model for retrieving inference"""
 
-    model_config = ConfigDict(extra="forbid")
+    results: List[InferenceOutcome]
+    artifact_id: str
+    transform_hash: str

@@ -9,7 +9,7 @@ import json
 import numpy as np
 from typing import Tuple, assert_never
 from ..constants import STORAGE_OP_VERSION
-from ..enums import TrainingNormalize
+from ..enums import InferenceAbstainReason, TrainingNormalize
 from ..models import TrainingDeformation
 
 
@@ -96,3 +96,27 @@ class Transformation:
             "utf-8"
         )
         return hashlib.sha256(blob).hexdigest()
+
+    @staticmethod
+    def map_rejection_to_reason(rejection: str) -> InferenceAbstainReason:
+        match rejection:
+            case "expected array shape (2, H, W)":
+                return InferenceAbstainReason.TRANSFORM_REJECTED
+            case "patch_px must be postive int":
+                return InferenceAbstainReason.TRANSFORM_REJECTED
+            case "array smaller than patch_px":
+                return InferenceAbstainReason.TRANSFORM_REJECTED
+            case "minmax range is empy":
+                return InferenceAbstainReason.TRANSFORM_REJECTED
+            case "zscore std is zero":
+                return InferenceAbstainReason.TRANSFORM_REJECTED
+            case "percentile range is empty":
+                return InferenceAbstainReason.TRANSFORM_REJECTED
+            case "non-finite phase or coherence":
+                return InferenceAbstainReason.TRANSFORM_REJECTED
+            case "coherence below min":
+                return InferenceAbstainReason.LOW_COHERENCE
+            case "wrap_rad must be positive finite":
+                return InferenceAbstainReason.TRANSFORM_REJECTED
+            case _:
+                return InferenceAbstainReason.TRANSFORM_REJECTED
