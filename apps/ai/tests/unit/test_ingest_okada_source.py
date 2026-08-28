@@ -70,7 +70,7 @@ def test_run_upserts_okada_page():
             side_effect=_record_page,
         ) as upsert_okada_page,
         patch(
-            "integrations.ingest.services.okada_source.IngestPersistService.npz_bytes",
+            "integrations.ingest.services.okada_source.IngestPersistService.interferogram_npz_bytes",
             return_value=b"npz",
         ),
         patch(

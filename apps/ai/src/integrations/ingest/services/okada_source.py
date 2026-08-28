@@ -52,7 +52,7 @@ class IngestOkadaSource:
         try:
             for sample in cls._iter_samples(max_samples):
                 deformation_source: TrainingDeformationSource = sample["source"]
-                body = IngestPersistService.npz_bytes(
+                body = IngestPersistService.interferogram_npz_bytes(
                     sample["phase"], sample["coherence"]
                 )
                 storage_path = BlobStorageServices.put_unrefined(

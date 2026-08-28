@@ -147,7 +147,7 @@ def test_iter_samples_skips_bad_rows():
             side_effect=load_dataset,
         ),
         patch(
-            "integrations.ingest.services.hephaestus_source.HF_STREAM_TOKEN",
+            "integrations.ingest.services.hephaestus_source.HF_TOKEN",
             "test-token",
         ),
     ):
@@ -178,7 +178,7 @@ def test_iter_samples_maps_hub_splits():
             side_effect=load_dataset,
         ) as load_ds,
         patch(
-            "integrations.ingest.services.hephaestus_source.HF_STREAM_TOKEN",
+            "integrations.ingest.services.hephaestus_source.HF_TOKEN",
             "test-token",
         ),
     ):
@@ -208,7 +208,7 @@ def test_iter_samples_stops_after_max_samples():
             side_effect=load_dataset,
         ),
         patch(
-            "integrations.ingest.services.hephaestus_source.HF_STREAM_TOKEN",
+            "integrations.ingest.services.hephaestus_source.HF_TOKEN",
             "test-token",
         ),
     ):
@@ -242,7 +242,7 @@ def test_run_upserts_completed_and_returns_count():
             "integrations.ingest.services.hephaestus_source.IngestPersistService.upsert_interferograms"
         ) as upsert_interferograms,
         patch(
-            "integrations.ingest.services.hephaestus_source.IngestPersistService.npz_bytes",
+            "integrations.ingest.services.hephaestus_source.IngestPersistService.interferogram_npz_bytes",
             return_value=b"npz",
         ),
         patch(

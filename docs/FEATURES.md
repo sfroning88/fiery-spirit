@@ -1,8 +1,8 @@
-# Deformation Interferograms
+# Interferograms and Waveforms
 
 Last updated: **August 2026**
 
-## Deformation API
+## Feature API
 
 ### Ingest Endpoint
 
@@ -10,6 +10,10 @@ Last updated: **August 2026**
 
 - [**`Hephaestus`**](https://arxiv.org/abs/2204.09435) from the [`orion-ai-lab`](https://huggingface.co/orion-ai-lab)
 - [**`Okada model`**](https://www.clawpack.org/v5.5.x/okada.html) for ground deformation
+
+- `Waveform` source:
+
+- [**`Llaima volcano`**](https://data.mendeley.com/datasets/dv8nwdd36k/1) from [`João Paulo Canárioet al`]
 
 `Ingest` functions are requested via `/api/ingest`:
 
@@ -51,6 +55,16 @@ ops = [
 ]
 ```
 
+The current **waveform contract** is:
+
+```python
+array_shape = (T,) # T = 60 s @ 100 Hz
+station = "LAV"
+sampling_hz = 100
+value_range = [1, 2] # archive scale
+ops = [] # bandpass 1 - 10 Hz
+```
+
 The current **packing contract** is:
 
 ```python
@@ -64,7 +78,7 @@ shard_members = [
 
 ### Unrefined and Refined Samples
 
-Unrefined interferogram `.npz` files are **content-addressed:**
+Unrefined sample `.npz` files are **content-addressed:**
 
 ```python
 content_hash = hashlib.sha256(npz_bytes).hexdigest()
@@ -105,9 +119,9 @@ Attempting to apply `padding` or `normalization` would invent fringes.
 
 ### Samples Flow
 
-Deformation interferograms move through the pipeline:
+Deformation interferograms and seismic waveforms move:
 
-1. Source from `Hephaestus` or `Okada`
+1. Source from `<Hephaestus|Okada|Llaima>`
 2. Flush unrefined `.npz` to `r2_s3`
 3. Mark `DatasetIngest`
 4. Load unrefined `.npz` from `r2_s3`
@@ -134,13 +148,19 @@ Using **Hugging Face** [`datasets`](https://huggingface.co/docs/datasets/en/inde
 
 1. Read `MAX_DEFORMATION_SAMPLES` with `load_dataset`
 2. Take `MAX_DEFORMATION_SAMPLES` with `dataset.take`
-3. Iterate and process each `interferogram`
+3. Iterate and process each `<interferogram|waveform>`
 4. Idempotently `execute_values` by `TRAINING_DB_PAGE_SIZE`
 
 Processing for each `interferogram`:
 
-1. Read `insar_difference` and `insar_coherence` (clipped)
+1. Read `phase_band` and `coherence_band` (clipped)
 2. Assign `TrainingDeformationLabel` from `flags`
+3. Yield the unrefined catalog fields
+
+Processing for each `waveform`:
+
+1. Read the `1D_waveform`; squeeze to `(T,) float32`
+2. Assign `TrainingSeismicLabel`
 3. Yield the unrefined catalog fields
 
 ### Synthetic Fringes
@@ -167,10 +187,12 @@ To refine `.npz` samples to `.tar` shards:
 Data credits:
 
 - **Dataset:** [huggingface.co/datasets/orion-ai-lab/Thalia](https://huggingface.co/datasets/orion-ai-lab/Thalia)
+- **Dataset:** [huggingface.co/datasets/sfroning88/Llaima](https://huggingface.co/datasets/sfroning88/Llaima)
 - **Codebase:** [github.com/Orion-AI-Lab/Thalia](https://github.com/Orion-AI-Lab/Thalia)
+- **Database:** [data.mendeley.com/datasets/dv8nwdd36k/1](https://data.mendeley.com/datasets/dv8nwdd36k/1)
 
 There is one required `.env` variable to stream data:
 
 ```python
-HF_STREAM_TOKEN # read-only fine-grained token from Hugging Face
+HF_TOKEN # read-only fine-grained token from Hugging Face
 ```

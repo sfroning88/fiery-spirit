@@ -23,7 +23,7 @@ from fiery_python import (
 )
 from .persist_service import IngestPersistService
 
-HF_STREAM_TOKEN = config.get("HF_STREAM_TOKEN")
+HF_TOKEN = config.get("HF_TOKEN")
 
 _HF_ID = "orion-ai-lab/Thalia"
 _HF_REVISION = "543216fef7483825e786b3da96caeb1ee197befc"
@@ -59,7 +59,7 @@ class IngestHephaestusSource:
         asset_count = 0
         try:
             for sample in cls._iter_samples(max_samples):
-                body = IngestPersistService.npz_bytes(
+                body = IngestPersistService.interferogram_npz_bytes(
                     sample["phase"], sample["coherence"]
                 )
                 storage_path = BlobStorageServices.put_unrefined(
@@ -191,8 +191,8 @@ class IngestHephaestusSource:
     @staticmethod
     def _iter_samples(max_samples: int) -> Iterator[Dict[str, Any]]:
         """Yield unrefined phase/coherence plus catalog fields"""
-        if not HF_STREAM_TOKEN or not isinstance(HF_STREAM_TOKEN, str):
-            raise error("HF_STREAM_TOKEN not configured")
+        if not HF_TOKEN or not isinstance(HF_TOKEN, str):
+            raise error("HF_TOKEN not configured")
         remaining = max_samples
         for hf_split, training_split in _HF_SPLIT_MAP:
             if remaining <= 0:
@@ -201,7 +201,7 @@ class IngestHephaestusSource:
                 _HF_ID,
                 split=hf_split,
                 revision=_HF_REVISION,
-                token=HF_STREAM_TOKEN,
+                token=HF_TOKEN,
                 streaming=True,
             )
             dataset = dataset.take(remaining)
