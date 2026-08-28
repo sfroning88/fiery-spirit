@@ -170,7 +170,7 @@ class _ModelEvaluator:
         if recall_delta == _SCREENER_MIN_RECALL_DELTA:
             if not incumbent_abstention_rate:
                 return True
-            return abstention_rate > incumbent_abstention_rate
+            return abstention_rate < incumbent_abstention_rate
         return recall_delta >= _SCREENER_MIN_RECALL_DELTA
 
     @classmethod

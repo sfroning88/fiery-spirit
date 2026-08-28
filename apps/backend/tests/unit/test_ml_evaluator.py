@@ -182,7 +182,7 @@ def test_gate_check_promotes_screener_when_recall_delta_holds():
 
 def test_gate_check_promotes_screener_on_min_recall_delta_with_higher_abstention():
     challenger = _artifact()
-    incumbent = _screener_metrics(recall="0.80", abstention_rate="0.10")
+    incumbent = _screener_metrics(recall="0.80", abstention_rate="0.25")
 
     with patch.object(
         _ModelEvaluator,
