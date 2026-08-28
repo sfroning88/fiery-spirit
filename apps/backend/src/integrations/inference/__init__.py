@@ -1,6 +1,15 @@
-from .schemas import InferenceRequest, InferenceResponse
+from .schemas import InferenceSingleRequest, InferenceBatchRequest, InferenceResponse
+from .services import (
+    InferencePersistService,
+    InferenceServingWaiter,
+)
+from .models import InferenceOutcome
 
 __all__ = [
-    "InferenceRequest",
+    "InferenceSingleRequest",
+    "InferenceBatchRequest",
     "InferenceResponse",
+    "InferencePersistService",
+    "InferenceServingWaiter",
+    "InferenceOutcome",
 ]

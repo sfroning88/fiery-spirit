@@ -1,7 +1,8 @@
-from .requests import InferenceRequest
+from .requests import InferenceSingleRequest, InferenceBatchRequest
 from .responses import InferenceResponse
 
 __all__ = [
-    "InferenceRequest",
+    "InferenceSingleRequest",
+    "InferenceBatchRequest",
     "InferenceResponse",
 ]
