@@ -5,17 +5,15 @@ Ingest datasets testing script
 """
 
 from typing import Any, Dict, List
-
-from ...fiery_python import TrainingSampleSource
-
 from ..endpoints import INGEST_URL, endpoint_test
 from ..helpers import wait_for_jobs
+from ...fiery_python import TrainingSampleSource
 
 _DEFORMATION_SOURCES = (
     TrainingSampleSource.HEPHAESTUS,
     TrainingSampleSource.OKADA,
 )
-_MAX_SAMPLES = 5
+_MAX_SAMPLES = 20
 _JOB_TIMEOUT_SECONDS = 600
 
 

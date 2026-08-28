@@ -4,10 +4,8 @@ Created Date: 8.28.2026
 Inference backend testing script
 """
 
-from typing import Any, Dict, Tuple
-
 import requests
-
+from typing import Any, Dict, Tuple
 from ..endpoints import (
     INFERENCE_SINGLE_URL,
     endpoint_test,
@@ -16,17 +14,22 @@ from ...fiery_python import (
     MODEL_REGISTRY_SLOTS,
     ModelRole,
     ModelTier,
+    TrainingDeformationSourceType,
+    UuidUtils,
 )
-
-_INFERENCE_INTERFEROGRAM_ID = ""
 
 
 def run_inference_test() -> Dict[Tuple[ModelTier, ModelRole], Dict[str, Any]]:
     """POST /api/inference/single per (tier, role) registry slot"""
     print("Inference integration endpoint test start")
 
-    if not _INFERENCE_INTERFEROGRAM_ID:
-        raise RuntimeError("Set _INFERENCE_INTERFEROGRAM_ID before running inference")
+    deformation_source_id = UuidUtils.deterministic_uuid(
+        TrainingDeformationSourceType.OKADA.value,
+        -38.000000,
+        -71.000000,
+        5.000,
+    )
+    interferogram_id = UuidUtils.deterministic_uuid(deformation_source_id)
 
     inferred: Dict[Tuple[ModelTier, ModelRole], Dict[str, Any]] = {}
     for key in MODEL_REGISTRY_SLOTS:
@@ -39,7 +42,7 @@ def run_inference_test() -> Dict[Tuple[ModelTier, ModelRole], Dict[str, Any]]:
                 payload={
                     "tier": tier.value,
                     "role": role.value,
-                    "interferogram_id": _INFERENCE_INTERFEROGRAM_ID,
+                    "interferogram_id": interferogram_id,
                 },
             )
         except requests.HTTPError as err:

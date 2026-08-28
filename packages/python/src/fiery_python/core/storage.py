@@ -92,6 +92,18 @@ class _S3ClientStorage:
             params["Metadata"] = metadata
         try:
             self.get_client().put_object(**params)
+        except ClientError as err:
+            meta = err.response.get("ResponseMetadata") or {}
+            logger.warning(
+                "storage_upload_failed",
+                bucket=bucket,
+                key=key,
+                error=str(err),
+                error_code=(err.response.get("Error") or {}).get("Code"),
+                http_status=meta.get("HTTPStatusCode"),
+                request_id=meta.get("RequestId"),
+            )
+            raise
         except Exception as err:
             logger.warning(
                 "storage_upload_failed", bucket=bucket, key=key, error=str(err)
@@ -104,6 +116,18 @@ class _S3ClientStorage:
             raise ValueError("Storage key is required")
         try:
             return self.get_client().get_object(Bucket=bucket, Key=key)
+        except ClientError as err:
+            meta = err.response.get("ResponseMetadata") or {}
+            logger.warning(
+                "storage_download_failed",
+                bucket=bucket,
+                key=key,
+                error=str(err),
+                error_code=(err.response.get("Error") or {}).get("Code"),
+                http_status=meta.get("HTTPStatusCode"),
+                request_id=meta.get("RequestId"),
+            )
+            raise
         except Exception as err:
             logger.warning(
                 "storage_download_failed", bucket=bucket, key=key, error=str(err)
@@ -157,8 +181,8 @@ models_s3 = _S3ClientStorage(
 r2_s3 = _S3ClientStorage(
     _S3ClientEnv(
         endpoint_url="R2_BUCKET_URL",
-        access_key_id="R2_KEY_ID",
-        secret_access_key="R2_KEY_SECRET",
+        access_key_id="R2_BUCKET_KEY_ID",
+        secret_access_key="R2_BUCKET_KEY_SECRET",
         region="R2_BUCKET_REGION",
         missing_message="R2 credentials not configured",
     )

@@ -5,13 +5,11 @@ Refine shards testing script
 """
 
 from typing import Any, List
-
 from ..endpoints import REFINE_URL, endpoint_test
 from ..helpers import wait_for_jobs
+from ...fiery_python import UuidUtils
 
 _JOB_TIMEOUT_SECONDS = 600
-
-_TRAINING_CONTRACT_ID = ""
 
 
 def run_refine_test() -> None:
@@ -20,10 +18,12 @@ def run_refine_test() -> None:
 
     print(f"\nAttempting refine")
 
+    training_contract_id = UuidUtils.deterministic_uuid("deformation", 1)
+
     response: Any = endpoint_test(
         REFINE_URL,
         name=f"refine",
-        payload={"contract_id": _TRAINING_CONTRACT_ID},
+        payload={"contract_id": training_contract_id},
     )
 
     job_ids: List[str] = list(response.get("job_ids") or [])

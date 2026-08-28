@@ -4,11 +4,13 @@ Created Date: 8.21.2026
 Processing functions for Hephaestus source
 """
 
+import io
+import torch
 import numpy as np
 from datasets import load_dataset
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from typing import Any, Dict, Iterator, List, Optional, Tuple
-from fiery_python import config, error, logging
+from fiery_python import config, error
 from fiery_python import (
     TRAINING_DB_PAGE_SIZE,
     TrainingSplit,
@@ -21,15 +23,19 @@ from fiery_python import (
 )
 from .persist_service import IngestPersistService
 
-logger = logging.get_logger(__name__)
-
 HF_STREAM_TOKEN = config.get("HF_STREAM_TOKEN")
 
 _HF_ID = "orion-ai-lab/Thalia"
-_HF_SPLIT = "train"
 _HF_REVISION = "543216fef7483825e786b3da96caeb1ee197befc"
-_PHASE_KEYS = ("insar_difference",)
-_COHERENCE_KEYS = ("insar_coherence",)
+_HF_SPLIT_MAP = (
+    ("train", TrainingSplit.TRAIN),
+    ("validation", TrainingSplit.VALIDATE),
+    ("test", TrainingSplit.TEST),
+)
+_PHASE_BAND = 0
+_COHERENCE_BAND = 1
+_IMAGE_KEYS = ("image.pth", "image")
+_SAMPLE_KEYS = ("sample.pth", "sample")
 
 
 class IngestHephaestusSource:
@@ -107,34 +113,58 @@ class IngestHephaestusSource:
             raise
 
     @staticmethod
-    def _cast_height_width(array: np.ndarray) -> np.ndarray:
-        array = np.asarray(array, dtype=np.float32)
-        array = np.squeeze(array)
-        if array.ndim == 3:
-            channel_axis = int(np.argmin(array.shape))
-            array = np.take(array, -1, axis=channel_axis)
-        if array.ndim != 2:
-            raise ValueError("expected (H, W) InSAR channel")
-        return array
+    def _load_pth(value: Any) -> Any:
+        if value is None:
+            return None
+        if isinstance(value, dict) or hasattr(value, "shape"):
+            return value
+        if isinstance(value, (bytes, bytearray, memoryview)):
+            return torch.load(io.BytesIO(bytes(value)), map_location="cpu")
+        return value
 
     @staticmethod
-    def _pick_channel(
-        sample: Dict[str, np.ndarray], names: Tuple[str, ...]
-    ) -> Optional[np.ndarray]:
+    def _member(sample: Dict[str, Any], names: Tuple[str, ...]) -> Any:
         for name in names:
-            array = sample.get(name)
-            if array is not None:
-                return IngestHephaestusSource._cast_height_width(array)
+            if name in sample and sample[name] is not None:
+                return IngestHephaestusSource._load_pth(sample[name])
         return None
+
+    @staticmethod
+    def _annotation(sample: Any) -> Dict[str, Any]:
+        if not isinstance(sample, dict):
+            return {}
+        payload = IngestHephaestusSource._member(sample, _SAMPLE_KEYS)
+        if isinstance(payload, dict):
+            annotations = payload.get("annotation") or []
+            if annotations and isinstance(annotations[0], dict):
+                return annotations[0]
+            return payload
+        if isinstance(sample.get("json"), dict):
+            return sample["json"]
+        return sample
+
+    @staticmethod
+    def _parse_yyyymmdd(raw: Any) -> Optional[date]:
+        text = str(raw or "")
+        if len(text) != 8 or not text.isdigit():
+            return None
+        return date(int(text[:4]), int(text[4:6]), int(text[6:8]))
 
     @staticmethod
     def _channels_from_interferogram(
         sample: Any,
     ) -> Optional[Tuple[np.ndarray, np.ndarray]]:
-        phase = IngestHephaestusSource._pick_channel(sample, _PHASE_KEYS)
-        coherence = IngestHephaestusSource._pick_channel(sample, _COHERENCE_KEYS)
-        if phase is None or coherence is None:
+        if not isinstance(sample, dict):
             return None
+        cube = IngestHephaestusSource._member(sample, _IMAGE_KEYS)
+        if cube is None:
+            return None
+        array = np.asarray(cube, dtype=np.float32)
+        array = np.squeeze(array)
+        if array.ndim != 3 or array.shape[0] <= max(_PHASE_BAND, _COHERENCE_BAND):
+            return None
+        phase: Optional[np.ndarray] = array[_PHASE_BAND]
+        coherence: Optional[np.ndarray] = array[_COHERENCE_BAND]
         if phase.shape != coherence.shape:
             return None
         if float(np.nanmax(coherence)) > 1.0:
@@ -143,13 +173,11 @@ class IngestHephaestusSource:
 
     @staticmethod
     def _label_interferogram(sample: Any) -> Optional[TrainingDeformationLabel]:
-        flags = sample
-        if isinstance(sample.get("json"), dict):
-            flags = sample["json"]
+        flags = IngestHephaestusSource._annotation(sample)
         raw = flags.get("label") or []
         if isinstance(raw, str):
             raw = [raw]
-        names = {str(item) for item in raw}
+        names = {str(item) for item in raw if not isinstance(item, int)}
         if flags.get("corrupted") or flags.get("no_info") or flags.get("low_coherence"):
             return None
         if "Earthquake" in names:
@@ -165,29 +193,41 @@ class IngestHephaestusSource:
         """Yield unrefined phase/coherence plus catalog fields"""
         if not HF_STREAM_TOKEN or not isinstance(HF_STREAM_TOKEN, str):
             raise error("HF_STREAM_TOKEN not configured")
-        dataset = load_dataset(
-            _HF_ID,
-            split=_HF_SPLIT,
-            revision=_HF_REVISION,
-            token=HF_STREAM_TOKEN,
-            streaming=True,
-        )
-        dataset = dataset.take(max_samples)
-        for sample in dataset:
-            channels = IngestHephaestusSource._channels_from_interferogram(sample)
-            if channels is None:
-                continue
-            phase, coherence = channels
-            label = IngestHephaestusSource._label_interferogram(sample)
-            if label is None:
-                continue
-            yield {
-                "phase": phase,
-                "coherence": coherence,
-                "split": TrainingSplit.TRAIN,
-                "label": label,
-                "frame_id": sample.get("frame_id") or sample.get("id"),
-                "primary_at": sample.get("primary_date"),
-                "secondary_at": sample.get("secondary_date"),
-                "coherence_mean": float(np.mean(coherence)),
-            }
+        remaining = max_samples
+        for hf_split, training_split in _HF_SPLIT_MAP:
+            if remaining <= 0:
+                break
+            dataset = load_dataset(
+                _HF_ID,
+                split=hf_split,
+                revision=_HF_REVISION,
+                token=HF_STREAM_TOKEN,
+                streaming=True,
+            )
+            dataset = dataset.take(remaining)
+            for sample in dataset:
+                channels = IngestHephaestusSource._channels_from_interferogram(sample)
+                if channels is None:
+                    continue
+                phase, coherence = channels
+                flags = IngestHephaestusSource._annotation(sample)
+                label = IngestHephaestusSource._label_interferogram(sample)
+                if label is None:
+                    continue
+                yield {
+                    "phase": phase,
+                    "coherence": coherence,
+                    "split": training_split,
+                    "label": label,
+                    "frame_id": flags.get("frameID") or flags.get("frame_id"),
+                    "primary_at": IngestHephaestusSource._parse_yyyymmdd(
+                        flags.get("primary_date")
+                    ),
+                    "secondary_at": IngestHephaestusSource._parse_yyyymmdd(
+                        flags.get("secondary_date")
+                    ),
+                    "coherence_mean": float(np.mean(coherence)),
+                }
+                remaining -= 1
+                if remaining <= 0:
+                    break

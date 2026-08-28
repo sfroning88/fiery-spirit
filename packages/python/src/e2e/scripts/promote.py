@@ -5,7 +5,6 @@ Model evaluator testing script
 """
 
 from typing import Any, Dict, List
-
 from ..endpoints import (
     ML_PROMOTE_URL,
     endpoint_test,
