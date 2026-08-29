@@ -181,7 +181,7 @@ def test_map_rejection_to_reason_transform_rejected():
     )
     assert (
         Transformation.map_rejection_to_reason("snr below min")
-        is InferenceAbstainReason.TRANSFORM_REJECTED
+        is InferenceAbstainReason.LOW_SNR
     )
 
 

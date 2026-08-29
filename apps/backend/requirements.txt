@@ -163,8 +163,8 @@ s3transfer==0.17.0
     # via boto3
 safetensors==0.8.0
     # via
-    #   -r requirements.in
     #   accelerate
+    #   fiery-python
     #   peft
     #   timm
     #   transformers

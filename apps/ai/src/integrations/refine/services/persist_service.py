@@ -50,6 +50,7 @@ class RefinePersistService:
             logger.warning("fetch_training_contract_empty", contract_id=contract_id)
             return None
         return TrainingContract(
+            id=row.get("id"),
             signal=row.get("signal"),
             notes=row.get("notes"),
             version=row.get("version"),

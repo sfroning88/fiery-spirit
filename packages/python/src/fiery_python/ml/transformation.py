@@ -73,7 +73,7 @@ class Transformation:
 
     @staticmethod
     def _bandpass_filter(
-        trace: np.ndarray, sampling_hz: int, low_hz: int, high_hz: int
+        trace: np.ndarray, sampling_hz: int, low_hz: float, high_hz: float
     ) -> np.ndarray:
         """Run through nyquist sampling frequency; bandpass filter"""
         nyquist = sampling_hz / 2.0
@@ -284,5 +284,7 @@ class Transformation:
         match rejection:
             case "coherence below min":
                 return InferenceAbstainReason.LOW_COHERENCE
+            case "snr below min":
+                return InferenceAbstainReason.LOW_SNR
             case _:
                 return InferenceAbstainReason.TRANSFORM_REJECTED

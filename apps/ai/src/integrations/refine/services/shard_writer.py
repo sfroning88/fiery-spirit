@@ -23,6 +23,7 @@ from fiery_python import (
     Transformation,
     TransformationRejected,
 )
+
 from .persist_service import RefinePersistService
 from .shard_manifest import RefineShardManifest
 
@@ -196,7 +197,7 @@ class RefineShardWriter:
         ):
             storage_path = sample.waveform_path
         else:
-            assert_never(sample)
+            raise error("Sample and params signal mismatch")
         if not sample.id or not storage_path:
             manifest.record_reject(sample.split, sample.label, "missing_identity")
             return None
@@ -206,6 +207,11 @@ class RefineShardWriter:
             if isinstance(params, TrainingDeformation):
                 transformed = Transformation.apply_deformation(array, params)
             elif isinstance(params, TrainingSeismic):
+                if (
+                    isinstance(sample, TrainingSeismicEvent)
+                    and sample.sampling_hz != params.sampling_hz
+                ):
+                    raise TransformationRejected("sampling_hz mismatch")
                 transformed = Transformation.apply_seismic(array, params)
             else:
                 assert_never(params)
