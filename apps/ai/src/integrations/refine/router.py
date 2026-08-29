@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Created Date: 8.22.2026
+Created Date: 8.28.2026
 Core AI API orchestration
 """
 
@@ -52,19 +52,43 @@ async def refine_shards(request: Request, payload: RefineRequest) -> RefineRespo
     version = None
 
     try:
-        deformation = RefinePersistService.select_deformation(payload.contract_id)
-        if not deformation:
+        contract = RefinePersistService.select_contract(payload.contract_id)
+        if not contract or not contract.id:
             logger.error(
-                "fetch_deformation_failed",
+                "fetch_contract_failed",
                 contract_id=payload.contract_id,
             )
-            raise error("Fetch deformation failed", status_code=500)
+            raise error("Fetch contract failed", status_code=500)
 
-        transform_hash = Transformation.transform_hash(deformation)
+        if contract.deformation_id:
+            deformation = RefinePersistService.select_deformation(contract.id)
+            if not deformation:
+                logger.error(
+                    "fetch_deformation_failed",
+                    contract_id=contract.id,
+                )
+                raise error("Fetch deformation failed", status_code=500)
 
-        version = RefinePersistService.select_version(
-            payload.contract_id, transform_hash
-        )
+            transform_hash = Transformation.transform_hash_deformation(deformation)
+
+        elif contract.seismic_id:
+            seismic = RefinePersistService.select_seismic(contract.id)
+            if not seismic:
+                logger.error(
+                    "fetch_seismic_failed",
+                    contract_id=contract.id,
+                )
+
+            transform_hash = Transformation.transform_hash_seismic(seismic)
+
+        else:
+            logger.error(
+                "contract_missing_deformation_and_seismic",
+                status_code=500,
+            )
+            raise error("Contract malformed", status_code=500)
+
+        version = RefinePersistService.select_version(contract.id, transform_hash)
 
         if version and version.status is TrainingStatus.COMPLETED:
             return RefineResponse(
@@ -87,7 +111,7 @@ async def refine_shards(request: Request, payload: RefineRequest) -> RefineRespo
 
         if not version:
             manifest_path = BlobStorageServices._manifest_key(
-                payload.contract_id, transform_hash
+                contract.id, transform_hash
             )
             version = DatasetVersion(
                 transform_hash=transform_hash,
@@ -95,7 +119,7 @@ async def refine_shards(request: Request, payload: RefineRequest) -> RefineRespo
                 shard_count=0,
                 sample_count=0,
                 status=TrainingStatus.PENDING,
-                contract_id=payload.contract_id,
+                contract_id=contract.id,
             )
             version.id = version.deterministic_id()
             RefinePersistService.upsert_version(version)
@@ -106,8 +130,8 @@ async def refine_shards(request: Request, payload: RefineRequest) -> RefineRespo
         specs = [
             {
                 "func": RefineBackgroundJobs.background_refine_shards,
-                "args": (payload.contract_id, version.id),
-                "job_id": f"refine_shards_{payload.contract_id}_{version.id}",
+                "args": (contract, version.id),
+                "job_id": f"refine_shards_{contract.id}_{version.id}",
                 "job_timeout": 6000,
             }
         ]

@@ -102,6 +102,7 @@ numpy==2.4.4
     #   fiery-python
     #   pandas
     #   peft
+    #   scipy
     #   torchvision
     #   transformers
 packaging==26.2
@@ -162,11 +163,13 @@ s3transfer==0.17.0
     # via boto3
 safetensors==0.8.0
     # via
-    #   -r requirements.in
     #   accelerate
+    #   fiery-python
     #   peft
     #   timm
     #   transformers
+scipy==1.18.1
+    # via fiery-python
 shellingham==1.5.4
     # via typer
 six==1.17.0

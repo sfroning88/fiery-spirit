@@ -84,7 +84,7 @@ Unrefined sample `.npz` files are **content-addressed:**
 content_hash = hashlib.sha256(npz_bytes).hexdigest()
 ```
 
-Refined shard `.tar` files are **layout-addressed:**
+Refined `interferogram` shard `.tar` files are **layout-addressed:**
 
 ```python
 payload = {
@@ -94,6 +94,26 @@ payload = {
     "normalize", # scale mode
     "coherence_min", # keep/drop
 }
+```
+
+Refined `waveform` shard `.tar` files are **layout-addressed:**
+
+```python
+payload = {
+    "op_version", # STORAGE_OP_VERSION
+    "signal", # seismic
+    "nfft", "hop", "window", # STFT
+    "window_s", "sampling_hz",
+    "mel_bins",
+    "bandpass_low_hz", "bandpass_high_hz", "bandpass_order",
+    "normalize",
+    "snr_min", # keep/drop
+    "log_mel_eps",
+    "array_shape", # 1,M,F
+}
+```
+
+```python
 transform_hash = sha256(sorted(payload))
 ```
 
@@ -111,9 +131,16 @@ Tradeoffs of this choice:
 - invalid `array_shape` against `patch_px`
 - `normalize` function fails with inputs
 - `coherence` is less than threshold `coherence_min`
+- invalid `array_shape` against `(T,)`
+- `waveform` shorter than `window_s` or `nfft`
+- invalid `bandpass` bounds or `sampling_hz`
+- `snr` is less than threshold `snr_min`
 
 A low `coherence` interferogram is a bad measurement.
 Attempting to apply `padding` or `normalization` would invent fringes.
+
+A low `snr` (short) waveform is a bad measurement.
+`Padding` or `stretching` it to `window_s` would invent a tremor.
 
 ## Dataset Pipeline
 

@@ -133,6 +133,7 @@ numpy==2.4.4
     #   fiery-python
     #   h5py
     #   pandas
+    #   scipy
 packaging==26.2
     # via
     #   datasets
@@ -188,6 +189,10 @@ rq==2.6.0
     # via fiery-python
 s3transfer==0.17.0
     # via boto3
+safetensors==0.8.0
+    # via fiery-python
+scipy==1.18.1
+    # via fiery-python
 shellingham==1.5.4
     # via typer
 six==1.17.0

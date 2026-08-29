@@ -136,15 +136,19 @@ class TrainingSeismic(BaseFiery):
     nfft: int
     hop: int
     window: TrainingWindow
+    window_s: Decimal
+    sampling_hz: int
     mel_bins: int
     bandpass_low_hz: Decimal
     bandpass_high_hz: Decimal
+    normalize: TrainingNormalize
+    snr_min: Decimal
     class_id: str
 
     def deterministic_id(self) -> Optional[str]:
-        """Stable id derived from (nfft, hop, window, class_id)"""
+        """Stable id derived from (nfft, hop, window, normalize, class_id)"""
         return UuidUtils.deterministic_uuid(
-            self.nfft, self.hop, self.window.value, self.class_id
+            self.nfft, self.hop, self.window.value, self.normalize, self.class_id
         )
 
 

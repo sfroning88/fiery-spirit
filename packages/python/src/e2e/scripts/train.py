@@ -32,7 +32,7 @@ def run_train_test() -> None:
         coherence_min=Decimal("0.300"),
         class_id="ignored-for-hash",
     )
-    transform_hash = Transformation.transform_hash(deformation)
+    transform_hash = Transformation.transform_hash_deformation(deformation)
     training_contract_id = UuidUtils.deterministic_uuid("deformation", 1)
     dataset_version_id = UuidUtils.deterministic_uuid(
         training_contract_id, transform_hash

@@ -1,16 +1,21 @@
 """
 Author: Sean Froning
-Created Date: 8.22.2026
+Created Date: 8.28.2026
 Processing functions for Refine manifest
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union, assert_never
 from fiery_python import (
     Shard,
     TrainingDeformation,
     TrainingDeformationLabel,
+    TrainingSeismic,
+    TrainingSeismicLabel,
     TrainingSplit,
 )
+
+_Label = Union[TrainingDeformationLabel, TrainingSeismicLabel]
+_Params = Union[Optional[TrainingDeformation], Optional[TrainingSeismic]]
 
 
 class RefineShardManifest:
@@ -20,27 +25,31 @@ class RefineShardManifest:
         self,
         contract_id: str,
         transform_hash: str,
-        deformation: TrainingDeformation,
+        params: _Params,
     ) -> None:
+        if params is None:
+            raise ValueError("Refine manifest requires deformation or seismic params")
         self._contract_id = contract_id
         self._transform_hash = transform_hash
-        self._deformation = deformation
+        self._params = params
+        if isinstance(params, TrainingDeformation):
+            labels = TrainingDeformationLabel
+        elif isinstance(params, TrainingSeismic):
+            labels = TrainingSeismicLabel
+        else:
+            assert_never(params)
         self._splits: Dict[str, Dict[str, Any]] = {
             split.value: {
                 "sample_count": 0,
                 "rejected_count": 0,
-                "label_counts": {label.value: 0 for label in TrainingDeformationLabel},
-                "rejected_label_counts": {
-                    label.value: 0 for label in TrainingDeformationLabel
-                },
+                "label_counts": {label.value: 0 for label in labels},
+                "rejected_label_counts": {label.value: 0 for label in labels},
                 "shards": [],
             }
             for split in TrainingSplit
         }
 
-    def record_kept(
-        self, split: TrainingSplit, label: TrainingDeformationLabel
-    ) -> None:
+    def record_kept(self, split: TrainingSplit, label: _Label) -> None:
         bucket = self._splits[split.value]
         bucket["sample_count"] += 1
         bucket["label_counts"][label.value] += 1
@@ -48,7 +57,7 @@ class RefineShardManifest:
     def record_reject(
         self,
         split: TrainingSplit,
-        label: Optional[TrainingDeformationLabel],
+        label: Optional[_Label],
         reason: str,
     ) -> None:
         bucket = self._splits[split.value]
@@ -83,14 +92,34 @@ class RefineShardManifest:
         return sum(len(bucket["shards"]) for bucket in self._splits.values())
 
     def payload(self) -> Dict[str, Any]:
+        snapshot: Dict[str, Any]
+        if isinstance(self._params, TrainingDeformation):
+            snapshot = {
+                "patch_px": self._params.patch_px,
+                "wrap_rad": str(self._params.wrap_rad),
+                "normalize": self._params.normalize.value,
+                "coherence_min": str(self._params.coherence_min),
+            }
+        elif isinstance(self._params, TrainingSeismic):
+            snapshot = {
+                "nfft": self._params.nfft,
+                "hop": self._params.hop,
+                "window": self._params.window.value,
+                "window_s": str(self._params.window_s),
+                "sampling_hz": self._params.sampling_hz,
+                "mel_bins": self._params.mel_bins,
+                "bandpass_low_hz": str(self._params.bandpass_low_hz),
+                "bandpass_high_hz": str(self._params.bandpass_high_hz),
+                "normalize": self._params.normalize.value,
+                "snr_min": str(self._params.snr_min),
+            }
+        else:
+            assert_never(self._params)
         return {
             "format_version": 1,
             "contract_id": self._contract_id,
             "transform_hash": self._transform_hash,
-            "patch_px": self._deformation.patch_px,
-            "wrap_rad": str(self._deformation.wrap_rad),
-            "normalize": self._deformation.normalize.value,
-            "coherence_min": str(self._deformation.coherence_min),
+            **snapshot,
             "sample_count": self.sample_count(),
             "rejected_count": self.rejected_count(),
             "shard_count": self.shard_count(),

@@ -19,7 +19,7 @@ _JOB_TIMEOUT_SECONDS = 600
 
 
 def run_ingest_test() -> None:
-    """POST /api/ingest once per deformation sample source"""
+    """POST /api/ingest once per sample source"""
     print("Ingest integration endpoint test start")
 
     all_job_ids: List[str] = []

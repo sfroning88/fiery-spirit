@@ -113,10 +113,10 @@ class InferenceServingWaiter:
         decision = metadata.preprocessing
         if int(decision["op_version"]) != STORAGE_OP_VERSION:
             raise error(f"Artifact-Contract mismatch for {metadata.artifact_id}")
-        resolved = Transformation.transform_hash(deformation)
+        resolved = Transformation.transform_hash_deformation(deformation)
         if resolved != decision["transform_hash"]:
             raise error(f"Artifact-Contract mismatch for {metadata.artifact_id}")
-        return Transformation.apply(raw, deformation)
+        return Transformation.apply_deformation(raw, deformation)
 
     @staticmethod
     def _image_to_nchw_tensor(image: np.ndarray) -> Tensor:

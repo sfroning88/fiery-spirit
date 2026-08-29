@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Created Date: 8.22.2026
+Created Date: 8.28.2026
 Operations pertaining to Refine persistence
 """
 
@@ -14,11 +14,17 @@ from fiery_python import (
     DatasetVersion,
     TrainingSplit,
     TrainingInterferogram,
+    TrainingSeismicEvent,
     TrainingDeformation,
+    TrainingSeismic,
+    TrainingContract,
 )
+from ..queries.select_training_contract import QUERY as SELECT_CONTRACT
 from ..queries.select_training_deformation import QUERY as SELECT_DEFORMATION
+from ..queries.select_training_seismic import QUERY as SELECT_SEISMIC
 from ..queries.select_dataset_version import QUERY as SELECT_VERSION
 from ..queries.select_training_interferograms import QUERY as SELECT_INTERFEROGRAMS
+from ..queries.select_training_seismic_events import QUERY as SELECT_SEISMIC_EVENTS
 from ..queries.upsert_dataset_version import QUERY as UPSERT_VERSION
 
 logger = logging.get_logger(__name__)
@@ -31,6 +37,26 @@ class RefinePersistService:
     def load_npz(body: bytes) -> np.ndarray:
         buf = io.BytesIO(body)
         return np.load(buf)["data"]
+
+    @staticmethod
+    def select_contract(contract_id: str) -> Optional[TrainingContract]:
+        row = db_pool.run(
+            SELECT_CONTRACT,
+            (contract_id,),
+            fetch=PoolFetch.ONE,
+            error_event="fetch_training_contract_failed",
+        )
+        if not row:
+            logger.warning("fetch_training_contract_empty", contract_id=contract_id)
+            return None
+        return TrainingContract(
+            id=row.get("id"),
+            signal=row.get("signal"),
+            notes=row.get("notes"),
+            version=row.get("version"),
+            seismic_id=row.get("seismic_id"),
+            deformation_id=row.get("deformation_id"),
+        )
 
     @staticmethod
     def select_deformation(contract_id: str) -> Optional[TrainingDeformation]:
@@ -49,6 +75,32 @@ class RefinePersistService:
             wrap_rad=row.get("wrap_rad"),
             normalize=row.get("normalize"),
             coherence_min=row.get("coherence_min"),
+            class_id=row.get("class_id"),
+        )
+
+    @staticmethod
+    def select_seismic(contract_id: str) -> Optional[TrainingSeismic]:
+        row = db_pool.run(
+            SELECT_SEISMIC,
+            (contract_id,),
+            fetch=PoolFetch.ONE,
+            error_event="fetch_training_seismic_failed",
+        )
+        if not row:
+            logger.warning("fetch_training_seismic_empty", contract_id=contract_id)
+            return None
+        return TrainingSeismic(
+            id=row.get("id"),
+            nfft=row.get("nfft"),
+            hop=row.get("hop"),
+            window=row.get("window"),
+            window_s=row.get("window_s"),
+            sampling_hz=row.get("sampling_hz"),
+            mel_bins=row.get("mel_bins"),
+            bandpass_low_hz=row.get("bandpass_low_hz"),
+            bandpass_high_hz=row.get("bandpass_high_hz"),
+            normalize=row.get("normalize"),
+            snr_min=row.get("snr_min"),
             class_id=row.get("class_id"),
         )
 
@@ -107,6 +159,38 @@ class RefinePersistService:
                 )
             )
         return interferograms
+
+    @staticmethod
+    def select_seismic_events(
+        split: TrainingSplit, after_id: str, limit: int = TRAINING_DB_FETCH_SIZE
+    ) -> List[TrainingSeismicEvent]:
+        rows = db_pool.run(
+            SELECT_SEISMIC_EVENTS,
+            (split, after_id, limit),
+            fetch=PoolFetch.ALL,
+            error_event="fetch_training_seismic_events_failed",
+        )
+        if not rows:
+            logger.warning("fetch_training_seismic_events_empty")
+            return []
+        seismic_events: List[TrainingSeismicEvent] = []
+        for row in rows:
+            seismic_events.append(
+                TrainingSeismicEvent(
+                    id=row.get("id"),
+                    source=row.get("source"),
+                    split=row.get("split"),
+                    label=row.get("label"),
+                    station=row.get("station"),
+                    recorded_at=row.get("recorded_at"),
+                    duration_s=row.get("duration_s"),
+                    sampling_hz=row.get("sampling_hz"),
+                    waveform_path=row.get("waveform_path"),
+                    spectrogram_path=row.get("spectrogram_path"),
+                    volcano_id=row.get("volcano_id"),
+                )
+            )
+        return seismic_events
 
     @staticmethod
     def upsert_version(version: DatasetVersion) -> None:

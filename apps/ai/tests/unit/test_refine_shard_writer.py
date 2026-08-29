@@ -1,9 +1,10 @@
 """
 Author: Sean Froning
-Created Date: 8.22.2026
+Created Date: 8.28.2026
 Unit tests for RefineShardWriter
 """
 
+from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -12,13 +13,19 @@ import pytest
 from fiery_python import (
     STORAGE_OP_VERSION,
     DatasetVersion,
+    TrainingContract,
     TrainingDeformation,
     TrainingDeformationLabel,
     TrainingInterferogram,
     TrainingNormalize,
     TrainingSampleSource,
+    TrainingSeismic,
+    TrainingSeismicEvent,
+    TrainingSeismicLabel,
+    TrainingSignal,
     TrainingSplit,
     TrainingStatus,
+    TrainingWindow,
     TransformationRejected,
 )
 from integrations.refine.services.shard_manifest import RefineShardManifest
@@ -35,6 +42,22 @@ def _deformation() -> TrainingDeformation:
     )
 
 
+def _seismic() -> TrainingSeismic:
+    return TrainingSeismic(
+        nfft=256,
+        hop=128,
+        window=TrainingWindow.HANN,
+        window_s=Decimal("60"),
+        sampling_hz=100,
+        mel_bins=64,
+        bandpass_low_hz=Decimal("1.00"),
+        bandpass_high_hz=Decimal("10.00"),
+        normalize=TrainingNormalize.NONE,
+        snr_min=Decimal("0.300"),
+        class_id="class-1",
+    )
+
+
 def _interferogram(**overrides) -> TrainingInterferogram:
     payload = {
         "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -45,6 +68,38 @@ def _interferogram(**overrides) -> TrainingInterferogram:
     }
     payload.update(overrides)
     return TrainingInterferogram(**payload)
+
+
+def _seismic_event(**overrides) -> TrainingSeismicEvent:
+    payload = {
+        "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "source": TrainingSampleSource.LLAIMA,
+        "split": TrainingSplit.TRAIN,
+        "label": TrainingSeismicLabel.LP,
+        "station": "LAV",
+        "recorded_at": datetime(2010, 1, 1, tzinfo=timezone.utc),
+        "duration_s": Decimal("60"),
+        "sampling_hz": 100,
+        "waveform_path": "llaima/abc.npz",
+    }
+    payload.update(overrides)
+    return TrainingSeismicEvent(**payload)
+
+
+def _contract_deformation() -> TrainingContract:
+    return TrainingContract(
+        id="contract-1",
+        signal=TrainingSignal.DEFORMATION,
+        deformation_id="deform-1",
+    )
+
+
+def _contract_seismic() -> TrainingContract:
+    return TrainingContract(
+        id="contract-1",
+        signal=TrainingSignal.SEISMIC,
+        seismic_id="seismic-1",
+    )
 
 
 def _version() -> DatasetVersion:
@@ -59,20 +114,85 @@ def _version() -> DatasetVersion:
     )
 
 
-def test_transform_rejects_missing_identity():
-    manifest = RefineShardManifest("contract-1", "hash-1", _deformation())
-    interferogram = _interferogram(id=None, storage_path="")
-    interferogram.id = None
-    result = RefineShardWriter._transform_interferogram(
-        interferogram, _deformation(), manifest
-    )
+_DEFORMATION = pytest.param(
+    _deformation(),
+    _interferogram,
+    _contract_deformation(),
+    "select_interferograms",
+    "select_deformation",
+    "transform_hash_deformation",
+    "apply_deformation",
+    np.ones((2, 2, 2), dtype=np.float32),
+    np.ones((2, 2), dtype=np.float32),
+    "coherence below min",
+    TrainingDeformationLabel.POSITIVE.value,
+    {"id": None, "storage_path": ""},
+    id="deformation",
+)
+_SEISMIC = pytest.param(
+    _seismic(),
+    _seismic_event,
+    _contract_seismic(),
+    "select_seismic_events",
+    "select_seismic",
+    "transform_hash_seismic",
+    "apply_seismic",
+    np.ones(100, dtype=np.float32),
+    np.ones((1, 8, 4), dtype=np.float32),
+    "snr below min",
+    TrainingSeismicLabel.LP.value,
+    {"id": None, "waveform_path": ""},
+    id="seismic",
+)
+_CASES = (_DEFORMATION, _SEISMIC)
+
+
+@pytest.mark.parametrize(
+    "params, sample_fn, contract, select_samples, select_params, hash_fn, apply_fn, raw, kept, reject_reason, label_value, missing",
+    _CASES,
+)
+def test_transform_rejects_missing_identity(
+    params,
+    sample_fn,
+    contract,
+    select_samples,
+    select_params,
+    hash_fn,
+    apply_fn,
+    raw,
+    kept,
+    reject_reason,
+    label_value,
+    missing,
+):
+    manifest = RefineShardManifest("contract-1", "hash-1", params)
+    sample = sample_fn(**missing)
+    sample.id = None
+    result = RefineShardWriter._transform_shard(sample, params, manifest)
     assert result is None
     assert manifest.rejected_count() == 1
 
 
-def test_transform_records_rejected_and_returns_none():
-    manifest = RefineShardManifest("contract-1", "hash-1", _deformation())
-    interferogram = _interferogram()
+@pytest.mark.parametrize(
+    "params, sample_fn, contract, select_samples, select_params, hash_fn, apply_fn, raw, kept, reject_reason, label_value, missing",
+    _CASES,
+)
+def test_transform_records_rejected_and_returns_none(
+    params,
+    sample_fn,
+    contract,
+    select_samples,
+    select_params,
+    hash_fn,
+    apply_fn,
+    raw,
+    kept,
+    reject_reason,
+    label_value,
+    missing,
+):
+    manifest = RefineShardManifest("contract-1", "hash-1", params)
+    sample = sample_fn()
     with (
         patch(
             "integrations.refine.services.shard_writer.BlobStorageServices.get_unrefined",
@@ -80,25 +200,39 @@ def test_transform_records_rejected_and_returns_none():
         ),
         patch(
             "integrations.refine.services.shard_writer.RefinePersistService.load_npz",
-            return_value=np.ones((2, 2, 2), dtype=np.float32),
+            return_value=raw,
         ),
         patch(
-            "integrations.refine.services.shard_writer.Transformation.apply",
-            side_effect=TransformationRejected("coherence below min"),
+            f"integrations.refine.services.shard_writer.Transformation.{apply_fn}",
+            side_effect=TransformationRejected(reject_reason),
         ),
     ):
-        result = RefineShardWriter._transform_interferogram(
-            interferogram, _deformation(), manifest
-        )
+        result = RefineShardWriter._transform_shard(sample, params, manifest)
     assert result is None
     assert manifest.sample_count() == 0
     assert manifest.rejected_count() == 1
 
 
-def test_transform_keeps_phase_and_label():
-    manifest = RefineShardManifest("contract-1", "hash-1", _deformation())
-    interferogram = _interferogram()
-    phase = np.ones((2, 2), dtype=np.float32)
+@pytest.mark.parametrize(
+    "params, sample_fn, contract, select_samples, select_params, hash_fn, apply_fn, raw, kept, reject_reason, label_value, missing",
+    _CASES,
+)
+def test_transform_keeps_array_and_label(
+    params,
+    sample_fn,
+    contract,
+    select_samples,
+    select_params,
+    hash_fn,
+    apply_fn,
+    raw,
+    kept,
+    reject_reason,
+    label_value,
+    missing,
+):
+    manifest = RefineShardManifest("contract-1", "hash-1", params)
+    sample = sample_fn()
     with (
         patch(
             "integrations.refine.services.shard_writer.BlobStorageServices.get_unrefined",
@@ -106,20 +240,18 @@ def test_transform_keeps_phase_and_label():
         ),
         patch(
             "integrations.refine.services.shard_writer.RefinePersistService.load_npz",
-            return_value=np.ones((2, 2, 2), dtype=np.float32),
+            return_value=raw,
         ),
         patch(
-            "integrations.refine.services.shard_writer.Transformation.apply",
-            return_value=phase,
+            f"integrations.refine.services.shard_writer.Transformation.{apply_fn}",
+            return_value=kept,
         ),
     ):
-        key, out, label = RefineShardWriter._transform_interferogram(
-            interferogram, _deformation(), manifest
-        )
-    assert key == interferogram.id
-    np.testing.assert_array_equal(out, phase)
+        key, out, label = RefineShardWriter._transform_shard(sample, params, manifest)
+    assert key == sample.id
+    np.testing.assert_array_equal(out, kept)
     assert label == {
-        "label": TrainingDeformationLabel.POSITIVE.value,
+        "label": label_value,
         "split": TrainingSplit.TRAIN.value,
         "format_version": 1,
         "op_version": STORAGE_OP_VERSION,
@@ -127,15 +259,31 @@ def test_transform_keeps_phase_and_label():
     assert manifest.sample_count() == 1
 
 
-def test_flush_shard_puts_tar_and_records():
-    manifest = RefineShardManifest("contract-1", "hash-1", _deformation())
-    phase = np.ones((2, 2), dtype=np.float32)
+@pytest.mark.parametrize(
+    "params, sample_fn, contract, select_samples, select_params, hash_fn, apply_fn, raw, kept, reject_reason, label_value, missing",
+    _CASES,
+)
+def test_flush_shard_puts_tar_and_records(
+    params,
+    sample_fn,
+    contract,
+    select_samples,
+    select_params,
+    hash_fn,
+    apply_fn,
+    raw,
+    kept,
+    reject_reason,
+    label_value,
+    missing,
+):
+    manifest = RefineShardManifest("contract-1", "hash-1", params)
     buffer = [
         (
             "k1",
-            phase,
+            kept,
             {
-                "label": "positive",
+                "label": label_value,
                 "split": "train",
                 "format_version": 1,
                 "op_version": STORAGE_OP_VERSION,
@@ -167,50 +315,82 @@ def test_flush_shard_puts_tar_and_records():
     assert manifest.shard_count() == 1
 
 
-def test_write_split_flushes_when_target_bytes_hit():
-    interferograms = [
-        _interferogram(id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
-        _interferogram(id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2"),
+@pytest.mark.parametrize(
+    "params, sample_fn, contract, select_samples, select_params, hash_fn, apply_fn, raw, kept, reject_reason, label_value, missing",
+    _CASES,
+)
+def test_write_split_flushes_when_target_bytes_hit(
+    params,
+    sample_fn,
+    contract,
+    select_samples,
+    select_params,
+    hash_fn,
+    apply_fn,
+    raw,
+    kept,
+    reject_reason,
+    label_value,
+    missing,
+):
+    samples = [
+        sample_fn(id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
+        sample_fn(id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2"),
     ]
-    phase = np.ones((2, 2), dtype=np.float32)
-    manifest = RefineShardManifest("contract-1", "hash-1", _deformation())
+    manifest = RefineShardManifest("contract-1", "hash-1", params)
     with (
         patch(
-            "integrations.refine.services.shard_writer.RefinePersistService.select_interferograms",
-            return_value=interferograms,
+            f"integrations.refine.services.shard_writer.RefinePersistService.{select_samples}",
+            return_value=samples,
         ),
         patch.object(
             RefineShardWriter,
-            "_transform_interferogram",
+            "_transform_shard",
             side_effect=[
-                (interferograms[0].id, phase, {"label": "positive"}),
-                (interferograms[1].id, phase, {"label": "positive"}),
+                (samples[0].id, kept, {"label": label_value}),
+                (samples[1].id, kept, {"label": label_value}),
             ],
         ),
         patch.object(RefineShardWriter, "_flush_shard") as flush,
         patch("integrations.refine.services.shard_writer._TARGET_SHARD_BYTES", 1),
     ):
-        kept = RefineShardWriter._write_split(
+        kept_count = RefineShardWriter._write_split(
             "contract-1",
             "hash-1",
             TrainingSplit.TRAIN,
-            _deformation(),
+            params,
             manifest,
         )
-    assert kept == 2
+    assert kept_count == 2
     assert flush.call_count == 2
 
 
-def test_run_upserts_completed_and_returns_count():
-    deformation = _deformation()
+@pytest.mark.parametrize(
+    "params, sample_fn, contract, select_samples, select_params, hash_fn, apply_fn, raw, kept, reject_reason, label_value, missing",
+    _CASES,
+)
+def test_run_upserts_completed_and_returns_count(
+    params,
+    sample_fn,
+    contract,
+    select_samples,
+    select_params,
+    hash_fn,
+    apply_fn,
+    raw,
+    kept,
+    reject_reason,
+    label_value,
+    missing,
+):
     version = _version()
     with (
         patch(
-            "integrations.refine.services.shard_writer.RefinePersistService.select_deformation",
-            return_value=deformation,
+            f"integrations.refine.services.shard_writer.RefinePersistService.{select_params}",
+            return_value=params,
         ),
         patch(
-            "integrations.refine.services.shard_writer.Transformation.transform_hash",
+            f"integrations.refine.services.shard_writer.Transformation.{hash_fn}",
             return_value="hash-1",
         ),
         patch(
@@ -226,23 +406,39 @@ def test_run_upserts_completed_and_returns_count():
             return_value="contract-1/hash-1/manifest.json",
         ),
     ):
-        count = RefineShardWriter.run("contract-1", version.id)
+        count = RefineShardWriter.run(contract, version.id)
     assert count == 3 * len(TrainingSplit)
     assert upsert_version.call_args_list[0].args[0].status is TrainingStatus.EXECUTING
     assert upsert_version.call_args_list[-1].args[0].status is TrainingStatus.COMPLETED
     assert upsert_version.call_args_list[-1].args[0].sample_count == 0
 
 
-def test_run_marks_failed_and_reraises():
-    deformation = _deformation()
+@pytest.mark.parametrize(
+    "params, sample_fn, contract, select_samples, select_params, hash_fn, apply_fn, raw, kept, reject_reason, label_value, missing",
+    _CASES,
+)
+def test_run_marks_failed_and_reraises(
+    params,
+    sample_fn,
+    contract,
+    select_samples,
+    select_params,
+    hash_fn,
+    apply_fn,
+    raw,
+    kept,
+    reject_reason,
+    label_value,
+    missing,
+):
     version = _version()
     with (
         patch(
-            "integrations.refine.services.shard_writer.RefinePersistService.select_deformation",
-            return_value=deformation,
+            f"integrations.refine.services.shard_writer.RefinePersistService.{select_params}",
+            return_value=params,
         ),
         patch(
-            "integrations.refine.services.shard_writer.Transformation.transform_hash",
+            f"integrations.refine.services.shard_writer.Transformation.{hash_fn}",
             return_value="hash-1",
         ),
         patch(
@@ -257,5 +453,5 @@ def test_run_marks_failed_and_reraises():
         ),
     ):
         with pytest.raises(RuntimeError, match="r2 down"):
-            RefineShardWriter.run("contract-1", version.id)
+            RefineShardWriter.run(contract, version.id)
     assert upsert_version.call_args_list[-1].args[0].status is TrainingStatus.FAILED

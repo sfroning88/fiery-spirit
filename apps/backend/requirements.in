@@ -2,6 +2,5 @@
 -e ../../packages/python
 
 # Model inference
-safetensors>=0.8.0
 timm>=1.0.28
 peft>=0.20.0
