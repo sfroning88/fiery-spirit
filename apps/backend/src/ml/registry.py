@@ -25,6 +25,43 @@ from .queries.select_promoted_artifact import QUERY as SELECT_PROMOTED_ARTIFACT
 
 logger = logging.get_logger(__name__)
 
+_VIT = "vit_small_patch16_224"
+_CNN_SMALL = "cnn_small"
+_CNN_TINY = "cnn_tiny"
+_CNN_WIDTHS = {
+    _CNN_SMALL: (32, 64, 128),
+    _CNN_TINY: (16, 32, 64),
+}
+_NUM_SEISMIC_CLASSES = 4
+
+
+class SeismicCnn(nn.Module):
+    def __init__(
+        self, widths: tuple[int, ...], num_classes: int = _NUM_SEISMIC_CLASSES
+    ):
+        super().__init__()
+        blocks: list[nn.Module] = []
+        in_ch = 1
+        for width in widths:
+            blocks.extend(
+                [
+                    nn.Conv2d(in_ch, width, kernel_size=3, padding=1, bias=False),
+                    nn.BatchNorm2d(width),
+                    nn.ReLU(inplace=True),
+                    nn.MaxPool2d(2),
+                ]
+            )
+            in_ch = width
+        self.features = nn.Sequential(*blocks)
+        self.head = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Flatten(),
+            nn.Linear(in_ch, num_classes),
+        )
+
+    def forward(self, x):
+        return self.head(self.features(x))
+
 
 class _RegistrySlot:
     """Per-key cache slot with lazy empty state and explicit invalidation"""
@@ -146,6 +183,50 @@ class _ModelRegistry:
             for slot in self._slots.values():
                 slot.reset()
 
+    @staticmethod
+    def materialize(sidecar: dict) -> nn.Module:
+        architecture = sidecar.get("architecture")
+        if not architecture or not isinstance(architecture, str):
+            spec = sidecar.get("spec") or {}
+            architecture = spec.get("architecture")
+        if architecture == _VIT:
+            return _ModelRegistry._materialize_screener(sidecar)
+        elif architecture in _CNN_WIDTHS:
+            return _ModelRegistry._materialize_cnn(architecture)
+        else:
+            raise RuntimeError(f"Unknown architecture: {architecture}")
+
+    @staticmethod
+    def _materialize_screener(sidecar: dict) -> nn.Module:
+        lora = sidecar.get("lora") or (sidecar.get("spec") or {}).get("lora")
+        if not lora:
+            raise RuntimeError("sidecar missing lora")
+        modules = lora.get("target_modules") or {}
+        targets = []
+        if modules.get("query") or modules.get("key") or modules.get("value"):
+            targets.append("qkv")
+        if modules.get("output"):
+            targets.append("proj")
+        if not targets:
+            raise RuntimeError("Empty LoRA target modules")
+        backbone = timm.create_model(
+            sidecar.get("architecture") or "vit_small_patch16_224",
+            pretrained=False,
+            num_classes=2,
+        )
+        config = LoraConfig(
+            r=lora["rank"],
+            lora_alpha=lora["alpha"],
+            lora_dropout=lora["dropout"],
+            target_modules=targets,
+            bias="none",
+        )
+        return get_peft_model(backbone, config)
+
+    @staticmethod
+    def _materialize_cnn(architecture: str) -> nn.Module:
+        return SeismicCnn(widths=_CNN_WIDTHS[architecture])
+
     def _load_model_entry(
         self, row: Dict[str, Any], artifact_id: str
     ) -> tuple[Optional[LoadedModel], Optional[nn.Module]]:
@@ -164,7 +245,7 @@ class _ModelRegistry:
             )
             return None, None
         try:
-            model = self._materialize_screener(sidecar)
+            model = self.materialize(sidecar)
             model.load_state_dict(state_dict, strict=True)
             model.eval()
         except Exception as err:
@@ -194,33 +275,6 @@ class _ModelRegistry:
             preprocessing=decision,
         )
         return entry, model
-
-    @staticmethod
-    def _materialize_screener(sidecar: dict) -> nn.Module:
-        lora = sidecar.get("lora") or (sidecar.get("spec") or {}).get("lora")
-        if not lora:
-            raise RuntimeError("sidecar missing lora")
-        modules = lora.get("target_modules") or {}
-        targets = []
-        if modules.get("query") or modules.get("key") or modules.get("value"):
-            targets.append("qkv")
-        if modules.get("output"):
-            targets.append("proj")
-        if not targets:
-            raise RuntimeError("Empty LoRA target modules")
-        backbone = timm.create_model(
-            sidecar.get("architecture") or "vit_small_patch16_224",
-            pretrained=False,
-            num_classes=2,
-        )
-        config = LoraConfig(
-            r=lora["rank"],
-            lora_alpha=lora["alpha"],
-            lora_dropout=lora["dropout"],
-            target_modules=targets,
-            bias="none",
-        )
-        return get_peft_model(backbone, config)
 
     @staticmethod
     def _fetch_promoted_artifact(

@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Created Date: 8.20.2026
+Created Date: 8.29.2026
 Unit tests for the inference-side model registry cache
 """
 
@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fiery_python import ModelRole, ModelTier, TrainingPrecision, TrainingStage
 from ml.models import LoadedModel
-from ml.registry import _ModelRegistry
+from ml.registry import SeismicCnn, _ModelRegistry
 
 KEY = (ModelTier.CLOUD, ModelRole.SCREENER)
 NOW = datetime.now(tz=timezone.utc)
@@ -262,7 +262,7 @@ def test_load_model_entry_returns_none_when_materialize_fails():
         ),
         patch.object(
             registry,
-            "_materialize_screener",
+            "materialize",
             side_effect=RuntimeError("sidecar missing lora"),
         ),
     ):
@@ -298,7 +298,7 @@ def test_load_model_entry_builds_loaded_model():
             "ml.registry.ModelStorageServices.load_artifact",
             return_value=(state_dict, sidecar),
         ),
-        patch.object(registry, "_materialize_screener", return_value=artifact),
+        patch.object(registry, "materialize", return_value=artifact),
     ):
         entry, loaded = registry._load_model_entry(row, "art-1")
 
@@ -316,3 +316,61 @@ def test_load_model_entry_builds_loaded_model():
     assert entry.promoted is True
     assert entry.session_id == "session-1"
     assert entry.preprocessing["threshold"] == 0.5
+
+
+def test_materialize_vit_delegates_to_screener():
+    sidecar = {
+        "architecture": "vit_small_patch16_224",
+        "lora": {
+            "rank": 8,
+            "alpha": 16,
+            "dropout": 0.1,
+            "target_modules": {"query": True},
+        },
+    }
+    stub = MagicMock(name="vit")
+    with patch.object(
+        _ModelRegistry, "_materialize_screener", return_value=stub
+    ) as screener:
+        assert _ModelRegistry.materialize(sidecar) is stub
+    screener.assert_called_once_with(sidecar)
+
+
+def test_materialize_cnn_small_and_tiny():
+    small = _ModelRegistry.materialize({"architecture": "cnn_small"})
+    tiny = _ModelRegistry.materialize({"architecture": "cnn_tiny"})
+    assert isinstance(small, SeismicCnn)
+    assert isinstance(tiny, SeismicCnn)
+
+
+def test_materialize_uses_spec_architecture_when_top_level_missing():
+    with patch.object(
+        _ModelRegistry, "_materialize_cnn", return_value=MagicMock()
+    ) as cnn:
+        _ModelRegistry.materialize({"spec": {"architecture": "cnn_tiny"}})
+    cnn.assert_called_once_with("cnn_tiny")
+
+
+def test_materialize_unknown_architecture():
+    with pytest.raises(RuntimeError, match="Unknown architecture"):
+        _ModelRegistry.materialize({"architecture": "resnet18"})
+
+
+def test_materialize_screener_requires_lora():
+    with pytest.raises(RuntimeError, match="sidecar missing lora"):
+        _ModelRegistry._materialize_screener({"architecture": "vit_small_patch16_224"})
+
+
+def test_materialize_screener_requires_target_modules():
+    with pytest.raises(RuntimeError, match="Empty LoRA"):
+        _ModelRegistry._materialize_screener(
+            {
+                "architecture": "vit_small_patch16_224",
+                "lora": {
+                    "rank": 8,
+                    "alpha": 16,
+                    "dropout": 0.1,
+                    "target_modules": {},
+                },
+            }
+        )

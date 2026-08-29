@@ -7,10 +7,11 @@ Inference-side in-memory outcome
 from datetime import datetime
 from decimal import Decimal
 from pydantic import BaseModel
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 from fiery_python import (
     InferenceAbstainReason,
     TrainingDeformationLabel,
+    TrainingSeismicLabel,
 )
 
 
@@ -27,7 +28,8 @@ class InferenceOutcome(BaseModel):
     latency_ms: Optional[Decimal] = None
     inferred_at: datetime
     probabilities: Dict[str, Decimal]
-    label: Optional[TrainingDeformationLabel] = None
+    label: Optional[Union[TrainingDeformationLabel, TrainingSeismicLabel]] = None
     score: Optional[Decimal] = None
     interferogram_id: Optional[str] = None
+    seismic_event_id: Optional[str] = None
     volcano_id: Optional[str] = None
