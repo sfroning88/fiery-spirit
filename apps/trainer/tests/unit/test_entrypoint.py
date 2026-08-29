@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Created Date: 8.27.2026
+Created Date: 8.29.2026
 Unit tests for trainer entrypoint
 """
 
@@ -18,7 +18,8 @@ from fiery_python import (
     TrainingSplit,
     TrainingStage,
 )
-from src.entrypoint import _seed, lora_screener
+from src.build_job import DistillPair
+from src.entrypoint import _seed, entrypoint
 
 
 class _TinyModel(nn.Module):
@@ -77,7 +78,7 @@ def test_seed_sets_torch_rng():
     assert torch.equal(first, second)
 
 
-def test_lora_screener_saves_then_callbacks():
+def test_entrypoint_saves_then_callbacks():
     metrics = _metrics()
     decision = _decision()
     model = _TinyModel()
@@ -86,7 +87,7 @@ def test_lora_screener_saves_then_callbacks():
     with (
         patch("src.entrypoint.build_loaders", return_value=loaders),
         patch("src.entrypoint.build_job", return_value=model),
-        patch("src.entrypoint.train_model"),
+        patch("src.entrypoint.train_model", return_value=model),
         patch("src.entrypoint.score_model", return_value=(metrics, decision)),
         patch("src.entrypoint.ModelStorageServices.save_artifact") as save,
         patch(
@@ -95,7 +96,7 @@ def test_lora_screener_saves_then_callbacks():
         ),
         patch("src.entrypoint.send_callback") as callback,
     ):
-        result = lora_screener(spec)
+        result = entrypoint(spec, "vit_small_patch16_224")
     save.assert_called_once()
     weights_key = save.call_args[0][2]
     sidecar = save.call_args[0][1]
@@ -117,7 +118,7 @@ def test_lora_screener_saves_then_callbacks():
     }
 
 
-def test_lora_screener_skips_callback_when_train_fails():
+def test_entrypoint_skips_callback_when_train_fails():
     spec = _spec()
     with (
         patch(
@@ -126,9 +127,69 @@ def test_lora_screener_skips_callback_when_train_fails():
         ),
         patch("src.entrypoint.send_callback") as callback,
     ):
-        result = lora_screener(spec)
+        result = entrypoint(spec, "vit_small_patch16_224")
     callback.assert_not_called()
     assert result == {
         "ok": False,
         "spec": "sess-1",
     }
+
+
+def test_entrypoint_saves_distilled_student_only():
+    student = _TinyModel()
+    teacher = _TinyModel()
+    pair = DistillPair(student=student, teacher=teacher)
+    pair.to = lambda _device: pair
+    spec = _spec(
+        stage=TrainingStage.DISTILL.value,
+        tier=ModelTier.EDGE.value,
+        role=ModelRole.STUDENT.value,
+        distill={"student_architecture": "cnn_tiny"},
+    )
+    spec.pop("lora")
+    with (
+        patch("src.entrypoint.build_loaders", return_value={"train": object()}),
+        patch("src.entrypoint.build_job", return_value=pair),
+        patch("src.entrypoint.train_model", return_value=pair),
+        patch("src.entrypoint.score_model", return_value=(_metrics(), _decision())),
+        patch("src.entrypoint.ModelStorageServices.save_artifact") as save,
+        patch(
+            "src.entrypoint.ModelStorageServices.head_hmac",
+            return_value="b" * 64,
+        ),
+        patch("src.entrypoint.send_callback") as callback,
+    ):
+        entrypoint(spec, "cnn_tiny")
+    state_dict = save.call_args[0][0]
+    sidecar = save.call_args[0][1]
+    assert "weight" in state_dict
+    assert not any(key.startswith("student.") for key in state_dict)
+    assert not any(key.startswith("teacher.") for key in state_dict)
+    assert sidecar["architecture"] == "cnn_tiny"
+    assert "lora" not in sidecar
+    assert callback.call_args.kwargs["architecture"] == "cnn_tiny"
+    assert callback.call_args.kwargs["param_count"] == student.weight.numel()
+
+
+def test_entrypoint_scores_and_saves_rebound_model():
+    original = _TinyModel()
+    converted = _TinyModel()
+    converted.weight.data.fill_(3.0)
+    spec = _spec()
+    with (
+        patch("src.entrypoint.build_loaders", return_value={"train": object()}),
+        patch("src.entrypoint.build_job", return_value=original),
+        patch("src.entrypoint.train_model", return_value=converted),
+        patch(
+            "src.entrypoint.score_model", return_value=(_metrics(), _decision())
+        ) as score,
+        patch("src.entrypoint.ModelStorageServices.save_artifact") as save,
+        patch(
+            "src.entrypoint.ModelStorageServices.head_hmac",
+            return_value="b" * 64,
+        ),
+        patch("src.entrypoint.send_callback"),
+    ):
+        entrypoint(spec, "vit_small_patch16_224")
+    assert score.call_args[0][1] is converted
+    assert save.call_args[0][0]["weight"].tolist() == [3.0, 3.0]

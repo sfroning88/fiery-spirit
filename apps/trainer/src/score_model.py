@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Created Date: 8.27.2026
+Created Date: 8.29.2026
 Evaluate model performance
 """
 
@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch import Tensor, device
 from torch.utils.data import DataLoader
 from decimal import Decimal
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 from fiery_python import (
     STORAGE_OP_VERSION,
     ModelTier,
@@ -56,16 +56,28 @@ def score_model(
             ModelTier.CLOUD.value,
             ModelRole.TEACHER.value,
         ):
-            raise NotImplementedError(
-                "Unsupported (stage, tier, spec) from spec: (pretrain, cloud, teacher)"
+            return _score_teacher_or_student_model(
+                model,
+                loaders,
+                artifact_id,
+                spec,
+                name=ModelMetricName.MACRO_F1_SCORE,
+                score=_macro_f1,
             )
         case (
-            TrainingStage.DISTILL.value,
+            TrainingStage.DISTILL.value
+            | TrainingStage.PRUNE.value
+            | TrainingStage.QUANTIZE.value,
             ModelTier.EDGE.value,
             ModelRole.STUDENT.value,
         ):
-            raise NotImplementedError(
-                "Unsupported (stage, tier, spec) from spec: (distill, edge, student)"
+            return _score_teacher_or_student_model(
+                model,
+                loaders,
+                artifact_id,
+                spec,
+                name=ModelMetricName.ACCURACY,
+                score=_accuracy,
             )
         case _:
             raise RuntimeError(
@@ -129,16 +141,109 @@ def _score_screener_model(
         )
     if not metrics:
         raise RuntimeError("Missing test or holdout loader")
+    return metrics, _decision(spec, threshold)
+
+
+def _score_teacher_or_student_model(
+    model: nn.Module,
+    loaders: dict[str, DataLoader],
+    artifact_id: str,
+    spec: dict,
+    *,
+    name: ModelMetricName,
+    score: Callable[[Tensor, Tensor], float],
+) -> Tuple[List[ModelMetric], dict]:
+    device = _model_device(model)
+    model.eval()
+    metrics: List[ModelMetric] = []
+    for split in (TrainingSplit.TEST, TrainingSplit.HOLDOUT):
+        loader = loaders.get(split.value)
+        if not loader:
+            continue
+        preds, labels = _collect_preds(model, loader, device)
+        metrics.append(
+            ModelMetric(
+                name=name,
+                split=split,
+                value=Decimal(str(round(score(preds, labels), 6))),
+                artifact_id=artifact_id,
+            )
+        )
+    if not metrics:
+        raise RuntimeError("Missing test or holdout loader")
+    return metrics, _decision(spec, 0.0)
+
+
+def _decision(spec: dict, threshold: float) -> dict:
     transform_hash = spec["shard_prefix"].rstrip("/").rsplit("/", 1)[-1]
     if not transform_hash or not isinstance(transform_hash, str):
         raise RuntimeError("Invalid compiled transform_hash")
-    decision = {
+    return {
         "threshold": round(threshold, 5),
         "abstention_band": "0.00000",
         "transform_hash": transform_hash,
         "op_version": STORAGE_OP_VERSION,
     }
-    return metrics, decision
+
+
+def _model_device(model: nn.Module) -> device:
+    import torch
+
+    try:
+        return next(model.parameters()).device
+    except StopIteration:
+        return torch.device("cpu")
+
+
+def _collect_preds(
+    model: nn.Module,
+    loader: DataLoader,
+    device: device,
+) -> Tuple[Tensor, Tensor]:
+    import torch
+
+    preds = []
+    labels = []
+    with torch.no_grad():
+        for features, targets in loader:
+            logits = model(features.to(device))
+            preds.append(logits.argmax(dim=1).cpu())
+            labels.append(targets.cpu())
+    if not preds:
+        raise RuntimeError("Empty split while scoring")
+    return torch.cat(preds), torch.cat(labels)
+
+
+def _macro_f1(preds: Tensor, labels: Tensor) -> float:
+    num_classes = int(max(int(labels.max().item()), int(preds.max().item())) + 1)
+    scores = []
+    for index in range(num_classes):
+        true_positive = int(((preds == index) & (labels == index)).sum().item())
+        false_positive = int(((preds == index) & (labels != index)).sum().item())
+        false_negative = int(((preds != index) & (labels == index)).sum().item())
+        precision = (
+            0.0
+            if true_positive + false_positive == 0
+            else true_positive / (true_positive + false_positive)
+        )
+        recall = (
+            0.0
+            if true_positive + false_negative == 0
+            else true_positive / (true_positive + false_negative)
+        )
+        if precision + recall == 0:
+            scores.append(0.0)
+            continue
+        scores.append(2.0 * precision * recall / (precision + recall))
+    if not scores:
+        raise RuntimeError("Empty split while scoring")
+    return sum(scores) / len(scores)
+
+
+def _accuracy(preds: Tensor, labels: Tensor) -> float:
+    if int(labels.numel()) == 0:
+        raise RuntimeError("Empty split while scoring")
+    return float((preds == labels).sum().item()) / int(labels.numel())
 
 
 def _collect_positive_probs(

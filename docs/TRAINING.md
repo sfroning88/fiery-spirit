@@ -35,20 +35,20 @@ This is also why each transaction happens **atomically** with `caching`.
 To prevent **training-serving skew**, only `unpacking` happens within the [`Modal workspace`](https://modal.com/docs/guide/workspaces).
 The refinement process has already `wrapped`, `cropped`, `normalized` all shards.
 
-### Low-Rank Adapation
-
-For `lora_screener` job:
+Each job follows:
 
 1. Build the `training_dataset` from the `job_spec`
 2. Build the `training_job` from the `job_spec`
 3. Initialize the `cuda` model
-4. Apply `LoRA` adapation to the model
+4. Apply `<method>` to the model
 5. Score the model to collect `metrics`
 6. Persist the model to `s3` bucket `models`
 7. Send the `callback` to `apps/ai`
 
+Methods supported are `pretrain`, `lora`, `distill`, `prune`, `quantize`.
+
 ```python
-def train_deformation(spec):
+def process(spec):
     loaders = build_loaders(spec)
     model = build_job(spec)
     model = model.to("cuda")
@@ -59,22 +59,101 @@ def train_deformation(spec):
     send_callback(spec, payload)
 ```
 
-For applying `Low-Rank Adaption (LoRA)` with `AdamW`:
+```python
+def fit(model, loader, spec):
+    params = (param for param in model.parameters if requires_grad)
+    # optimizer options: adam | adamw | sgd | rmsprop
+    optimizer = optimizer_from_spec(params, spec)
+    # scheduler options: constant | cosine | step | linear | warmup_cosine
+    scheduler = scheduler_from_spec(optimizer, spec)
+    return optimizer, scheduler
+```
 
 ```python
-def train_lora_model(model, loader, lora):
-    model.train()
-    optimizer = torch.optim.AdamW(
-        (param for param in model.parameters() if param.requires_grad),
-        learning_rate
-    )
-    loss_fn = nn.CrossEntropyLoss()
+def epoch(model, loader, optimizer, loss_fn, device):
+    for x, y in loader:
+        optimizer.zero_grad()
+        loss_fn(model(x), y).backward()
+        optimizer.step()
+```
+
+### CNN Pre-Training
+
+For applying training a `from-scratch CNN`:
+
+```python
+def pretrain_cloud_teacher(model, loader, spec)
+    optimizer, scheduler = fit(model, loader, spec)
+    loss_fn = CrossEntropyLoss(weights)
+    for _ in range(epochs):
+        epoch(model, loader, optimizer, loss_fn, device)
+        scheduler.step()
+```
+
+### Low-Rank Adapation
+
+For applying `Low-Rank Adaption (LoRA)`:
+
+```python
+def lora_cloud_screener(model, loader, spec):
+    params = (param for param in model.parameters if requires_grad)
+    optimizer = AdamW(params, learning_rate, weight_decay)
+    loss_fn = CrossEntropyLoss()
     for _ in range(epochs):
         for images, targets in loader:
-            optimizer.zero_grad()
-            loss = loss_fn(model(images), targets)
-            loss.backward()
-            optimizer.step()
+            epoch(model, loader, optimizer, loss_fn, device)
+```
+
+### Knowledge Distillation
+
+For `transfer learning` from `teacher CNN`:
+
+```python
+def distill_edge_student(pair, loader, student)
+    optimizer, scheduler = fit(pair.student, loader, spec)
+    teacher.eval()
+    for _ in range(epochs):
+        # KL(student/T || teacher/T) * T^2 * alpha + CE * (1-alpha)
+        scheduler.step()
+```
+
+### Parameters Pruning
+
+For applying `pruning` on `CNN weights and activations`:
+
+```python
+def prune_edge_student()
+    optimizer, scheduler = fit(pair.student, loader, spec)
+    loss_fn = CrossEntropyLoss(weights)
+    previous = 0.0
+    for step in range(steps):
+        # prune weights
+        prune.global_unstructured(convs, method, sparsity_at(step, spec))
+        for _ in range(finetune_epochs):
+            # preserve accuracy
+            epoch(model, loader, optimizer, loss_fn, device)
+        scheduler.step()
+    prune.remove(convs)
+```
+
+### Weights Quantization
+
+For applying `quantization` on `CNN weights`:
+
+```python
+def quantize_edge_student()
+    exported = torch.export.export(model, (example,)).module()
+    if method is PTQ:
+        prepared = prepare_pt2e(exported, quantizer)
+        for x, _ in calibrate:
+            prepared(x)  # observe
+    if method is QAT:
+        prepared = prepare_qat_pt2e(exported, quantizer)
+        optimizer, scheduler = fit(prepared, train, spec)
+        for _ in range(qat_epochs):
+            epoch(prepared, train, optimizer, CrossEntropyLoss(), device)
+            scheduler.step() # train
+    return convert_pt2e(prepared)
 ```
 
 ### Artifact Persistence

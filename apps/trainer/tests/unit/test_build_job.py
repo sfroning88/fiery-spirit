@@ -1,14 +1,22 @@
 """
 Author: Sean Froning
-Created Date: 8.27.2026
+Created Date: 8.29.2026
 Unit tests for trainer model builders
 """
 
 from unittest.mock import MagicMock, patch
 
 import pytest
+import torch
 from fiery_python import TrainingStage
-from src.build_job import _peft_targets, build_job
+from src.build_job import (
+    DistillPair,
+    SeismicCnn,
+    _STUDENT_ARCHITECTURE,
+    _TEACHER_ARCHITECTURE,
+    _peft_targets,
+    build_job,
+)
 
 
 def _lora(**overrides) -> dict:
@@ -29,6 +37,15 @@ def _lora(**overrides) -> dict:
     return data
 
 
+def _parent_spec(**overrides) -> dict:
+    data = {
+        "parent_storage_path": "edge/student/sess.safetensors",
+        "parent_architecture": _TEACHER_ARCHITECTURE,
+    }
+    data.update(overrides)
+    return data
+
+
 def test_build_job_raises_when_stage_missing():
     with pytest.raises(RuntimeError, match="Missing stage from spec"):
         build_job({"stage": None})
@@ -37,20 +54,6 @@ def test_build_job_raises_when_stage_missing():
 def test_build_job_raises_when_stage_invalid():
     with pytest.raises(RuntimeError, match="Invalid stage from spec"):
         build_job({"stage": "unknown"})
-
-
-@pytest.mark.parametrize(
-    "stage",
-    [
-        TrainingStage.PRETRAIN.value,
-        TrainingStage.DISTILL.value,
-        TrainingStage.PRUNE.value,
-        TrainingStage.QUANTIZE.value,
-    ],
-)
-def test_build_job_rejects_unimplemented_stages(stage: str):
-    with pytest.raises(NotImplementedError, match="Unsupported stage from spec"):
-        build_job({"stage": stage})
 
 
 def test_peft_targets_maps_qkv_and_proj():
@@ -102,3 +105,87 @@ def test_build_lora_job_wraps_timm_backbone():
     assert config.r == 8
     assert config.lora_alpha == 16
     assert set(config.target_modules) == {"qkv", "proj"}
+
+
+def test_build_pretrain_job_returns_teacher_cnn():
+    model = build_job({"stage": TrainingStage.PRETRAIN.value})
+    assert isinstance(model, SeismicCnn)
+    logits = model(torch.zeros(2, 1, 16, 16))
+    assert logits.shape == (2, 4)
+
+
+def test_build_job_unknown_architecture():
+    with pytest.raises(RuntimeError, match="Unknown architecture"):
+        build_job(
+            {
+                "stage": TrainingStage.PRUNE.value,
+                "parent_storage_path": "path.safetensors",
+                "parent_architecture": "missing",
+            }
+        )
+
+
+def test_load_parent_requires_storage_path():
+    with pytest.raises(RuntimeError, match="Missing parent_storage_path"):
+        build_job(
+            {
+                "stage": TrainingStage.PRUNE.value,
+                "parent_architecture": _STUDENT_ARCHITECTURE,
+            }
+        )
+
+
+def test_build_distill_job_pairs_student_and_frozen_teacher():
+    teacher = SeismicCnn(widths=(32, 64, 128))
+    state = teacher.state_dict()
+    with patch(
+        "src.build_job.ModelStorageServices.load_artifact",
+        return_value=(state, {}),
+    ) as load:
+        pair = build_job(
+            {
+                "stage": TrainingStage.DISTILL.value,
+                "distill": {"student_architecture": _STUDENT_ARCHITECTURE},
+                **_parent_spec(),
+            }
+        )
+    load.assert_called_once_with("edge/student/sess.safetensors")
+    assert isinstance(pair, DistillPair)
+    assert isinstance(pair.student, SeismicCnn)
+    assert isinstance(pair.teacher, SeismicCnn)
+    assert all(not param.requires_grad for param in pair.teacher.parameters())
+    assert any(param.requires_grad for param in pair.student.parameters())
+    logits = pair(torch.zeros(1, 1, 16, 16))
+    assert logits.shape == (1, 4)
+
+
+def test_build_prune_job_loads_parent():
+    parent = SeismicCnn(widths=(16, 32, 64))
+    with patch(
+        "src.build_job.ModelStorageServices.load_artifact",
+        return_value=(parent.state_dict(), {}),
+    ):
+        model = build_job(
+            {
+                "stage": TrainingStage.PRUNE.value,
+                **_parent_spec(parent_architecture=_STUDENT_ARCHITECTURE),
+            }
+        )
+    assert isinstance(model, SeismicCnn)
+    for name, value in parent.state_dict().items():
+        assert torch.equal(model.state_dict()[name], value)
+
+
+def test_build_quantize_job_loads_parent():
+    parent = SeismicCnn(widths=(16, 32, 64))
+    with patch(
+        "src.build_job.ModelStorageServices.load_artifact",
+        return_value=(parent.state_dict(), {}),
+    ):
+        model = build_job(
+            {
+                "stage": TrainingStage.QUANTIZE.value,
+                **_parent_spec(parent_architecture=_STUDENT_ARCHITECTURE),
+            }
+        )
+    assert isinstance(model, SeismicCnn)
