@@ -18,7 +18,7 @@ from fiery_python import (
     TrainingSplit,
     TrainingStage,
 )
-from src.entrypoint import _seed, train_deformation
+from src.entrypoint import _seed, lora_screener
 
 
 class _TinyModel(nn.Module):
@@ -77,7 +77,7 @@ def test_seed_sets_torch_rng():
     assert torch.equal(first, second)
 
 
-def test_train_deformation_saves_then_callbacks():
+def test_lora_screener_saves_then_callbacks():
     metrics = _metrics()
     decision = _decision()
     model = _TinyModel()
@@ -95,7 +95,7 @@ def test_train_deformation_saves_then_callbacks():
         ),
         patch("src.entrypoint.send_callback") as callback,
     ):
-        result = train_deformation(spec)
+        result = lora_screener(spec)
     save.assert_called_once()
     weights_key = save.call_args[0][2]
     sidecar = save.call_args[0][1]
@@ -117,7 +117,7 @@ def test_train_deformation_saves_then_callbacks():
     }
 
 
-def test_train_deformation_skips_callback_when_train_fails():
+def test_lora_screener_skips_callback_when_train_fails():
     spec = _spec()
     with (
         patch(
@@ -126,7 +126,7 @@ def test_train_deformation_skips_callback_when_train_fails():
         ),
         patch("src.entrypoint.send_callback") as callback,
     ):
-        result = train_deformation(spec)
+        result = lora_screener(spec)
     callback.assert_not_called()
     assert result == {
         "ok": False,

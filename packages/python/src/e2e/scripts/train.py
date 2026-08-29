@@ -20,7 +20,7 @@ _JOB_TIMEOUT_SECONDS = 600
 
 
 def run_train_test() -> None:
-    """POST /api/train once against LoRA spawn"""
+    """POST /api/train once against chosen spawn"""
     print("Train integration endpoint test start")
 
     print(f"\nAttempting train")

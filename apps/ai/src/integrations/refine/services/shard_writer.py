@@ -33,7 +33,7 @@ _FORMAT_VERSION = 1
 _TARGET_SHARD_BYTES = 200 * 1024 * 1024
 _LABEL_OVERHEAD = 256
 _BASE_ID = "00000000-0000-0000-0000-000000000000"
-_Params = Union[Optional[TrainingDeformation], Optional[TrainingSeismic]]
+_Params = Union[TrainingDeformation, TrainingSeismic]
 _Sample = Union[TrainingInterferogram, TrainingSeismicEvent]
 
 
@@ -45,7 +45,6 @@ class RefineShardWriter:
         """Read unrefined samples, apply transform, store refined shards; return sample_count"""
         if not contract.id:
             raise error("Training contract missing id")
-        params: _Params = None
         if contract.deformation_id:
             params = RefinePersistService.select_deformation(contract.id)
             if not params:

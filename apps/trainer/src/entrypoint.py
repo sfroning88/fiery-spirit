@@ -25,8 +25,7 @@ logger = logging.get_logger(__name__)
 _MAX_TRAINING_ATTEMPTS = 2
 
 
-# Training deformation endpoint
-def train_deformation(spec: Dict) -> Dict:
+def lora_screener(spec: Dict) -> Dict:
     storage_path = None
     signature = None
     param_count = None
@@ -69,7 +68,7 @@ def train_deformation(spec: Dict) -> Dict:
             break
         except Exception as err:
             logger.warning(
-                "train_deformation_failed",
+                "lora_screener_failed",
                 spec=spec["session_id"],
                 attempt=attempt,
                 error=str(err),

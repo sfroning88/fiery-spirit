@@ -15,7 +15,7 @@ from fiery_python import (
 )
 
 _Label = Union[TrainingDeformationLabel, TrainingSeismicLabel]
-_Params = Union[Optional[TrainingDeformation], Optional[TrainingSeismic]]
+_Params = Union[TrainingDeformation, TrainingSeismic]
 
 
 class RefineShardManifest:
@@ -27,8 +27,6 @@ class RefineShardManifest:
         transform_hash: str,
         params: _Params,
     ) -> None:
-        if params is None:
-            raise ValueError("Refine manifest requires deformation or seismic params")
         self._contract_id = contract_id
         self._transform_hash = transform_hash
         self._params = params

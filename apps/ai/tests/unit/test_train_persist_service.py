@@ -6,16 +6,43 @@ Unit tests for TrainPersistService
 
 from unittest.mock import patch
 
+import pytest
 from fiery_python import (
     PoolFetch,
+    TrainingHyperparameterDistill,
     TrainingHyperparameterLora,
+    TrainingHyperparameterPretrain,
+    TrainingHyperparameterPrune,
+    TrainingHyperparameterQuantize,
+    TrainingOptimizer,
+    TrainingPrecision,
+    TrainingPruningCriterion,
+    TrainingQuantizeMethod,
+    TrainingRateSchedule,
     TrainingSession,
     TrainingSignal,
+    TrainingSparsitySchedule,
     TrainingStage,
     TrainingStatus,
     TrainingTargetModules,
 )
 from integrations.train.services.persist_service import TrainPersistService
+
+
+def _session(**overrides) -> TrainingSession:
+    payload = {
+        "id": "sess-1",
+        "signal": TrainingSignal.DEFORMATION,
+        "stage": TrainingStage.LORA,
+        "status": TrainingStatus.PENDING,
+        "samples": 10,
+        "seed": 42,
+        "hyperparameter_lora_id": "lora-1",
+        "contract_id": "contract-1",
+        "version_id": "ver-1",
+    }
+    payload.update(overrides)
+    return TrainingSession(**payload)
 
 
 def test_select_version_maps_row():
@@ -49,6 +76,28 @@ def test_select_version_returns_none_when_empty():
         assert TrainPersistService.select_version("ver-1") is None
 
 
+def test_select_pretrain_maps_row():
+    row = {
+        "epochs": 50,
+        "batch_size": 32,
+        "learning_rate": 0.001,
+        "optimizer": TrainingOptimizer.ADAMW.value,
+        "weight_decay": "0.01",
+        "lr_schedule": TrainingRateSchedule.COSINE.value,
+        "seed": 42,
+    }
+    with patch(
+        "integrations.train.services.persist_service.db_pool.run",
+        return_value=row,
+    ) as run:
+        pretrain = TrainPersistService.select_pretrain("pretrain-1")
+    assert run.call_args.args[1] == ("pretrain-1",)
+    assert pretrain.id == "pretrain-1"
+    assert pretrain.epochs == 50
+    assert pretrain.optimizer is TrainingOptimizer.ADAMW
+    assert pretrain.lr_schedule is TrainingRateSchedule.COSINE
+
+
 def test_select_lora_maps_row():
     row = {
         "rank": 8,
@@ -77,12 +126,82 @@ def test_select_lora_maps_row():
     assert modules.key is False
 
 
-def test_select_lora_returns_none_when_empty():
+def test_select_distill_maps_row():
+    row = {
+        "temperature": 4.0,
+        "alpha": "0.7",
+        "epochs": 30,
+        "batch_size": 64,
+        "learning_rate": 0.001,
+        "student_architecture": "seismic_cnn_student",
+    }
+    with patch(
+        "integrations.train.services.persist_service.db_pool.run",
+        return_value=row,
+    ) as run:
+        distill = TrainPersistService.select_distill("distill-1")
+    assert run.call_args.args[1] == ("distill-1",)
+    assert distill.id == "distill-1"
+    assert distill.temperature == 4.0
+    assert distill.student_architecture == "seismic_cnn_student"
+
+
+def test_select_prune_maps_row():
+    row = {
+        "target_sparsity": "0.7",
+        "iterations": 5,
+        "sparsity_schedule": TrainingSparsitySchedule.LINEAR.value,
+        "finetune_epochs_per_iter": 3,
+        "pruning_criterion": TrainingPruningCriterion.L1_MAGNITUDE.value,
+    }
+    with patch(
+        "integrations.train.services.persist_service.db_pool.run",
+        return_value=row,
+    ) as run:
+        prune = TrainPersistService.select_prune("prune-1")
+    assert run.call_args.args[1] == ("prune-1",)
+    assert prune.id == "prune-1"
+    assert prune.iterations == 5
+    assert prune.sparsity_schedule is TrainingSparsitySchedule.LINEAR
+    assert prune.pruning_criterion is TrainingPruningCriterion.L1_MAGNITUDE
+
+
+def test_select_quantize_maps_row():
+    row = {
+        "method": TrainingQuantizeMethod.PTQ.value,
+        "precision": TrainingPrecision.INT8.value,
+        "calibration_samples": 100,
+        "accuracy_drop_threshold": "0.02",
+        "qat_epochs": 5,
+        "qat_learning_rate": 0.001,
+    }
+    with patch(
+        "integrations.train.services.persist_service.db_pool.run",
+        return_value=row,
+    ) as run:
+        quantize = TrainPersistService.select_quantize("quantize-1")
+    assert run.call_args.args[1] == ("quantize-1",)
+    assert quantize.id == "quantize-1"
+    assert quantize.method is TrainingQuantizeMethod.PTQ
+    assert quantize.precision is TrainingPrecision.INT8
+
+
+@pytest.mark.parametrize(
+    "select_fn,row_id",
+    [
+        (TrainPersistService.select_pretrain, "pretrain-1"),
+        (TrainPersistService.select_lora, "lora-1"),
+        (TrainPersistService.select_distill, "distill-1"),
+        (TrainPersistService.select_prune, "prune-1"),
+        (TrainPersistService.select_quantize, "quantize-1"),
+    ],
+)
+def test_select_hyperparameter_returns_none_when_empty(select_fn, row_id):
     with patch(
         "integrations.train.services.persist_service.db_pool.run",
         return_value=None,
     ):
-        assert TrainPersistService.select_lora("lora-1") is None
+        assert select_fn(row_id) is None
 
 
 def test_select_session_maps_row():
@@ -127,6 +246,86 @@ def test_select_session_returns_none_when_empty():
         assert TrainPersistService.select_session("sess-1") is None
 
 
+@pytest.mark.parametrize(
+    "stage,fk,fn_name,select_attr,row",
+    [
+        (
+            TrainingStage.PRETRAIN,
+            "hyperparameter_pretrain_id",
+            "pretrain_teacher",
+            "select_pretrain",
+            TrainingHyperparameterPretrain(id="pretrain-1"),
+        ),
+        (
+            TrainingStage.LORA,
+            "hyperparameter_lora_id",
+            "lora_screener",
+            "select_lora",
+            (
+                TrainingHyperparameterLora(id="lora-1", target_modules_id="mod-1"),
+                TrainingTargetModules(id="mod-1"),
+            ),
+        ),
+        (
+            TrainingStage.DISTILL,
+            "hyperparameter_distill_id",
+            "distill_student",
+            "select_distill",
+            TrainingHyperparameterDistill(
+                id="distill-1", student_architecture="seismic_cnn_student"
+            ),
+        ),
+        (
+            TrainingStage.PRUNE,
+            "hyperparameter_prune_id",
+            "prune_student",
+            "select_prune",
+            TrainingHyperparameterPrune(id="prune-1"),
+        ),
+        (
+            TrainingStage.QUANTIZE,
+            "hyperparameter_quantize_id",
+            "quantize_student",
+            "select_quantize",
+            TrainingHyperparameterQuantize(id="quantize-1"),
+        ),
+    ],
+)
+def test_select_hyperparameters_packs_stage_slot(stage, fk, fn_name, select_attr, row):
+    session = _session(stage=stage, **{fk: "hp-1"})
+    with patch(
+        f"integrations.train.services.persist_service.TrainPersistService.{select_attr}",
+        return_value=row,
+    ):
+        packed, spawned = TrainPersistService.select_hyperparameters(session)
+    assert spawned == fn_name
+    pretrain, screener, distill, prune, quantize = packed
+    slots = {
+        TrainingStage.PRETRAIN: pretrain,
+        TrainingStage.LORA: screener,
+        TrainingStage.DISTILL: distill,
+        TrainingStage.PRUNE: prune,
+        TrainingStage.QUANTIZE: quantize,
+    }
+    assert slots[stage] == row
+    assert sum(slot is not None for slot in packed) == 1
+
+
+def test_select_hyperparameters_returns_none_packed_when_missing():
+    session = _session(hyperparameter_lora_id=None)
+    packed, fn_name = TrainPersistService.select_hyperparameters(session)
+    assert packed is None
+    assert fn_name == "lora_screener"
+
+
+def test_upsert_pretrain_passes_storage_dict():
+    pretrain = TrainingHyperparameterPretrain()
+    with patch("integrations.train.services.persist_service.db_pool.run") as run:
+        TrainPersistService.upsert_pretrain(pretrain)
+    assert run.call_args.args[1]["epochs"] == 50
+    assert run.call_args.args[1]["optimizer"] == TrainingOptimizer.ADAMW.value
+
+
 def test_upsert_lora_runs_modules_then_lora():
     modules = TrainingTargetModules()
     lora = TrainingHyperparameterLora(target_modules_id=modules.deterministic_id())
@@ -136,6 +335,33 @@ def test_upsert_lora_runs_modules_then_lora():
     assert run.call_args_list[0].args[1]["query"] is True
     assert run.call_args_list[1].args[1]["rank"] == 8
     assert run.call_args_list[1].args[1]["target_modules_id"] == modules.id
+
+
+def test_upsert_distill_passes_storage_dict():
+    distill = TrainingHyperparameterDistill(student_architecture="seismic_cnn_student")
+    with patch("integrations.train.services.persist_service.db_pool.run") as run:
+        TrainPersistService.upsert_distill(distill)
+    assert run.call_args.args[1]["temperature"] == 4.0
+    assert run.call_args.args[1]["student_architecture"] == "seismic_cnn_student"
+
+
+def test_upsert_prune_passes_storage_dict():
+    prune = TrainingHyperparameterPrune()
+    with patch("integrations.train.services.persist_service.db_pool.run") as run:
+        TrainPersistService.upsert_prune(prune)
+    assert run.call_args.args[1]["iterations"] == 5
+    assert (
+        run.call_args.args[1]["pruning_criterion"]
+        == TrainingPruningCriterion.L1_MAGNITUDE.value
+    )
+
+
+def test_upsert_quantize_passes_storage_dict():
+    quantize = TrainingHyperparameterQuantize()
+    with patch("integrations.train.services.persist_service.db_pool.run") as run:
+        TrainPersistService.upsert_quantize(quantize)
+    assert run.call_args.args[1]["method"] == TrainingQuantizeMethod.PTQ.value
+    assert run.call_args.args[1]["precision"] == TrainingPrecision.INT8.value
 
 
 def test_upsert_session_passes_storage_dict():
