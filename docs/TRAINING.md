@@ -35,20 +35,20 @@ This is also why each transaction happens **atomically** with `caching`.
 To prevent **training-serving skew**, only `unpacking` happens within the [`Modal workspace`](https://modal.com/docs/guide/workspaces).
 The refinement process has already `wrapped`, `cropped`, `normalized` all shards.
 
-### Low-Rank Adapation
-
-For `lora_screener` job:
+Each job follows:
 
 1. Build the `training_dataset` from the `job_spec`
 2. Build the `training_job` from the `job_spec`
 3. Initialize the `cuda` model
-4. Apply `LoRA` adapation to the model
+4. Apply `<method>` to the model
 5. Score the model to collect `metrics`
 6. Persist the model to `s3` bucket `models`
 7. Send the `callback` to `apps/ai`
 
+Methods supported are `pretrain`, `lora`, `distill`, `prune`, `quantize`.
+
 ```python
-def train_deformation(spec):
+def training_process(spec):
     loaders = build_loaders(spec)
     model = build_job(spec)
     model = model.to("cuda")
@@ -59,22 +59,123 @@ def train_deformation(spec):
     send_callback(spec, payload)
 ```
 
+### CNN Pre-Training
+
+For applying training a `from-scratch CNN`:
+
+```python
+def pretrain_cloud_teacher()
+    optimizer = torch.optim.AdamW(params, learning_rate, weight_decay)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs)
+    loss_fn = CrossEntropyLoss(weight)
+    model.train()
+    for _ in range(epochs):
+        epoch(model, loader, optimizer, loss_fn, device)
+        scheduler.step()
+```
+
+### Low-Rank Adapation
+
 For applying `Low-Rank Adaption (LoRA)` with `AdamW`:
 
 ```python
-def train_lora_model(model, loader, lora):
+def lora_cloud_screener():
     model.train()
-    optimizer = torch.optim.AdamW(
-        (param for param in model.parameters() if param.requires_grad),
-        learning_rate
-    )
-    loss_fn = nn.CrossEntropyLoss()
+    params = (param for param in model.parameters() if param.requires_grad)
+    optimizer = torch.optim.AdamW(params, learning_rate, weight_decay)
+    loss_fn = CrossEntropyLoss()
     for _ in range(epochs):
         for images, targets in loader:
             optimizer.zero_grad()
             loss = loss_fn(model(images), targets)
             loss.backward()
             optimizer.step()
+```
+
+### Knowledge Distillation
+
+For `transfer learning` from `teacher CNN`:
+
+```python
+def distill_edge_student()
+    teacher.eval()
+    params = (param for param in model.parameters() if param.requires_grad)
+    optimizer = torch.optim.AdamW(params, learning_rate, weight_decay)
+    ce_fn = CrossEntropyLoss()
+    student.train()
+    for _ in range(epochs):
+        for features, targets in loader:
+            optimizer.zero_grad()
+            student_logits = student(features)
+            with torch.no_grad():
+                teacher_logits = teacher(features)
+            soft = F.kl_div(
+                F.log_softmax(student_logits / temperature),
+                F.softmax(teacher_logits / temperature),
+                reduction="batchmean",
+            ) * (temperature ** 2)
+            hard = ce_fn(student_logits, targets)
+            loss = alpha * soft + (1.0 - alpha) * hard
+            loss.backward()
+            optimizer.step()
+```
+
+### Parameters Pruning
+
+For applying `pruning` on `CNN weights and activations`:
+
+```python
+def prune_edge_student()
+    convs = [(module, weight) for module in model.modules() if Conv2d]
+    loss_fn = CrossEntropyLoss(weights)
+    params = (param for param in model.parameters() if param.requires_grad)
+    optimizer = torch.optim.AdamW(params, learning_rate, weight_decay)
+    previous = 0.0
+    for index in range(1, steps + 1):
+        desired = sparsity_at(index, steps, target, schedule)
+        remaining = 1.0 - previous
+        if remaining <= 0:
+            break
+        amount = min(max((desired - previous) / remaining, 0.0), 1.0)
+        if amount > 0:
+            prune.global_unstructured(convs, pruning_method, amount)
+        previous = desired
+        model.train()
+        for _ in range(finetune_epochs):
+            epoch(model, loader, optimizer, loss_fn, device)
+    for module, name in convs:
+        prune.remove(module, name)
+```
+
+### Weights Quantization
+
+For applying `quantization` on `CNN weights`:
+
+```python
+def quantize_edge_student()
+    exported = torch.export.export(model, (example,)).module()
+    quantizer = x86_quantizer()
+    if method is PTQ:
+        prepared = prepare_pt2e(exported, quantizer)
+        prepared.eval()
+        with torch.no_grad():
+            for features, _targets in calibrate:
+                prepared(features.cpu())
+        return convert_pt2e(prepared)
+    if method is QAT:
+        prepared = prepare_qat_pt2e(exported, quantizer)
+        prepared.train()
+        params = (param for param in model.parameters() if param.requires_grad)
+        optimizer = torch.optim.AdamW(params, qat_learning_rate, weight_decay)
+        loss_fn = CrossEntropyLoss()
+        for _ in range(epochs):
+            for features, targets in train:
+                optimizer.zero_grad()
+                loss = loss_fn(prepared(features), targets)
+                loss.backward()
+                optimizer.step()
+        prepared.eval()
+        return convert_pt2e(prepared)
 ```
 
 ### Artifact Persistence

@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Created Date: 8.27.2026
+Created Date: 8.29.2026
 Modal app deployment
 """
 
@@ -42,11 +42,39 @@ image = (
 )
 
 
+@app.function(image=image, gpu="T4", timeout=7200, secrets=secrets)
+def pretrain_teacher(spec: Dict) -> Dict:
+    from src.entrypoint import entrypoint
+
+    return entrypoint(spec, architecture="cnn_small")
+
+
 @app.function(image=image, gpu="T4", timeout=3600, secrets=secrets)
 def lora_screener(spec: Dict) -> Dict:
-    from src.entrypoint import lora_screener
+    from src.entrypoint import entrypoint
 
-    return lora_screener(spec)
+    return entrypoint(spec, architecture="vit_small_patch16_224")
+
+
+@app.function(image=image, gpu="T4", timeout=3600, secrets=secrets)
+def distill_student(spec: Dict) -> Dict:
+    from src.entrypoint import entrypoint
+
+    return entrypoint(spec, architecture="cnn_tiny")
+
+
+@app.function(image=image, gpu="T4", timeout=1800, secrets=secrets)
+def prune_student(spec: Dict) -> Dict:
+    from src.entrypoint import entrypoint
+
+    return entrypoint(spec, architecture="cnn_tiny")
+
+
+@app.function(image=image, gpu="T4", timeout=1800, secrets=secrets)
+def quantize_student(spec: Dict) -> Dict:
+    from src.entrypoint import entrypoint
+
+    return entrypoint(spec, architecture="cnn_tiny")
 
 
 @app.function(image=image, secrets=secrets, timeout=60)

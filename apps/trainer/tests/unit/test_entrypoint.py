@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Created Date: 8.27.2026
+Created Date: 8.29.2026
 Unit tests for trainer entrypoint
 """
 
@@ -18,7 +18,7 @@ from fiery_python import (
     TrainingSplit,
     TrainingStage,
 )
-from src.entrypoint import _seed, lora_screener
+from src.entrypoint import _seed, entrypoint
 
 
 class _TinyModel(nn.Module):
@@ -77,7 +77,7 @@ def test_seed_sets_torch_rng():
     assert torch.equal(first, second)
 
 
-def test_lora_screener_saves_then_callbacks():
+def test_entrypoint_saves_then_callbacks():
     metrics = _metrics()
     decision = _decision()
     model = _TinyModel()
@@ -95,7 +95,7 @@ def test_lora_screener_saves_then_callbacks():
         ),
         patch("src.entrypoint.send_callback") as callback,
     ):
-        result = lora_screener(spec)
+        result = entrypoint(spec, "vit_small_patch16_224")
     save.assert_called_once()
     weights_key = save.call_args[0][2]
     sidecar = save.call_args[0][1]
@@ -117,7 +117,7 @@ def test_lora_screener_saves_then_callbacks():
     }
 
 
-def test_lora_screener_skips_callback_when_train_fails():
+def test_entrypoint_skips_callback_when_train_fails():
     spec = _spec()
     with (
         patch(
@@ -126,7 +126,7 @@ def test_lora_screener_skips_callback_when_train_fails():
         ),
         patch("src.entrypoint.send_callback") as callback,
     ):
-        result = lora_screener(spec)
+        result = entrypoint(spec, "vit_small_patch16_224")
     callback.assert_not_called()
     assert result == {
         "ok": False,

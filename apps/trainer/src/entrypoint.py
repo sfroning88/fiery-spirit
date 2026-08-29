@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Created Date: 8.27.2026
+Created Date: 8.29.2026
 Main entrypoint for Fiery AI/ML API
 """
 
@@ -25,11 +25,10 @@ logger = logging.get_logger(__name__)
 _MAX_TRAINING_ATTEMPTS = 2
 
 
-def lora_screener(spec: Dict) -> Dict:
+def entrypoint(spec: Dict, architecture: str) -> Dict:
     storage_path = None
     signature = None
     param_count = None
-    architecture = None
     metrics = None
     decision = None
     for attempt in range(_MAX_TRAINING_ATTEMPTS):
@@ -73,14 +72,7 @@ def lora_screener(spec: Dict) -> Dict:
                 attempt=attempt,
                 error=str(err),
             )
-    if (
-        storage_path
-        and signature
-        and architecture
-        and param_count
-        and metrics
-        and decision
-    ):
+    if storage_path and signature and param_count and metrics and decision:
         send_callback(
             spec,
             storage_path=storage_path,
