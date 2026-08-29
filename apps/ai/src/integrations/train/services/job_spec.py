@@ -10,6 +10,7 @@ from fiery_python import (
     DatasetVersion,
     ModelTier,
     ModelRole,
+    ModelArtifact,
     TrainingStage,
     TrainingPrecision,
     TrainingTargetModules,
@@ -21,6 +22,7 @@ from fiery_python import (
     TrainingSession,
     TrainingHyperparameter,
 )
+from .persist_service import TrainPersistService
 
 
 class TrainJobSpec:
@@ -32,6 +34,7 @@ class TrainJobSpec:
         version: DatasetVersion,
         hyperparameter: TrainingHyperparameter,
         nonce: str,
+        parent_id: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         ai_api_url = config.get_required("ai_api_url")
         if not ai_api_url or not isinstance(ai_api_url, str):
@@ -41,6 +44,9 @@ class TrainJobSpec:
         modules = None
         if screener:
             lora, modules = screener
+        parent = None
+        if parent_id:
+            parent = TrainPersistService.select_artifact(parent_id)
         spec = {
             "session_id": session.id,
             "contract_id": session.contract_id,
@@ -66,17 +72,17 @@ class TrainJobSpec:
                     return None
                 return spec | TrainJobSpec.build_lora_job_spec(modules, lora)
             case TrainingStage.DISTILL:
-                if not distill:
+                if not distill or not parent:
                     return None
-                return spec | TrainJobSpec.build_distill_job_spec(distill)
+                return spec | TrainJobSpec.build_distill_job_spec(distill, parent)
             case TrainingStage.PRUNE:
-                if not prune:
+                if not prune or not parent:
                     return None
-                return spec | TrainJobSpec.build_prune_job_spec(prune)
+                return spec | TrainJobSpec.build_prune_job_spec(prune, parent)
             case TrainingStage.QUANTIZE:
-                if not quantize:
+                if not quantize or not parent:
                     return None
-                return spec | TrainJobSpec.build_quantize_job_spec(quantize)
+                return spec | TrainJobSpec.build_quantize_job_spec(quantize, parent)
             case _:
                 assert_never(session.stage)
 
@@ -125,6 +131,7 @@ class TrainJobSpec:
     @staticmethod
     def build_distill_job_spec(
         distill: TrainingHyperparameterDistill,
+        parent: ModelArtifact,
     ) -> Dict[str, Any]:
         return {
             "distill": {
@@ -138,11 +145,12 @@ class TrainJobSpec:
             },
             "tier": ModelTier.EDGE.value,
             "role": ModelRole.STUDENT.value,
-        }
+        } | TrainJobSpec._parent_fields(parent)
 
     @staticmethod
     def build_prune_job_spec(
         prune: TrainingHyperparameterPrune,
+        parent: ModelArtifact,
     ) -> Dict[str, Any]:
         return {
             "prune": {
@@ -155,11 +163,12 @@ class TrainJobSpec:
             },
             "tier": ModelTier.EDGE.value,
             "role": ModelRole.STUDENT.value,
-        }
+        } | TrainJobSpec._parent_fields(parent)
 
     @staticmethod
     def build_quantize_job_spec(
         quantize: TrainingHyperparameterQuantize,
+        parent: ModelArtifact,
     ) -> Dict[str, Any]:
         return {
             "quantize": {
@@ -174,4 +183,13 @@ class TrainJobSpec:
             "tier": ModelTier.EDGE.value,
             "role": ModelRole.STUDENT.value,
             "precision": quantize.precision.value,
+        } | TrainJobSpec._parent_fields(parent)
+
+    @staticmethod
+    def _parent_fields(parent: ModelArtifact) -> Dict[str, Any]:
+        return {
+            "parent_id": parent.id,
+            "parent_storage_path": parent.storage_path,
+            "parent_architecture": parent.architecture,
+            "parent_precision": parent.precision.value,
         }

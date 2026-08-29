@@ -135,16 +135,16 @@ def test_run_fails_when_hyperparameters_missing(stage, fn_name):
 
 
 @pytest.mark.parametrize(
-    "stage,fn_name",
+    "stage,fn_name,parent_id",
     [
-        (TrainingStage.PRETRAIN, "pretrain_teacher"),
-        (TrainingStage.LORA, "lora_screener"),
-        (TrainingStage.DISTILL, "distill_student"),
-        (TrainingStage.PRUNE, "prune_student"),
-        (TrainingStage.QUANTIZE, "quantize_student"),
+        (TrainingStage.PRETRAIN, "pretrain_teacher", None),
+        (TrainingStage.LORA, "lora_screener", None),
+        (TrainingStage.DISTILL, "distill_student", "parent-1"),
+        (TrainingStage.PRUNE, "prune_student", "parent-1"),
+        (TrainingStage.QUANTIZE, "quantize_student", "parent-1"),
     ],
 )
-def test_run_returns_modal_call_id(stage, fn_name):
+def test_run_returns_modal_call_id(stage, fn_name, parent_id):
     session = _session(stage=stage)
     spec = {"session_id": "sess-1", "stage": stage.value}
     with (
@@ -166,16 +166,17 @@ def test_run_returns_modal_call_id(stage, fn_name):
         patch(
             "integrations.train.services.modal_spawn.TrainJobSpec.build_job_spec",
             return_value=spec,
-        ),
+        ) as build,
         patch.object(
             TrainModalSpawn,
             "_spawn_modal_function",
             return_value=("call-1", None),
         ) as spawn,
     ):
-        call_id = TrainModalSpawn.run("sess-1")
+        call_id = TrainModalSpawn.run("sess-1", parent_id)
     assert call_id == "call-1"
     spawn.assert_called_once_with(spec, fn_name)
+    assert build.call_args.args[4] == parent_id
 
 
 def test_run_fails_when_job_spec_missing():

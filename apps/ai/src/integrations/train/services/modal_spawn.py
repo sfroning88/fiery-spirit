@@ -19,7 +19,7 @@ class TrainModalSpawn:
     """Build training job Modal kwargs for GPU training"""
 
     @classmethod
-    def run(cls, session_id: str) -> str:
+    def run(cls, session_id: str, parent_id: Optional[str] = None) -> str:
         """Load session payload and manage session status; return Modal call id"""
         session = TrainPersistService.select_session(session_id)
         if not session:
@@ -38,7 +38,9 @@ class TrainModalSpawn:
         session.started_at = datetime.now(timezone.utc)
         TrainPersistService.upsert_session(session)
         nonce = secrets.token_hex(16)
-        spec = TrainJobSpec.build_job_spec(session, version, hyperparameter, nonce)
+        spec = TrainJobSpec.build_job_spec(
+            session, version, hyperparameter, nonce, parent_id
+        )
         if not spec:
             cls._fail_spawn(session, "[system] no job spec was built")
             raise error("No job spec was built")

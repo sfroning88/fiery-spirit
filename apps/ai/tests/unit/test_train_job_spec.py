@@ -5,8 +5,10 @@ Unit tests for TrainJobSpec
 """
 
 import pytest
+from datetime import datetime, timezone
 from fiery_python import (
     DatasetVersion,
+    ModelArtifact,
     ModelRole,
     ModelTier,
     TrainingHyperparameterDistill,
@@ -79,6 +81,32 @@ def _quantize() -> TrainingHyperparameterQuantize:
     return TrainingHyperparameterQuantize(id="quantize-1")
 
 
+def _parent() -> ModelArtifact:
+    return ModelArtifact(
+        id="parent-1",
+        tier=ModelTier.CLOUD,
+        role=ModelRole.TEACHER,
+        stage=TrainingStage.PRETRAIN,
+        precision=TrainingPrecision.FP32,
+        architecture="seismic_cnn_teacher",
+        param_count=1,
+        storage_path="cloud/teacher/sess.safetensors",
+        signature="sig",
+        signed_at=datetime.now(timezone.utc),
+        session_id="teacher-sess",
+    )
+
+
+def _parent_id(stage: TrainingStage) -> str | None:
+    if stage in (
+        TrainingStage.DISTILL,
+        TrainingStage.PRUNE,
+        TrainingStage.QUANTIZE,
+    ):
+        return "parent-1"
+    return None
+
+
 def _packed(stage: TrainingStage):
     if stage is TrainingStage.PRETRAIN:
         return (_pretrain(), None, None, None, None)
@@ -143,11 +171,16 @@ def test_build_job_spec_payload(
         "integrations.train.services.job_spec.config.get_required",
         lambda _key: "https://ai.example",
     )
+    monkeypatch.setattr(
+        "integrations.train.services.job_spec.TrainPersistService.select_artifact",
+        lambda _artifact_id: _parent(),
+    )
     spec = TrainJobSpec.build_job_spec(
         _session(stage=stage, signal=signal),
         _version(),
         _packed(stage),
         "nonce-1",
+        _parent_id(stage),
     )
     assert spec["session_id"] == "sess-1"
     assert spec["signal"] == signal.value
@@ -161,6 +194,13 @@ def test_build_job_spec_payload(
     assert spec["precision"] == precision.value
     assert blob_key in spec
     assert spec[blob_key]["id"] == f"{blob_key}-1"
+    if _parent_id(stage):
+        assert spec["parent_id"] == "parent-1"
+        assert spec["parent_storage_path"] == "cloud/teacher/sess.safetensors"
+        assert spec["parent_architecture"] == "seismic_cnn_teacher"
+        assert spec["parent_precision"] == TrainingPrecision.FP32.value
+    else:
+        assert "parent_id" not in spec
 
 
 def test_build_job_spec_lora_target_modules(monkeypatch):
@@ -173,6 +213,20 @@ def test_build_job_spec_lora_target_modules(monkeypatch):
     )
     assert spec["lora"]["target_modules"]["query"] is True
     assert spec["lora"]["target_modules"]["key"] is False
+
+
+def test_build_job_spec_returns_none_when_parent_missing(monkeypatch):
+    monkeypatch.setattr(
+        "integrations.train.services.job_spec.config.get_required",
+        lambda _key: "https://ai.example",
+    )
+    spec = TrainJobSpec.build_job_spec(
+        _session(stage=TrainingStage.DISTILL, signal=TrainingSignal.SEISMIC),
+        _version(),
+        _packed(TrainingStage.DISTILL),
+        "nonce-1",
+    )
+    assert spec is None
 
 
 def test_build_job_spec_returns_none_when_stage_slot_empty(monkeypatch):

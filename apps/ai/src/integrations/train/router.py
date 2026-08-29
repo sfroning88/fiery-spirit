@@ -137,7 +137,7 @@ async def train_spawn(request: Request, payload: TrainRequest) -> TrainResponse:
         specs = [
             {
                 "func": TrainBackgroundJobs.background_spawn_training,
-                "args": (session.id,),
+                "args": (session.id, payload.parent_id),
                 "job_id": f"train_spawn_{payload.version_id}_{session.id}",
                 "job_timeout": 6000,
             }

@@ -49,6 +49,11 @@ def lora_screener(spec: Dict) -> Dict:
     return lora_screener(spec)
 
 
+@app.function(image=image, secrets=secrets, timeout=60)
+def smoke(_spec: Dict) -> Dict:
+    return {"ok": True}
+
+
 @app.local_entrypoint()
 def main() -> None:
-    print(lora_screener.remote({"smoke": True}))
+    print(smoke.remote({}))

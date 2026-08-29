@@ -9,6 +9,7 @@ from fiery_python import db_pool, logging
 from fiery_python import (
     PoolFetch,
     DatasetVersion,
+    ModelArtifact,
     TrainingSignal,
     TrainingStage,
     TrainingTargetModules,
@@ -23,6 +24,7 @@ from fiery_python import (
 )
 from ..queries.select_training_contract import QUERY as SELECT_CONTRACT
 from ..queries.select_dataset_version import QUERY as SELECT_VERSION
+from ..queries.select_model_artifact import QUERY as SELECT_ARTIFACT
 from ..queries.select_hyperparameter_pretrain import QUERY as SELECT_PRETRAIN
 from ..queries.select_hyperparameter_lora import QUERY as SELECT_LORA
 from ..queries.select_hyperparameter_distill import QUERY as SELECT_DISTILL
@@ -114,6 +116,7 @@ class TrainPersistService:
         session: TrainingSession,
     ) -> Tuple[Optional[TrainingHyperparameter], str]:
         fn_name = _MODAL_SPAWNABLE_FUNCTIONS[session.stage]
+        packed: Optional[TrainingHyperparameter] = None
         match session.stage:
             case TrainingStage.PRETRAIN:
                 row = (
@@ -199,6 +202,35 @@ class TrainPersistService:
             sample_count=row.get("sample_count"),
             status=row.get("status"),
             contract_id=row.get("contract_id"),
+        )
+
+    @staticmethod
+    def select_artifact(artifact_id: str) -> Optional[ModelArtifact]:
+        row = db_pool.run(
+            SELECT_ARTIFACT,
+            (artifact_id,),
+            fetch=PoolFetch.ONE,
+            error_event="fetch_model_artifact_failed",
+        )
+        if not row:
+            logger.warning("fetch_model_artifact_empty", artifact_id=artifact_id)
+            return None
+        return ModelArtifact(
+            id=artifact_id,
+            tier=row.get("tier"),
+            role=row.get("role"),
+            stage=row.get("stage"),
+            precision=row.get("precision"),
+            architecture=row.get("architecture"),
+            param_count=row.get("param_count"),
+            sparsity=row.get("sparsity"),
+            storage_path=row.get("storage_path"),
+            signature=row.get("signature"),
+            signed_at=row.get("signed_at"),
+            promoted=row.get("promoted"),
+            promoted_at=row.get("promoted_at"),
+            session_id=row.get("session_id"),
+            parent_id=row.get("parent_id"),
         )
 
     @staticmethod
