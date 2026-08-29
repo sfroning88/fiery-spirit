@@ -76,7 +76,9 @@ def test_score_model_raises_when_slot_invalid():
 
 def test_score_model_dispatches_teacher():
     expected = ([object()], {"op_version": 1})
-    with patch("src.score_model._score_teacher_model", return_value=expected) as score:
+    with patch(
+        "src.score_model._score_teacher_or_student_model", return_value=expected
+    ) as score:
         result = score_model(
             _score_spec(
                 stage=TrainingStage.PRETRAIN.value,
@@ -87,11 +89,15 @@ def test_score_model_dispatches_teacher():
         )
     assert result is expected
     score.assert_called_once()
+    assert score.call_args.kwargs["name"] is ModelMetricName.MACRO_F1_SCORE
+    assert score.call_args.kwargs["score"] is _macro_f1
 
 
 def test_score_model_dispatches_student():
     expected = ([object()], {"op_version": 1})
-    with patch("src.score_model._score_student_model", return_value=expected) as score:
+    with patch(
+        "src.score_model._score_teacher_or_student_model", return_value=expected
+    ) as score:
         result = score_model(
             _score_spec(
                 stage=TrainingStage.DISTILL.value,
@@ -103,6 +109,8 @@ def test_score_model_dispatches_student():
         )
     assert result is expected
     score.assert_called_once()
+    assert score.call_args.kwargs["name"] is ModelMetricName.ACCURACY
+    assert score.call_args.kwargs["score"] is _accuracy
 
 
 def test_screener_scores_counts_abstain_as_miss():

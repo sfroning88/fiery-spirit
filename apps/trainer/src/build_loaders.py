@@ -172,7 +172,10 @@ def _array_to_tensor(array: np.ndarray, signal: TrainingSignal) -> Tensor:
 
 def _label_to_index(label: dict, signal: TrainingSignal) -> Optional[int]:
     value = label.get("label")
-    return _LABEL_INDEX.get(signal).get(value)
+    mapping = _LABEL_INDEX.get(signal)
+    if mapping is None:
+        return None
+    return mapping.get(value)
 
 
 def _calibrate_loader(train_loader: DataLoader, spec: dict) -> DataLoader:
@@ -208,7 +211,7 @@ def _nested_int(spec: dict, block: str, field: str) -> int:
     payload = spec.get(block) or {}
     value = payload.get(field)
     if not isinstance(value, int) or value <= 0:
-        raise RuntimeError(f"MIssing {block}.{field} from spec")
+        raise RuntimeError(f"Missing {block}.{field} from spec")
     return value
 
 

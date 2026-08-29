@@ -68,15 +68,17 @@ def test_train_model_dispatches_stage(stage: str, builder: str):
     loaders = {"train": _linear_loader()}
     spec = {"stage": stage}
     with patch(f"src.train_model.{builder}") as train:
-        train_model(model, loaders, spec)
+        train.return_value = model
+        result = train_model(model, loaders, spec)
     train.assert_called_once_with(model, loaders, spec)
+    assert result is model
 
 
 def test_train_lora_model_runs_one_step():
     model = nn.Linear(4, 4)
     loaders = {"train": _linear_loader()}
     before = model.weight.detach().clone()
-    _train_lora_model(
+    trained = _train_lora_model(
         model,
         loaders,
         {
@@ -84,6 +86,7 @@ def test_train_lora_model_runs_one_step():
             "lora": {"epochs": 1, "learning_rate": 1e-2},
         },
     )
+    assert trained is model
     assert not torch.equal(before, model.weight.detach())
 
 

@@ -27,6 +27,7 @@ image = (
     .uv_pip_install(
         "safetensors==0.8.0",
         "torch==2.13.0",
+        "torchao==0.18.0",
         "timm==1.0.28",
         "peft==0.20.0",
         "webdataset==1.0.2",
@@ -63,14 +64,14 @@ def distill_student(spec: Dict) -> Dict:
     return entrypoint(spec, architecture="cnn_tiny")
 
 
-@app.function(image=image, gpu="T4", timeout=1800, secrets=secrets)
+@app.function(image=image, gpu="T4", timeout=3600, secrets=secrets)
 def prune_student(spec: Dict) -> Dict:
     from src.entrypoint import entrypoint
 
     return entrypoint(spec, architecture="cnn_tiny")
 
 
-@app.function(image=image, gpu="T4", timeout=1800, secrets=secrets)
+@app.function(image=image, cpu=4, memory=8192, timeout=5400, secrets=secrets)
 def quantize_student(spec: Dict) -> Dict:
     from src.entrypoint import entrypoint
 

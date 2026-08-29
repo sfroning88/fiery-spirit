@@ -6,7 +6,7 @@ Build training frame
 
 import torch.nn as nn
 from peft import PeftModel
-from typing import Dict, List, Optional, Type
+from typing import Callable, Dict, List, Optional
 from fiery_python import ModelStorageServices, TrainingStage
 
 _NUM_SEISMIC_CLASSES = 4
@@ -58,7 +58,7 @@ class DistillPair(nn.Module):
         return self.student(x)
 
 
-_ARCHITECTURES: Dict[str, Type[SeismicCnn]] = {
+_ARCHITECTURES: Dict[str, Callable[[], SeismicCnn]] = {
     _TEACHER_ARCHITECTURE: lambda: SeismicCnn(widths=(32, 64, 128)),
     _STUDENT_ARCHITECTURE: lambda: SeismicCnn(widths=(16, 32, 64)),
 }

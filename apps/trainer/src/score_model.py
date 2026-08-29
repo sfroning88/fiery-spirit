@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch import Tensor, device
 from torch.utils.data import DataLoader
 from decimal import Decimal
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 from fiery_python import (
     STORAGE_OP_VERSION,
     ModelTier,
@@ -56,7 +56,14 @@ def score_model(
             ModelTier.CLOUD.value,
             ModelRole.TEACHER.value,
         ):
-            return _score_teacher_model(model, loaders, artifact_id, spec)
+            return _score_teacher_or_student_model(
+                model,
+                loaders,
+                artifact_id,
+                spec,
+                name=ModelMetricName.MACRO_F1_SCORE,
+                score=_macro_f1,
+            )
         case (
             TrainingStage.DISTILL.value
             | TrainingStage.PRUNE.value
@@ -64,7 +71,14 @@ def score_model(
             ModelTier.EDGE.value,
             ModelRole.STUDENT.value,
         ):
-            return _score_student_model(model, loaders, artifact_id, spec)
+            return _score_teacher_or_student_model(
+                model,
+                loaders,
+                artifact_id,
+                spec,
+                name=ModelMetricName.ACCURACY,
+                score=_accuracy,
+            )
         case _:
             raise RuntimeError(
                 f"Invalid (stage, tier, role) from spec: ({stage}, {tier}, {role})"
@@ -130,11 +144,14 @@ def _score_screener_model(
     return metrics, _decision(spec, threshold)
 
 
-def _score_teacher_model(
+def _score_teacher_or_student_model(
     model: nn.Module,
     loaders: dict[str, DataLoader],
     artifact_id: str,
     spec: dict,
+    *,
+    name: ModelMetricName,
+    score: Callable[[Tensor, Tensor], float],
 ) -> Tuple[List[ModelMetric], dict]:
     device = _model_device(model)
     model.eval()
@@ -146,36 +163,9 @@ def _score_teacher_model(
         preds, labels = _collect_preds(model, loader, device)
         metrics.append(
             ModelMetric(
-                name=ModelMetricName.MACRO_F1_SCORE,
+                name=name,
                 split=split,
-                value=Decimal(str(round(_macro_f1(preds, labels), 6))),
-                artifact_id=artifact_id,
-            )
-        )
-    if not metrics:
-        raise RuntimeError("Missing test or holdout loader")
-    return metrics, _decision(spec, 0.0)
-
-
-def _score_student_model(
-    model: nn.Module,
-    loaders: dict[str, DataLoader],
-    artifact_id: str,
-    spec: dict,
-) -> Tuple[List[ModelMetric], dict]:
-    device = _model_device(model)
-    model.eval()
-    metrics: List[ModelMetric] = []
-    for split in (TrainingSplit.TEST, TrainingSplit.HOLDOUT):
-        loader = loaders.get(split.value)
-        if not loader:
-            continue
-        preds, labels = _collect_preds(model, loader, device)
-        metrics.append(
-            ModelMetric(
-                name=ModelMetricName.ACCURACY,
-                split=split,
-                value=Decimal(str(round(_accuracy(preds, labels), 6))),
+                value=Decimal(str(round(score(preds, labels), 6))),
                 artifact_id=artifact_id,
             )
         )

@@ -48,7 +48,7 @@ Each job follows:
 Methods supported are `pretrain`, `lora`, `distill`, `prune`, `quantize`.
 
 ```python
-def training_process(spec):
+def process(spec):
     loaders = build_loaders(spec)
     model = build_job(spec)
     model = model.to("cuda")
@@ -59,16 +59,32 @@ def training_process(spec):
     send_callback(spec, payload)
 ```
 
+```python
+def fit(model, loader, spec):
+    params = (param for param in model.parameters if requires_grad)
+    # optimizer options: adam | adamw | sgd | rmsprop
+    optimizer = optimizer_from_spec(params, spec)
+    # scheduler options: constant | cosine | step | linear | warmup_cosine
+    scheduler = scheduler_from_spec(optimizer, spec)
+    return optimizer, scheduler
+```
+
+```python
+def epoch(model, loader, optimizer, loss_fn, device):
+    for x, y in loader:
+        optimizer.zero_grad()
+        loss_fn(model(x), y).backward()
+        optimizer.step()
+```
+
 ### CNN Pre-Training
 
 For applying training a `from-scratch CNN`:
 
 ```python
-def pretrain_cloud_teacher()
-    optimizer = torch.optim.AdamW(params, learning_rate, weight_decay)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs)
-    loss_fn = CrossEntropyLoss(weight)
-    model.train()
+def pretrain_cloud_teacher(model, loader, spec)
+    optimizer, scheduler = fit(model, loader, spec)
+    loss_fn = CrossEntropyLoss(weights)
     for _ in range(epochs):
         epoch(model, loader, optimizer, loss_fn, device)
         scheduler.step()
@@ -76,20 +92,16 @@ def pretrain_cloud_teacher()
 
 ### Low-Rank Adapation
 
-For applying `Low-Rank Adaption (LoRA)` with `AdamW`:
+For applying `Low-Rank Adaption (LoRA)`:
 
 ```python
-def lora_cloud_screener():
-    model.train()
-    params = (param for param in model.parameters() if param.requires_grad)
-    optimizer = torch.optim.AdamW(params, learning_rate, weight_decay)
+def lora_cloud_screener(model, loader, spec):
+    params = (param for param in model.parameters if requires_grad)
+    optimizer = AdamW(params, learning_rate, weight_decay)
     loss_fn = CrossEntropyLoss()
     for _ in range(epochs):
         for images, targets in loader:
-            optimizer.zero_grad()
-            loss = loss_fn(model(images), targets)
-            loss.backward()
-            optimizer.step()
+            epoch(model, loader, optimizer, loss_fn, device)
 ```
 
 ### Knowledge Distillation
@@ -97,27 +109,12 @@ def lora_cloud_screener():
 For `transfer learning` from `teacher CNN`:
 
 ```python
-def distill_edge_student()
+def distill_edge_student(pair, loader, student)
+    optimizer, scheduler = fit(pair.student, loader, spec)
     teacher.eval()
-    params = (param for param in model.parameters() if param.requires_grad)
-    optimizer = torch.optim.AdamW(params, learning_rate, weight_decay)
-    ce_fn = CrossEntropyLoss()
-    student.train()
     for _ in range(epochs):
-        for features, targets in loader:
-            optimizer.zero_grad()
-            student_logits = student(features)
-            with torch.no_grad():
-                teacher_logits = teacher(features)
-            soft = F.kl_div(
-                F.log_softmax(student_logits / temperature),
-                F.softmax(teacher_logits / temperature),
-                reduction="batchmean",
-            ) * (temperature ** 2)
-            hard = ce_fn(student_logits, targets)
-            loss = alpha * soft + (1.0 - alpha) * hard
-            loss.backward()
-            optimizer.step()
+        # KL(student/T || teacher/T) * T^2 * alpha + CE * (1-alpha)
+        scheduler.step()
 ```
 
 ### Parameters Pruning
@@ -126,25 +123,17 @@ For applying `pruning` on `CNN weights and activations`:
 
 ```python
 def prune_edge_student()
-    convs = [(module, weight) for module in model.modules() if Conv2d]
+    optimizer, scheduler = fit(pair.student, loader, spec)
     loss_fn = CrossEntropyLoss(weights)
-    params = (param for param in model.parameters() if param.requires_grad)
-    optimizer = torch.optim.AdamW(params, learning_rate, weight_decay)
     previous = 0.0
-    for index in range(1, steps + 1):
-        desired = sparsity_at(index, steps, target, schedule)
-        remaining = 1.0 - previous
-        if remaining <= 0:
-            break
-        amount = min(max((desired - previous) / remaining, 0.0), 1.0)
-        if amount > 0:
-            prune.global_unstructured(convs, pruning_method, amount)
-        previous = desired
-        model.train()
+    for step in range(steps):
+        # prune weights
+        prune.global_unstructured(convs, method, sparsity_at(step, spec))
         for _ in range(finetune_epochs):
+            # preserve accuracy
             epoch(model, loader, optimizer, loss_fn, device)
-    for module, name in convs:
-        prune.remove(module, name)
+        scheduler.step()
+    prune.remove(convs)
 ```
 
 ### Weights Quantization
@@ -154,28 +143,17 @@ For applying `quantization` on `CNN weights`:
 ```python
 def quantize_edge_student()
     exported = torch.export.export(model, (example,)).module()
-    quantizer = x86_quantizer()
     if method is PTQ:
         prepared = prepare_pt2e(exported, quantizer)
-        prepared.eval()
-        with torch.no_grad():
-            for features, _targets in calibrate:
-                prepared(features.cpu())
-        return convert_pt2e(prepared)
+        for x, _ in calibrate:
+            prepared(x)  # observe
     if method is QAT:
         prepared = prepare_qat_pt2e(exported, quantizer)
-        prepared.train()
-        params = (param for param in model.parameters() if param.requires_grad)
-        optimizer = torch.optim.AdamW(params, qat_learning_rate, weight_decay)
-        loss_fn = CrossEntropyLoss()
-        for _ in range(epochs):
-            for features, targets in train:
-                optimizer.zero_grad()
-                loss = loss_fn(prepared(features), targets)
-                loss.backward()
-                optimizer.step()
-        prepared.eval()
-        return convert_pt2e(prepared)
+        optimizer, scheduler = fit(prepared, train, spec)
+        for _ in range(qat_epochs):
+            epoch(prepared, train, optimizer, CrossEntropyLoss(), device)
+            scheduler.step() # train
+    return convert_pt2e(prepared)
 ```
 
 ### Artifact Persistence

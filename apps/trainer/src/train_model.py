@@ -13,7 +13,9 @@ from fiery_python import TrainingStage
 _NUM_SEISMIC_CLASSES = 4
 
 
-def train_model(model: nn.Module, loaders: Dict[str, DataLoader], spec: dict) -> None:
+def train_model(
+    model: nn.Module, loaders: Dict[str, DataLoader], spec: dict
+) -> nn.Module:
     stage = spec["stage"]
     if not stage or not isinstance(stage, str):
         raise RuntimeError("Missing stage from spec")
@@ -76,6 +78,7 @@ def _train_lora_model(
             loss = loss_fn(model(images), targets)
             loss.backward()
             optimizer.step()
+    return model
 
 
 def _train_distill_model(
@@ -201,7 +204,7 @@ def _train_quantize_model(
             for features, _targets in calibrate:
                 prepared(features.cpu())
         return convert_pt2e(prepared)
-    if method == TrainingQuantizeMethod.QAT.value:
+    elif method == TrainingQuantizeMethod.QAT.value:
         prepared = prepare_qat_pt2e(exported, quantizer)
         prepared.train()
         optimizer = torch.optim.AdamW(
