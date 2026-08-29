@@ -1,6 +1,6 @@
 """
 Author: Sean Froning
-Created Date: 8.23.2026
+Created Date: 8.28.2026
 Processing functions for Train spawning
 """
 
@@ -28,22 +28,21 @@ class TrainModalSpawn:
         if not version or version.status is not TrainingStatus.COMPLETED:
             cls._fail_spawn(session, "[system] no dataset version is ready")
             raise error("No Dataset Version found or is ready")
-        hyperparameters = TrainPersistService.select_lora(
-            session.hyperparameter_lora_id
-        )
-        if not hyperparameters:
-            cls._fail_spawn(session, "[system] no LoRA hyperparameters found")
-            raise error("No LoRA Hyperparameters found")
-        lora, modules = hyperparameters
+        hyperparameter, fn_name = TrainPersistService.select_hyperparameters(session)
+        if not hyperparameter:
+            cls._fail_spawn(
+                session, f"[system] no {session.stage.value} hyperparameters found"
+            )
+            raise error(f"No {session.stage.value} Hyperparameters found")
         session.status = TrainingStatus.EXECUTING
         session.started_at = datetime.now(timezone.utc)
         TrainPersistService.upsert_session(session)
         nonce = secrets.token_hex(16)
-        spec = TrainJobSpec.build_lora_job_spec(session, version, modules, lora, nonce)
+        spec = TrainJobSpec.build_job_spec(session, version, hyperparameter, nonce)
         if not spec:
             cls._fail_spawn(session, "[system] no job spec was built")
             raise error("No job spec was built")
-        call_id, error_message = cls._spawn_modal_function(spec)
+        call_id, error_message = cls._spawn_modal_function(spec, fn_name)
         if not call_id:
             cls._fail_spawn(session, error_message or "[system] uncaught spawn error")
             raise error("Modal spawn failed")
@@ -51,13 +50,13 @@ class TrainModalSpawn:
 
     @staticmethod
     def _spawn_modal_function(
-        spec: Dict[str, Any],
+        spec: Dict[str, Any], fn_name: str
     ) -> Tuple[Optional[str], Optional[str]]:
         """Non-blocking spawn; return Modal call id or error_message"""
         try:
             import modal
 
-            fn = modal.Function.from_name("fiery-trainer", "train_deformation")
+            fn = modal.Function.from_name("fiery-trainer", fn_name)
             call = fn.spawn(spec)
             call_id = getattr(call, "object_id", None) or str(call)
             return call_id, None

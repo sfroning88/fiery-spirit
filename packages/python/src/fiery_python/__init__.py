@@ -145,6 +145,9 @@ from .services import (
     BlobStorageServices,
     ModelStorageServices,
 )
+from .types import (
+    TrainingHyperparameter,
+)
 from .utils import (
     NumberUtils,
     SchemaUtils,
@@ -283,6 +286,7 @@ __all__ = [
     "SyncLazyResource",
     "BlobStorageServices",
     "ModelStorageServices",
+    "TrainingHyperparameter",
     "NumberUtils",
     "SchemaUtils",
     "UuidUtils",

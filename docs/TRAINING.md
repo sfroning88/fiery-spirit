@@ -35,9 +35,9 @@ This is also why each transaction happens **atomically** with `caching`.
 To prevent **training-serving skew**, only `unpacking` happens within the [`Modal workspace`](https://modal.com/docs/guide/workspaces).
 The refinement process has already `wrapped`, `cropped`, `normalized` all shards.
 
-### Modal Instance
+### Low-Rank Adapation
 
-For `train_deformation` jobs:
+For `lora_screener` job:
 
 1. Build the `training_dataset` from the `job_spec`
 2. Build the `training_job` from the `job_spec`
@@ -58,8 +58,6 @@ def train_deformation(spec):
     signature = head_hmac(storage_path)
     send_callback(spec, payload)
 ```
-
-### Low-Rank Adapation
 
 For applying `Low-Rank Adaption (LoRA)` with `AdamW`:
 

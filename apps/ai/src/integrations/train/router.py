@@ -58,8 +58,14 @@ async def train_spawn(request: Request, payload: TrainRequest) -> TrainResponse:
     session = None
 
     try:
-        if payload.stage is not TrainingStage.LORA:
-            raise NotImplementedError("Only stage=LoRA is supported")
+        contract = TrainPersistService.select_contract(payload.contract_id)
+        if not contract or not contract.id:
+            logger.error(
+                "fetch_contract_failed",
+                contract_id=payload.contract_id,
+                version_id=payload.version_id,
+            )
+            raise error("Fetch contract failed", status_code=500)
 
         version = TrainPersistService.select_version(payload.version_id)
         if not version or version.contract_id != payload.contract_id:
@@ -77,8 +83,21 @@ async def train_spawn(request: Request, payload: TrainRequest) -> TrainResponse:
         render_commit = config.get("RENDER_GIT_COMMIT")
         git_sha = str(render_commit) if render_commit else None
 
+        if contract.deformation_id:
+            signal = TrainingSignal.DEFORMATION
+
+        elif contract.seismic_id:
+            signal = TrainingSignal.SEISMIC
+
+        else:
+            logger.error(
+                "contract_missing_deformation_and_seismic",
+                status_code=500,
+            )
+            raise error("Contract malformed", status_code=500)
+
         session = TrainingSession(
-            signal=TrainingSignal.DEFORMATION,
+            signal=signal,
             stage=payload.stage,
             status=TrainingStatus.PENDING,
             samples=version.sample_count,
@@ -87,6 +106,7 @@ async def train_spawn(request: Request, payload: TrainRequest) -> TrainResponse:
             contract_id=payload.contract_id,
             version_id=payload.version_id,
         )
+
         session.id = session.deterministic_id()
 
         cached_session = TrainPersistService.select_session(session.id)
@@ -111,18 +131,7 @@ async def train_spawn(request: Request, payload: TrainRequest) -> TrainResponse:
             session.error_message = None
             session.git_sha = git_sha
 
-        modules = TrainingTargetModules()
-        modules.id = modules.deterministic_id()
-        lora = TrainingHyperparameterLora(target_modules_id=modules.id)
-        lora.id = lora.deterministic_id()
-
-        hyperparameters = TrainPersistService.select_lora(lora.id)
-        if hyperparameters:
-            lora, _modules = hyperparameters
-        else:
-            TrainPersistService.upsert_lora(lora, modules)
-
-        session.hyperparameter_lora_id = lora.id
+        TrainPersistService.configure_hyperparameters(session, signal)
         TrainPersistService.upsert_session(session)
 
         specs = [

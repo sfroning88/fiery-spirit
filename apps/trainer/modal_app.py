@@ -43,12 +43,12 @@ image = (
 
 
 @app.function(image=image, gpu="T4", timeout=3600, secrets=secrets)
-def train_deformation(spec: Dict) -> Dict:
-    from src.entrypoint import train_deformation
+def lora_screener(spec: Dict) -> Dict:
+    from src.entrypoint import lora_screener
 
-    return train_deformation(spec)
+    return lora_screener(spec)
 
 
 @app.local_entrypoint()
 def main() -> None:
-    print(train_deformation.remote({"smoke": True}))
+    print(lora_screener.remote({"smoke": True}))
