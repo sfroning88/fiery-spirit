@@ -72,10 +72,15 @@ class InferenceSingleRequest(BaseModel):
     tier: ModelTier
     role: ModelRole
     interferogram_id: Optional[str] = None
+    seismic_event_id: Optional[str] = None
     volcano_id: Optional[str] = None
 
     def validate_payload(self):
-        return self.interferogram_id XOR self.volcano_id
+        return (
+            self.interferogram_id
+            XOR self.seismic_event_id
+            XOR self.self.volcano_id
+        )
 
 class InferenceBatchRequest(BaseModel):
     tier: ModelTier
