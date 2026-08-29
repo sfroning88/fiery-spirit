@@ -37,7 +37,7 @@ QUERY = sql.SQL("""
         %(latency_ms)s,
         %(inferred_at)s,
         %(artifact_id)s::uuid,
-        %(interferogram_id)s::uuid,
+        %(seismic_event_id)s::uuid,
         NOW(),
         NOW()
     )

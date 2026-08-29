@@ -40,6 +40,27 @@ class SeismicCnn(nn.Module):
         self, widths: tuple[int, ...], num_classes: int = _NUM_SEISMIC_CLASSES
     ):
         super().__init__()
+        blocks: list[nn.Module] = []
+        in_ch = 1
+        for width in widths:
+            blocks.extend(
+                [
+                    nn.Conv2d(in_ch, width, kernel_size=3, padding=1, bias=False),
+                    nn.BatchNorm2d(width),
+                    nn.ReLU(inplace=True),
+                    nn.MaxPool2d(2),
+                ]
+            )
+            in_ch = width
+        self.features = nn.Sequential(*blocks)
+        self.head = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Flatten(),
+            nn.Linear(in_ch, num_classes),
+        )
+
+    def forward(self, x):
+        return self.head(self.features(x))
 
 
 class _RegistrySlot:
