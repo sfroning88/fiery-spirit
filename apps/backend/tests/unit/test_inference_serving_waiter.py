@@ -47,7 +47,7 @@ def _loaded(deformation: TrainingDeformation, **overrides) -> LoadedModel:
     preprocessing = {
         "threshold": "0.50000",
         "abstention_band": "0.00000",
-        "transform_hash": Transformation.transform_hash(deformation),
+        "transform_hash": Transformation.transform_hash_deformation(deformation),
         "op_version": STORAGE_OP_VERSION,
     }
     preprocessing.update(overrides.pop("preprocessing", {}))
@@ -154,7 +154,7 @@ def test_run_abstains_when_transformation_rejected():
             return_value=deformation,
         ),
         patch(
-            "integrations.inference.services.serving_waiter.Transformation.apply",
+            "integrations.inference.services.serving_waiter.Transformation.apply_deformation",
             side_effect=TransformationRejected("coherence below min"),
         ),
     ):

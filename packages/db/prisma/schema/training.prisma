@@ -292,9 +292,13 @@ model TrainingSeismic {
     nfft                        Int
     hop                         Int
     window                      TrainingWindow
+    windowS                     Decimal @map("window_s") @db.Decimal(8,3)
+    samplingHz                  Int @map("sampling_hz")
     melBins                     Int @map("mel_bins")
     bandpassLowHz               Decimal @map("bandpass_low_hz") @db.Decimal(5,2)
     bandpassHighHz              Decimal @map("bandpass_high_hz") @db.Decimal(5,2)
+    normalize                   TrainingNormalize
+    snrMin                      Decimal @map("snr_min") @db.Decimal(4,3)
     
     classId                     String @map("class_id") @db.Uuid
     class                       TrainingSeismicClass @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)

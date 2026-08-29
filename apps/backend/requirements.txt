@@ -102,6 +102,7 @@ numpy==2.4.4
     #   fiery-python
     #   pandas
     #   peft
+    #   scipy
     #   torchvision
     #   transformers
 packaging==26.2
@@ -167,6 +168,8 @@ safetensors==0.8.0
     #   peft
     #   timm
     #   transformers
+scipy==1.18.1
+    # via fiery-python
 shellingham==1.5.4
     # via typer
 six==1.17.0
