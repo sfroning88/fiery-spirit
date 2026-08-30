@@ -6,6 +6,7 @@ from fiery_python import (
 
 QUERY = sql.SQL("""
     SELECT id::text,
+        gvp_number,
         name,
         country,
         zone::{zone_enum},
