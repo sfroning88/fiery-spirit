@@ -120,6 +120,18 @@ def _seismic_row() -> InferenceSeismic:
     )
 
 
+def _volcano_request(
+    *,
+    tier: ModelTier = ModelTier.CLOUD,
+    role: ModelRole = ModelRole.SCREENER,
+) -> InferenceSingleRequest:
+    return InferenceSingleRequest(
+        tier=tier,
+        role=role,
+        volcano_id=VOL_ID,
+    )
+
+
 def test_run_raises_for_unsupported_slot():
     payload = InferenceSingleRequest(
         tier=ModelTier.EDGE,
@@ -134,10 +146,29 @@ def test_run_raises_when_sample_unselected():
     payload = InferenceSingleRequest(
         tier=ModelTier.CLOUD,
         role=ModelRole.SCREENER,
-        volcano_id=VOL_ID,
     )
-    with pytest.raises(error, match="interfergoram or seismic_event"):
+    with pytest.raises(error, match="interferogram or seismic_event"):
         InferenceServingOrchestrator.run(payload)
+
+
+def test_run_volcano_raises_when_interferogram_missing():
+    with patch(
+        "integrations.inference.services.serving_orchestrator.InferencePersistService.select_interferogram",
+        return_value=None,
+    ) as select_interferogram:
+        with pytest.raises(error, match="No interferogram"):
+            InferenceServingOrchestrator.run(_volcano_request())
+    select_interferogram.assert_called_once_with((None, VOL_ID))
+
+
+def test_run_volcano_raises_when_seismic_event_missing():
+    with patch(
+        "integrations.inference.services.serving_orchestrator.InferencePersistService.select_seismic_event",
+        return_value=None,
+    ) as select_event:
+        with pytest.raises(error, match="No seismic event"):
+            InferenceServingOrchestrator.run(_volcano_request(role=ModelRole.TEACHER))
+    select_event.assert_called_once_with((None, VOL_ID))
 
 
 def test_run_raises_when_interferogram_missing():
@@ -202,8 +233,7 @@ def test_run_persists_deformation_and_returns_outcome():
     upsert_seismic.assert_not_called()
     assert response.artifact_id == ART_ID
     assert response.transform_hash == TRANSFORM_HASH
-    assert len(response.results) == 1
-    outcome = response.results[0]
+    outcome = response.result
     assert outcome.label is TrainingDeformationLabel.POSITIVE
     assert outcome.score == Decimal("0.90000")
     assert outcome.interferogram_id == IFG_ID
@@ -255,10 +285,84 @@ def test_run_persists_seismic_and_returns_outcome():
     assert waiter.call_args.args[3] == EVT_ID
     upsert_seismic.assert_called_once_with(row)
     upsert_deformation.assert_not_called()
-    outcome = response.results[0]
+    outcome = response.result
     assert outcome.label is TrainingSeismicLabel.TR
     assert outcome.score is None
     assert outcome.interferogram_id is None
     assert outcome.seismic_event_id == EVT_ID
     assert outcome.volcano_id == VOL_ID
     assert outcome.probabilities == probabilities
+
+
+def test_run_volcano_resolves_latest_interferogram_once():
+    sample = np.zeros((2, 4, 4), dtype=np.float32)
+    row = _deformation_row()
+    with (
+        patch(
+            "integrations.inference.services.serving_orchestrator.InferencePersistService.select_interferogram",
+            return_value=_interferogram(),
+        ) as select_interferogram,
+        patch(
+            "integrations.inference.services.serving_orchestrator.BlobStorageServices.get_unrefined",
+            return_value=b"npz",
+        ),
+        patch(
+            "integrations.inference.services.serving_orchestrator.InferencePersistService.load_npz",
+            return_value=sample,
+        ),
+        patch(
+            "integrations.inference.services.serving_orchestrator.InferenceServingWaiter.run",
+            return_value=(row, {"positive": Decimal("0.90000")}),
+        ) as waiter,
+        patch(
+            "integrations.inference.services.serving_orchestrator.InferencePersistService.upsert_deformation"
+        ),
+        patch(
+            "integrations.inference.services.serving_orchestrator.InferencePersistService.upsert_seismic"
+        ),
+    ):
+        response = InferenceServingOrchestrator.run(_volcano_request())
+    select_interferogram.assert_called_once_with((None, VOL_ID))
+    assert waiter.call_args.args[2] == IFG_ID
+    assert waiter.call_args.args[3] is None
+    assert response.result.interferogram_id == IFG_ID
+    assert response.result.seismic_event_id is None
+    assert response.result.volcano_id == VOL_ID
+
+
+def test_run_volcano_resolves_latest_seismic_event_once():
+    sample = np.zeros(100, dtype=np.float32)
+    row = _seismic_row()
+    with (
+        patch(
+            "integrations.inference.services.serving_orchestrator.InferencePersistService.select_seismic_event",
+            return_value=_seismic_event(),
+        ) as select_event,
+        patch(
+            "integrations.inference.services.serving_orchestrator.BlobStorageServices.get_unrefined",
+            return_value=b"npz",
+        ),
+        patch(
+            "integrations.inference.services.serving_orchestrator.InferencePersistService.load_npz",
+            return_value=sample,
+        ),
+        patch(
+            "integrations.inference.services.serving_orchestrator.InferenceServingWaiter.run",
+            return_value=(row, {"tr": Decimal("0.85000")}),
+        ) as waiter,
+        patch(
+            "integrations.inference.services.serving_orchestrator.InferencePersistService.upsert_deformation"
+        ),
+        patch(
+            "integrations.inference.services.serving_orchestrator.InferencePersistService.upsert_seismic"
+        ),
+    ):
+        response = InferenceServingOrchestrator.run(
+            _volcano_request(role=ModelRole.TEACHER)
+        )
+    select_event.assert_called_once_with((None, VOL_ID))
+    assert waiter.call_args.args[2] is None
+    assert waiter.call_args.args[3] == EVT_ID
+    assert response.result.interferogram_id is None
+    assert response.result.seismic_event_id == EVT_ID
+    assert response.result.volcano_id == VOL_ID

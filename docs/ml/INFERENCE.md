@@ -14,6 +14,7 @@ Tradeoffs of this choice:
 
 [+] Serving can assert `transform_hash` and `op_version` equivalence
 [+] `low_coherence` frames can be `abstained` during serving time
+[+] `low_snr` waveforms can be `abstained` during serving time
 [-] every inference pays `cache_latency` and `transformation_latency`
 
 ### Abstentions
@@ -65,10 +66,10 @@ The registry relies on **hot swapping** to use the best available model:
 
 ### Inference Requests
 
-To make `inferences`:
+To make a single `inferences`:
 
 ```python
-class InferenceSingleRequest(BaseModel):
+class InferenceSingleRequest:
     tier: ModelTier
     role: ModelRole
     interferogram_id: Optional[str] = None
@@ -82,21 +83,27 @@ class InferenceSingleRequest(BaseModel):
             XOR self.self.volcano_id
         )
 
-class InferenceBatchRequest(BaseModel):
-    tier: ModelTier
-    role: ModelRole
-    volcano_ids: List[str]
-
-class InferenceResponse:
-    results: List[InferenceOutcome]
+class InferenceSingleResponse:
+    result: InferenceOutcome
     artifact_id: str
     transform_hash: str
+```
+
+To cache batch `inferences`:
+
+```python
+class InferenceBatchRequest:
+    tier: ModelTier
+    role: ModelRole
+
+class InferenceSingleResponse:
+    job_ids: List[str]
 ```
 
 After **warm loading** `run` is called to compile:
 
 ```python
-class InferenceOutcome(BaseModel):
+class InferenceOutcome:
     artifact_id: str
     transform_hash: str
     op_version: int
@@ -118,7 +125,7 @@ class InferenceOutcome(BaseModel):
 To serve the `InferenceOutcome`:
 
 ```python
-def infer_deformation(key, sample):
+def infer(key, sample):
     model, metadata = registry.get(key)
     tensor = preprocess(metadata, sample)  # or abstain
     probability = softmax(model(tensor))
