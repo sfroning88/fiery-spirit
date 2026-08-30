@@ -7,6 +7,7 @@ Core backend API orchestration
 from fastapi import APIRouter, Depends, Request
 from fastapi.concurrency import run_in_threadpool
 from fiery_python import dependency, error, queue, logging
+from fiery_python import VOLCANO_DB_FETCH_SIZE, ModelTier, ModelRole
 from .schemas import (
     InferenceSingleRequest,
     InferenceBatchRequest,
@@ -25,6 +26,7 @@ router = APIRouter(
 inference_available: bool = False
 try:
     from .services import InferenceServingOrchestrator
+    from .services import InferencePersistService
     from .background import InferenceBackgroundJobs
 
     inference_available = True
@@ -89,8 +91,13 @@ async def batch_inference(
         ):
             raise NotImplementedError
 
+        volcanoes = InferencePersistService.select_volcanoes(VOLCANO_DB_FETCH_SIZE)
+        volcano_ids = [volcano.id for volcano in volcanoes if volcano.id]
+        if not volcano_ids:
+            raise error("No volcano_ids found")
+
         specs = []
-        for volcano_id in payload.volcano_ids:
+        for volcano_id in volcano_ids:
             data = {
                 "func": InferenceBackgroundJobs.background_make_inference,
                 "args": (volcano_id, payload.tier, payload.role),

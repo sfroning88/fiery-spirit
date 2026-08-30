@@ -95,7 +95,6 @@ To cache batch `inferences`:
 class InferenceBatchRequest:
     tier: ModelTier
     role: ModelRole
-    volcano_ids: List[str]
 
 class InferenceSingleResponse:
     job_ids: List[str]

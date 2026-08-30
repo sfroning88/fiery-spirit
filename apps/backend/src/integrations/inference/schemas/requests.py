@@ -35,4 +35,3 @@ class InferenceBatchRequest(BaseModel):
 
     tier: ModelTier
     role: ModelRole
-    volcano_ids: List[str]

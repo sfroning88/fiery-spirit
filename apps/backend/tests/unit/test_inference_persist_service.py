@@ -20,6 +20,7 @@ from fiery_python import (
     TrainingSeismicLabel,
     TrainingSplit,
     TrainingWindow,
+    VOLCANO_DB_FETCH_SIZE,
     VolcanoZone,
 )
 from integrations.inference.services.persist_service import InferencePersistService
@@ -37,50 +38,75 @@ def test_load_npz_reads_data_key():
     np.testing.assert_array_equal(loaded[1], stack[1])
 
 
-def test_select_volcano_maps_row():
-    row = {
-        "id": "vol-1",
-        "gvp_number": 357070,
-        "name": "Llaima",
-        "country": "Chile",
-        "zone": VolcanoZone.SVZ.value,
-        "latitude": "-38.692000",
-        "longitude": "-71.729000",
-        "elevation_m": 3125,
-        "volcanic_class": "stratovolcano",
-        "is_glaciated": True,
-        "is_instrumented": True,
-        "is_held_out": True,
-    }
+def test_select_volcanoes_maps_rows():
+    rows = [
+        {
+            "id": "vol-1",
+            "gvp_number": 357070,
+            "name": "Llaima",
+            "country": "Chile",
+            "zone": VolcanoZone.SVZ.value,
+            "latitude": "-38.692000",
+            "longitude": "-71.729000",
+            "elevation_m": 3125,
+            "volcanic_class": "stratovolcano",
+            "is_glaciated": True,
+            "is_instrumented": True,
+            "is_held_out": True,
+        },
+        {
+            "id": "vol-2",
+            "gvp_number": None,
+            "name": "Villarrica",
+            "country": "Chile",
+            "zone": VolcanoZone.SVZ.value,
+            "latitude": "-39.420000",
+            "longitude": "-71.930000",
+            "elevation_m": 2847,
+            "volcanic_class": None,
+            "is_glaciated": False,
+            "is_instrumented": True,
+            "is_held_out": False,
+        },
+    ]
     with patch(
         "integrations.inference.services.persist_service.db_pool.run",
-        return_value=row,
+        return_value=rows,
     ) as run:
-        volcano = InferencePersistService.select_volcano("vol-1")
+        volcanoes = InferencePersistService.select_volcanoes()
     run.assert_called_once()
-    assert run.call_args.args[1] == ("vol-1",)
-    assert run.call_args.kwargs["fetch"] is PoolFetch.ONE
-    assert volcano.id == "vol-1"
-    assert volcano.gvp_number == 357070
-    assert volcano.name == "Llaima"
-    assert volcano.country == "Chile"
-    assert volcano.zone is VolcanoZone.SVZ
-    assert volcano.elevation_m == 3125
-    assert volcano.volcanic_class == "stratovolcano"
-    assert volcano.is_glaciated is True
-    assert volcano.is_instrumented is True
-    assert volcano.is_held_out is True
+    assert run.call_args.args[1] == (VOLCANO_DB_FETCH_SIZE,)
+    assert run.call_args.kwargs["fetch"] is PoolFetch.ALL
+    assert [volcano.id for volcano in volcanoes] == ["vol-1", "vol-2"]
+    assert volcanoes[0].name == "Llaima"
+    assert volcanoes[0].zone is VolcanoZone.SVZ
+    assert volcanoes[0].is_held_out is True
+    assert volcanoes[1].name == "Villarrica"
+    assert volcanoes[1].gvp_number is None
+    assert volcanoes[1].is_instrumented is True
 
 
-def test_select_volcano_returns_none_when_empty():
+def test_select_volcanoes_uses_limit():
+    with patch(
+        "integrations.inference.services.persist_service.db_pool.run",
+        return_value=[],
+    ) as run:
+        volcanoes = InferencePersistService.select_volcanoes(limit=60)
+    run.assert_called_once()
+    assert run.call_args.args[1] == (60,)
+    assert volcanoes == []
+
+
+def test_select_volcanoes_returns_empty_when_none():
     with patch(
         "integrations.inference.services.persist_service.db_pool.run",
         return_value=None,
     ) as run:
-        assert InferencePersistService.select_volcano("vol-1") is None
+        volcanoes = InferencePersistService.select_volcanoes()
     run.assert_called_once()
-    assert run.call_args.args[1] == ("vol-1",)
-    assert run.call_args.kwargs["fetch"] is PoolFetch.ONE
+    assert run.call_args.args[1] == (VOLCANO_DB_FETCH_SIZE,)
+    assert run.call_args.kwargs["fetch"] is PoolFetch.ALL
+    assert volcanoes == []
 
 
 def test_select_interferogram_returns_none_when_ids_missing():

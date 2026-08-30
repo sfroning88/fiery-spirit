@@ -25,7 +25,7 @@ class InferenceServingOrchestrator:
     """Manage the serving process and call waiter"""
 
     @classmethod
-    def run(cls, payload: InferenceSingleRequest) -> InferenceSingleResponse:
+    def run(_cls, payload: InferenceSingleRequest) -> InferenceSingleResponse:
         key = (payload.tier, payload.role)
         if (
             key != (ModelTier.CLOUD, ModelRole.SCREENER)

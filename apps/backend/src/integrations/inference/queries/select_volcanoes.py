@@ -17,7 +17,8 @@ QUERY = sql.SQL("""
         is_instrumented,
         is_held_out
     FROM {table}
-    WHERE id = %s::uuid
+    ORDER BY id
+    LIMIT %s
 """).format(
     table=sql.Identifier(*VOLCANO_TABLE),
     zone_enum=sql.Identifier(*VOLCANO_ZONE_ENUM),
