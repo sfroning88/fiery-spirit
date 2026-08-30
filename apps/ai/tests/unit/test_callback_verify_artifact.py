@@ -33,7 +33,7 @@ def _payload(**overrides) -> CallbackRequest:
         "storage_path": "cloud/screener/art-1.safetensors",
         "signature": "b" * 64,
         "param_count": 22000000,
-        "architecture": "vit_small_patch16_224",
+        "architecture": "vit_small_patch16_224.augreg_in21k_ft_in1k",
         "sparsity": Decimal("0"),
         "metrics": [
             ModelMetric(
@@ -58,10 +58,12 @@ def _body_hmac(payload: CallbackRequest, secret: bytes) -> str:
         {
             "architecture": payload.architecture,
             "abstention_band": str(payload.abstention_band),
+            "base_model_id": payload.base_model_id or "",
             "nonce": payload.nonce or "",
             "op_version": payload.op_version,
             "param_count": payload.param_count,
             "precision": payload.precision.value,
+            "revision": payload.revision or "",
             "role": payload.role.value,
             "session_id": payload.session_id,
             "signature": payload.signature,

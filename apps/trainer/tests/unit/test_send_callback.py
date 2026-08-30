@@ -62,7 +62,7 @@ def _callback_kwargs(**overrides) -> dict:
         "storage_path": _WEIGHTS_KEY,
         "signature": "b" * 64,
         "param_count": 10,
-        "architecture": "vit_small_patch16_224",
+        "architecture": "vit_small_patch16_224.augreg_in21k_ft_in1k",
         "metrics": _metrics(),
         "decision": _decision(),
     }
@@ -81,12 +81,14 @@ def test_send_callback_posts_hmac_header():
     decision = _decision()
     canonical = json.dumps(
         {
-            "architecture": "vit_small_patch16_224",
+            "architecture": "vit_small_patch16_224.augreg_in21k_ft_in1k",
             "abstention_band": str(decision["abstention_band"]),
+            "base_model_id": "",
             "nonce": "nonce-1",
             "op_version": decision["op_version"],
             "param_count": 10,
             "precision": TrainingPrecision.FP32.value,
+            "revision": "",
             "role": ModelRole.SCREENER.value,
             "session_id": "sess-1",
             "signature": "b" * 64,

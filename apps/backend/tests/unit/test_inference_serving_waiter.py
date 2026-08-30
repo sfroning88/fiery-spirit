@@ -62,7 +62,7 @@ def _loaded(deformation: TrainingDeformation, **overrides) -> LoadedModel:
         role=ModelRole.SCREENER,
         stage=TrainingStage.LORA,
         precision=TrainingPrecision.FP32,
-        architecture="vit_small_patch16_224",
+        architecture="vit_small_patch16_224.augreg_in21k_ft_in1k",
         param_count=1,
         sparsity=Decimal("0.0"),
         storage_path="cloud/screener/art-1.safetensors",

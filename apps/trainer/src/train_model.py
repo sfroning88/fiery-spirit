@@ -128,7 +128,7 @@ def _train_prune_model(
 ) -> nn.Module:
     import torch
     from torch.nn.utils import prune
-    from fiery_python import TrainingPruningCriterion, TrainingSparsitySchedule
+    from fiery_python import TrainingSparsitySchedule
 
     prune_spec = spec.get("prune") or {}
     loader = loaders["train"]

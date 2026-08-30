@@ -50,6 +50,8 @@ def send_callback(
         "abstention_band": decision["abstention_band"],
         "transform_hash": decision["transform_hash"],
         "op_version": decision["op_version"],
+        "base_model_id": spec.get("base_model_id") or "",
+        "revision": spec.get("revision") or "",
     }
     canonical = json.dumps(
         {
@@ -67,6 +69,8 @@ def send_callback(
             "threshold": str(decision["threshold"]),
             "tier": spec["tier"],
             "transform_hash": decision["transform_hash"],
+            "base_model_id": spec.get("base_model_id") or "",
+            "revision": spec.get("revision") or "",
         },
         separators=(",", ":"),
         sort_keys=True,

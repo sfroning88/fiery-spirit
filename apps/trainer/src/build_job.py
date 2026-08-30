@@ -5,10 +5,15 @@ Build training frame
 """
 
 import torch.nn as nn
+from huggingface_hub import hf_hub_download
 from peft import PeftModel
 from typing import Callable, Dict, List, Optional
 from fiery_python import ModelStorageServices, TrainingStage
 
+_VIT_SNAPSHOT = "vit_small_patch16_224.augreg_in21k_ft_in1k"
+_VIT_BASE_MODEL_ID = "timm/vit_small_patch16_224.augreg_in21k_ft_in1k"
+_VIT_REVISION = "7e2c55630205e1266030f18370f4c6ed1a514b52"
+_VIT_WEIGHTS = "model.safetensors"
 _NUM_SEISMIC_CLASSES = 4
 _TEACHER_ARCHITECTURE = "cnn_small"
 _STUDENT_ARCHITECTURE = "cnn_tiny"
@@ -95,8 +100,22 @@ def _build_lora_job(spec: dict) -> Optional[PeftModel]:
     targets = _peft_targets(lora["target_modules"])
     if not targets:
         raise RuntimeError("Empty LoRA target modules")
+    base_model_id = spec.get("base_model_id")
+    revision = spec.get("revision")
+    if (
+        not base_model_id
+        or not revision
+        or not isinstance(base_model_id, str)
+        or not isinstance(revision, str)
+    ):
+        raise RuntimeError("Empty base_model_id and/or revision")
+    hf_hub_download(
+        repo_id=base_model_id,
+        filename=_VIT_WEIGHTS,
+        revision=revision,
+    )
     backbone = timm.create_model(
-        "vit_small_patch16_224",
+        _VIT_SNAPSHOT,
         pretrained=True,
         num_classes=2,
     )
@@ -105,6 +124,7 @@ def _build_lora_job(spec: dict) -> Optional[PeftModel]:
         lora_alpha=lora["alpha"],
         lora_dropout=lora["dropout"],
         target_modules=targets,
+        modules_to_save=["head"],
         bias="none",
     )
     return get_peft_model(backbone, config)
