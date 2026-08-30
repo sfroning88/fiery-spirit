@@ -16,7 +16,9 @@ from fiery_python import (
     TrainingSeismicEvent,
     TrainingDeformation,
     TrainingSeismic,
+    Volcano,
 )
+from ..queries.select_volcano import QUERY as SELECT_VOLCANO
 from ..queries.select_training_interferogram import QUERY as SELECT_INTERFEROGRAM
 from ..queries.select_training_seismic_event import QUERY as SELECT_SEISMIC_EVENT
 from ..queries.select_training_deformation import QUERY as SELECT_DEFORMATION
@@ -34,6 +36,35 @@ class InferencePersistService:
     def load_npz(body: bytes) -> np.ndarray:
         buf = io.BytesIO(body)
         return np.load(buf)["data"]
+
+    @staticmethod
+    def select_volcano(volcano_id: str) -> Optional[Volcano]:
+        row = db_pool.run(
+            SELECT_VOLCANO,
+            (volcano_id,),
+            fetch=PoolFetch.ONE,
+            error_event="fetch_volcano_failed",
+        )
+        if not row:
+            logger.warning(
+                "fetch_volcano_empty",
+                volcano_id=volcano_id,
+            )
+            return None
+        return Volcano(
+            id=volcano_id,
+            gvp_number=row.get("gvp_number"),
+            name=row.get("name"),
+            country=row.get("country"),
+            zone=row.get("zone"),
+            latitude=row.get("latitude"),
+            longitude=row.get("longitude"),
+            elevation_m=row.get("elevation_m"),
+            volcanic_class=row.get("volcanic_class"),
+            is_glaciated=row.get("is_glaciated"),
+            is_instrumented=row.get("is_instrumented"),
+            is_held_out=row.get("is_held_out"),
+        )
 
     @staticmethod
     def select_interferogram(

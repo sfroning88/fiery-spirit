@@ -14,8 +14,7 @@ from fiery_python import (
 )
 from ..schemas import (
     InferenceSingleRequest,
-    # InferenceBatchRequest,
-    InferenceResponse,
+    InferenceSingleResponse,
 )
 from ..models import InferenceOutcome
 from .persist_service import InferencePersistService
@@ -26,7 +25,7 @@ class InferenceServingOrchestrator:
     """Manage the serving process and call waiter"""
 
     @classmethod
-    def run(cls, payload: InferenceSingleRequest) -> InferenceResponse:
+    def run(cls, payload: InferenceSingleRequest) -> InferenceSingleResponse:
         key = (payload.tier, payload.role)
         if (
             key != (ModelTier.CLOUD, ModelRole.SCREENER)
@@ -34,37 +33,58 @@ class InferenceServingOrchestrator:
             and key != (ModelTier.EDGE, ModelRole.STUDENT)
         ):
             raise NotImplementedError
-        interferogram_id = None
-        seismic_event_id = None
-        score = None
-        if payload.interferogram_id:
+        interferogram_id = payload.interferogram_id
+        seismic_event_id = payload.seismic_event_id
+        volcano_id = payload.volcano_id
+        interferogram = None
+        seismic_event = None
+        if interferogram_id:
             interferogram = InferencePersistService.select_interferogram(
-                (payload.interferogram_id, payload.volcano_id)
+                (interferogram_id, None)
             )
-            if not interferogram:
-                raise error("No interferogram was found")
+        elif seismic_event_id:
+            seismic_event = InferencePersistService.select_seismic_event(
+                (seismic_event_id, None)
+            )
+        elif volcano_id:
+            if key == (ModelTier.CLOUD, ModelRole.SCREENER):
+                interferogram = InferencePersistService.select_interferogram(
+                    (None, volcano_id)
+                )
+            elif key in (
+                (ModelTier.CLOUD, ModelRole.TEACHER),
+                (ModelTier.EDGE, ModelRole.STUDENT),
+            ):
+                seismic_event = InferencePersistService.select_seismic_event(
+                    (None, volcano_id)
+                )
+            else:
+                raise NotImplementedError
+        else:
+            raise error("No interferogram or seismic_event is selected")
+        score = None
+        if interferogram:
             if not interferogram.id:
                 interferogram.id = interferogram.deterministic_id()
             if not interferogram.id:
                 raise error("Invalid interferogram_id")
             storage_path = interferogram.storage_path
-            volcano_id = interferogram.volcano_id
+            volcano_id = interferogram.volcano_id or volcano_id
             interferogram_id = interferogram.id
-        elif payload.seismic_event_id:
-            seismic_event = InferencePersistService.select_seismic_event(
-                (payload.seismic_event_id, payload.volcano_id)
-            )
-            if not seismic_event:
-                raise error("No seismic event was found")
+            seismic_event_id = None
+        elif seismic_event:
             if not seismic_event.id:
                 seismic_event.id = seismic_event.deterministic_id()
             if not seismic_event.id:
                 raise error("Invalid seismic_event_id")
             storage_path = seismic_event.waveform_path
-            volcano_id = seismic_event.volcano_id
+            volcano_id = seismic_event.volcano_id or volcano_id
             seismic_event_id = seismic_event.id
+            interferogram_id = None
+        elif key == (ModelTier.CLOUD, ModelRole.SCREENER):
+            raise error("No interferogram was found")
         else:
-            raise error("No interfergoram or seismic_event is selected")
+            raise error("No seismic event was found")
         body = BlobStorageServices.get_unrefined(storage_path)
         sample = InferencePersistService.load_npz(body)
         inference, probabilities = InferenceServingWaiter.run(
@@ -92,8 +112,8 @@ class InferenceServingOrchestrator:
             seismic_event_id=seismic_event_id,
             volcano_id=volcano_id,
         )
-        return InferenceResponse(
-            results=[outcome],
+        return InferenceSingleResponse(
+            result=outcome,
             artifact_id=outcome.artifact_id,
             transform_hash=outcome.transform_hash,
         )

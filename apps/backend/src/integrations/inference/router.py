@@ -6,11 +6,12 @@ Core backend API orchestration
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.concurrency import run_in_threadpool
-from fiery_python import dependency, error, logging
+from fiery_python import dependency, error, queue, logging
 from .schemas import (
     InferenceSingleRequest,
-    # InferenceBatchRequest,
-    InferenceResponse,
+    InferenceBatchRequest,
+    InferenceSingleResponse,
+    InferenceBatchResponse,
 )
 
 logger = logging.get_logger(__name__)
@@ -24,6 +25,7 @@ router = APIRouter(
 inference_available: bool = False
 try:
     from .services import InferenceServingOrchestrator
+    from .background import InferenceBackgroundJobs
 
     inference_available = True
 except ImportError as err:
@@ -37,7 +39,7 @@ except Exception as err:
 @router.post("/inference/single", dependencies=[Depends(dependency.get_token_header)])
 async def single_inference(
     request: Request, payload: InferenceSingleRequest
-) -> InferenceResponse:
+) -> InferenceSingleResponse:
     """Retrieve inference from the promoted model (if available)"""
     if not inference_available:
         raise error("Inferences service unavailable", status_code=503)
@@ -54,6 +56,52 @@ async def single_inference(
         return await run_in_threadpool(InferenceServingOrchestrator.run, payload)
     except error:
         raise
+    except NotImplementedError:
+        logger.warning("model_inference_unsupported")
+        raise error("(CLOUD, SCREENER) / (CLOUD, TEACHER) / (EDGE, STUDENT)")
+    except ValueError as err:
+        logger.warning("model_inference_rejected", error=str(err))
+        raise error(str(err), status_code=404)
+    except RuntimeError as err:
+        logger.error("model_inference_unavailable", error=str(err))
+        raise error(str(err), status_code=503)
+    except Exception as err:
+        logger.error("model_inference_failed", error=str(err))
+        raise error("Model inference failed", status_code=500)
+    finally:
+        logging.unbind_job_context()
+
+
+@router.post("/inference/batch", dependencies=[Depends(dependency.get_token_header)])
+async def batch_inference(
+    request: Request, payload: InferenceBatchRequest
+) -> InferenceBatchResponse:
+    """Retrieve inferences from the promoted model (if available)"""
+    if not inference_available:
+        raise error("Inferences service unavailable", status_code=503)
+
+    try:
+        key = (payload.tier, payload.role)
+        if (
+            key != (ModelTier.CLOUD, ModelRole.SCREENER)
+            and key != (ModelTier.CLOUD, ModelRole.TEACHER)
+            and key != (ModelTier.EDGE, ModelRole.STUDENT)
+        ):
+            raise NotImplementedError
+
+        specs = []
+        for volcano_id in payload.volcano_ids:
+            data = {
+                "func": InferenceBackgroundJobs.background_make_inference,
+                "args": (volcano_id, payload.tier, payload.role),
+                "job_id": f"inference_{payload.tier.value}_{payload.role.value}_{volcano_id}",
+                "job_timeout": 6000,
+            }
+            specs.append(data)
+
+        jobs = queue.enqueue_jobs(specs)
+        return InferenceBatchResponse(job_ids=[job.id for job in jobs])
+
     except NotImplementedError:
         logger.warning("model_inference_unsupported")
         raise error("(CLOUD, SCREENER) / (CLOUD, TEACHER) / (EDGE, STUDENT)")

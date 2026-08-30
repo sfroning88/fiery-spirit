@@ -20,6 +20,7 @@ from fiery_python import (
     TrainingSeismicLabel,
     TrainingSplit,
     TrainingWindow,
+    VolcanoZone,
 )
 from integrations.inference.services.persist_service import InferencePersistService
 
@@ -34,6 +35,52 @@ def test_load_npz_reads_data_key():
     assert loaded.shape == (2, 3, 3)
     np.testing.assert_array_equal(loaded[0], stack[0])
     np.testing.assert_array_equal(loaded[1], stack[1])
+
+
+def test_select_volcano_maps_row():
+    row = {
+        "id": "vol-1",
+        "gvp_number": 357070,
+        "name": "Llaima",
+        "country": "Chile",
+        "zone": VolcanoZone.SVZ.value,
+        "latitude": "-38.692000",
+        "longitude": "-71.729000",
+        "elevation_m": 3125,
+        "volcanic_class": "stratovolcano",
+        "is_glaciated": True,
+        "is_instrumented": True,
+        "is_held_out": True,
+    }
+    with patch(
+        "integrations.inference.services.persist_service.db_pool.run",
+        return_value=row,
+    ) as run:
+        volcano = InferencePersistService.select_volcano("vol-1")
+    run.assert_called_once()
+    assert run.call_args.args[1] == ("vol-1",)
+    assert run.call_args.kwargs["fetch"] is PoolFetch.ONE
+    assert volcano.id == "vol-1"
+    assert volcano.gvp_number == 357070
+    assert volcano.name == "Llaima"
+    assert volcano.country == "Chile"
+    assert volcano.zone is VolcanoZone.SVZ
+    assert volcano.elevation_m == 3125
+    assert volcano.volcanic_class == "stratovolcano"
+    assert volcano.is_glaciated is True
+    assert volcano.is_instrumented is True
+    assert volcano.is_held_out is True
+
+
+def test_select_volcano_returns_none_when_empty():
+    with patch(
+        "integrations.inference.services.persist_service.db_pool.run",
+        return_value=None,
+    ) as run:
+        assert InferencePersistService.select_volcano("vol-1") is None
+    run.assert_called_once()
+    assert run.call_args.args[1] == ("vol-1",)
+    assert run.call_args.kwargs["fetch"] is PoolFetch.ONE
 
 
 def test_select_interferogram_returns_none_when_ids_missing():
