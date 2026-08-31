@@ -34,3 +34,5 @@ class CallbackRequest(BaseModel):
     abstention_band: Decimal
     transform_hash: str
     op_version: int
+    base_model_id: Optional[str] = None
+    revision: Optional[str] = None

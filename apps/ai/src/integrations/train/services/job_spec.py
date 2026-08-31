@@ -24,6 +24,9 @@ from fiery_python import (
 )
 from .persist_service import TrainPersistService
 
+_VIT_BASE_MODEL_ID = "timm/vit_small_patch16_224.augreg_in21k_ft_in1k"
+_VIT_REVISION = "7e2c55630205e1266030f18370f4c6ed1a514b52"
+
 
 class TrainJobSpec:
     """Build training job Modal kwargs for GPU training"""
@@ -124,6 +127,8 @@ class TrainJobSpec:
                     "output": modules.output,
                 },
             },
+            "base_model_id": _VIT_BASE_MODEL_ID,
+            "revision": _VIT_REVISION,
             "tier": ModelTier.CLOUD.value,
             "role": ModelRole.SCREENER.value,
         }

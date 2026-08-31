@@ -14,6 +14,10 @@ from src.build_job import (
     SeismicCnn,
     _STUDENT_ARCHITECTURE,
     _TEACHER_ARCHITECTURE,
+    _VIT_BASE_MODEL_ID,
+    _VIT_REVISION,
+    _VIT_SNAPSHOT,
+    _VIT_WEIGHTS,
     _peft_targets,
     build_job,
 )
@@ -32,6 +36,17 @@ def _lora(**overrides) -> dict:
             "value": False,
             "output": True,
         },
+    }
+    data.update(overrides)
+    return data
+
+
+def _lora_spec(**overrides) -> dict:
+    data = {
+        "stage": TrainingStage.LORA.value,
+        "lora": _lora(),
+        "base_model_id": _VIT_BASE_MODEL_ID,
+        "revision": _VIT_REVISION,
     }
     data.update(overrides)
     return data
@@ -72,31 +87,44 @@ def test_peft_targets_empty_when_all_false():
 def test_build_lora_job_raises_when_targets_empty():
     with pytest.raises(RuntimeError, match="Empty LoRA target modules"):
         build_job(
-            {
-                "stage": TrainingStage.LORA.value,
-                "lora": _lora(
+            _lora_spec(
+                lora=_lora(
                     target_modules={
                         "query": False,
                         "key": False,
                         "value": False,
                         "output": False,
                     }
-                ),
-            }
+                )
+            )
         )
+
+
+def test_build_lora_job_raises_when_pin_missing():
+    with pytest.raises(RuntimeError, match="Empty base_model_id"):
+        build_job({"stage": TrainingStage.LORA.value, "lora": _lora()})
 
 
 def test_build_lora_job_wraps_timm_backbone():
     backbone = MagicMock(name="backbone")
     wrapped = MagicMock(name="peft")
     with (
+        patch(
+            "src.build_job.hf_hub_download",
+            return_value="/tmp/vit/model.safetensors",
+        ) as download,
         patch("timm.create_model", return_value=backbone) as create_model,
         patch("peft.get_peft_model", return_value=wrapped) as get_peft_model,
     ):
-        result = build_job({"stage": TrainingStage.LORA.value, "lora": _lora()})
+        result = build_job(_lora_spec())
     assert result is wrapped
+    download.assert_called_once_with(
+        repo_id=_VIT_BASE_MODEL_ID,
+        filename=_VIT_WEIGHTS,
+        revision=_VIT_REVISION,
+    )
     create_model.assert_called_once_with(
-        "vit_small_patch16_224",
+        _VIT_SNAPSHOT,
         pretrained=True,
         num_classes=2,
     )
@@ -105,6 +133,7 @@ def test_build_lora_job_wraps_timm_backbone():
     assert config.r == 8
     assert config.lora_alpha == 16
     assert set(config.target_modules) == {"qkv", "proj"}
+    assert list(config.modules_to_save) == ["head"]
 
 
 def test_build_pretrain_job_returns_teacher_cnn():

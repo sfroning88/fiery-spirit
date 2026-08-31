@@ -23,6 +23,7 @@ logging.setup_structured_logging()
 logger = logging.get_logger(__name__)
 
 _MAX_TRAINING_ATTEMPTS = 2
+_VIT_PARAMS = 22_100_000
 
 
 def entrypoint(spec: Dict, architecture: str) -> Dict:
@@ -67,13 +68,21 @@ def entrypoint(spec: Dict, architecture: str) -> Dict:
                 "spec": spec,
                 "decision": decision,
             }
-            if "lora" in spec:
+            if spec.get("lora"):
+                from peft import get_peft_model_state_dict
+
                 sidecar["lora"] = spec["lora"]
-            ModelStorageServices.save_artifact(
-                cpu_model.state_dict(), sidecar, storage_path
-            )
+                sidecar["base_model_id"] = spec["base_model_id"]
+                sidecar["revision"] = spec["revision"]
+                state_dict = get_peft_model_state_dict(cpu_model)
+                param_count = _VIT_PARAMS + sum(
+                    tensor.numel() for tensor in state_dict.values()
+                )
+            else:
+                state_dict = cpu_model.state_dict()
+                param_count = sum(param.numel() for param in cpu_model.parameters())
+            ModelStorageServices.save_artifact(state_dict, sidecar, storage_path)
             signature = ModelStorageServices.head_hmac(storage_path)
-            param_count = sum(param.numel() for param in cpu_model.parameters())
             break
         except Exception as err:
             logger.warning(

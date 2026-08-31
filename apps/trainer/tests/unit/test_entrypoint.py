@@ -19,7 +19,11 @@ from fiery_python import (
     TrainingStage,
 )
 from src.build_job import DistillPair
-from src.entrypoint import _seed, entrypoint
+from src.entrypoint import _VIT_PARAMS, _seed, entrypoint
+
+_VIT_SNAPSHOT = "vit_small_patch16_224.augreg_in21k_ft_in1k"
+_VIT_BASE_MODEL_ID = "timm/vit_small_patch16_224.augreg_in21k_ft_in1k"
+_VIT_REVISION = "7e2c55630205e1266030f18370f4c6ed1a514b52"
 
 
 class _TinyModel(nn.Module):
@@ -63,6 +67,8 @@ def _spec(**overrides) -> dict:
         "precision": TrainingPrecision.FP32.value,
         "seed": 42,
         "lora": {"epochs": 1, "learning_rate": 1e-4},
+        "base_model_id": _VIT_BASE_MODEL_ID,
+        "revision": _VIT_REVISION,
         "callback_url": "https://ai.example/api/callback/train",
         "storage_path": "unused",
     }
@@ -84,11 +90,16 @@ def test_entrypoint_saves_then_callbacks():
     model = _TinyModel()
     loaders = {"train": object()}
     spec = _spec()
+    adapter = {"lora_A": torch.ones(2)}
     with (
         patch("src.entrypoint.build_loaders", return_value=loaders),
         patch("src.entrypoint.build_job", return_value=model),
         patch("src.entrypoint.train_model", return_value=model),
         patch("src.entrypoint.score_model", return_value=(metrics, decision)),
+        patch(
+            "peft.get_peft_model_state_dict",
+            return_value=adapter,
+        ) as adapter_dict,
         patch("src.entrypoint.ModelStorageServices.save_artifact") as save,
         patch(
             "src.entrypoint.ModelStorageServices.head_hmac",
@@ -96,19 +107,24 @@ def test_entrypoint_saves_then_callbacks():
         ),
         patch("src.entrypoint.send_callback") as callback,
     ):
-        result = entrypoint(spec, "vit_small_patch16_224")
+        result = entrypoint(spec, _VIT_SNAPSHOT)
     save.assert_called_once()
     weights_key = save.call_args[0][2]
     sidecar = save.call_args[0][1]
+    assert save.call_args[0][0] is adapter
+    adapter_dict.assert_called_once()
     assert weights_key == "cloud/screener/sess-1.safetensors"
-    assert sidecar["architecture"] == "vit_small_patch16_224"
+    assert sidecar["architecture"] == _VIT_SNAPSHOT
     assert sidecar["decision"] is decision
     assert sidecar["lora"] == spec["lora"]
+    assert sidecar["base_model_id"] == _VIT_BASE_MODEL_ID
+    assert sidecar["revision"] == _VIT_REVISION
     callback.assert_called_once()
     kwargs = callback.call_args.kwargs
     assert kwargs["storage_path"] == "cloud/screener/sess-1.safetensors"
     assert kwargs["signature"] == "b" * 64
-    assert kwargs["architecture"] == "vit_small_patch16_224"
+    assert kwargs["architecture"] == _VIT_SNAPSHOT
+    assert kwargs["param_count"] == _VIT_PARAMS + 2
     assert kwargs["metrics"] is metrics
     assert kwargs["decision"] is decision
     assert result == {
@@ -127,7 +143,7 @@ def test_entrypoint_skips_callback_when_train_fails():
         ),
         patch("src.entrypoint.send_callback") as callback,
     ):
-        result = entrypoint(spec, "vit_small_patch16_224")
+        result = entrypoint(spec, _VIT_SNAPSHOT)
     callback.assert_not_called()
     assert result == {
         "ok": False,
@@ -183,6 +199,10 @@ def test_entrypoint_scores_and_saves_rebound_model():
         patch(
             "src.entrypoint.score_model", return_value=(_metrics(), _decision())
         ) as score,
+        patch(
+            "peft.get_peft_model_state_dict",
+            return_value={"weight": converted.weight},
+        ),
         patch("src.entrypoint.ModelStorageServices.save_artifact") as save,
         patch(
             "src.entrypoint.ModelStorageServices.head_hmac",
@@ -190,6 +210,6 @@ def test_entrypoint_scores_and_saves_rebound_model():
         ),
         patch("src.entrypoint.send_callback"),
     ):
-        entrypoint(spec, "vit_small_patch16_224")
+        entrypoint(spec, _VIT_SNAPSHOT)
     assert score.call_args[0][1] is converted
     assert save.call_args[0][0]["weight"].tolist() == [3.0, 3.0]

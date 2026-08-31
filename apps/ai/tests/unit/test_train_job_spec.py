@@ -24,7 +24,11 @@ from fiery_python import (
     TrainingTargetModules,
 )
 from fiery_python.fastapi.error import error as AppError
-from integrations.train.services.job_spec import TrainJobSpec
+from integrations.train.services.job_spec import (
+    TrainJobSpec,
+    _VIT_BASE_MODEL_ID,
+    _VIT_REVISION,
+)
 
 
 def _session(**overrides) -> TrainingSession:
@@ -201,6 +205,12 @@ def test_build_job_spec_payload(
         assert spec["parent_precision"] == TrainingPrecision.FP32.value
     else:
         assert "parent_id" not in spec
+    if stage is TrainingStage.LORA:
+        assert spec["base_model_id"] == _VIT_BASE_MODEL_ID
+        assert spec["revision"] == _VIT_REVISION
+    else:
+        assert "base_model_id" not in spec
+        assert "revision" not in spec
 
 
 def test_build_job_spec_lora_target_modules(monkeypatch):

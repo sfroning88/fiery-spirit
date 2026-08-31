@@ -14,9 +14,20 @@ secrets = [modal.Secret.from_name("Fiery-Environment")]
 
 def _download_vit_small() -> None:
     import timm
+    from huggingface_hub import hf_hub_download
 
+    _VIT_SNAPSHOT = "vit_small_patch16_224.augreg_in21k_ft_in1k"
+    _VIT_BASE_MODEL_ID = "timm/vit_small_patch16_224.augreg_in21k_ft_in1k"
+    _VIT_REVISION = "7e2c55630205e1266030f18370f4c6ed1a514b52"
+    _VIT_WEIGHTS = "model.safetensors"
+
+    hf_hub_download(
+        repo_id=_VIT_BASE_MODEL_ID,
+        filename=_VIT_WEIGHTS,
+        revision=_VIT_REVISION,
+    )
     timm.create_model(
-        "vit_small_patch16_224",
+        _VIT_SNAPSHOT,
         pretrained=True,
         num_classes=2,
     )
@@ -54,7 +65,9 @@ def pretrain_teacher(spec: Dict) -> Dict:
 def lora_screener(spec: Dict) -> Dict:
     from src.entrypoint import entrypoint
 
-    return entrypoint(spec, architecture="vit_small_patch16_224")
+    _VIT_SNAPSHOT = "vit_small_patch16_224.augreg_in21k_ft_in1k"
+
+    return entrypoint(spec, architecture=_VIT_SNAPSHOT)
 
 
 @app.function(image=image, gpu="T4", timeout=3600, secrets=secrets)

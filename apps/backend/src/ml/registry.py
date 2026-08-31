@@ -8,7 +8,8 @@ import threading
 import timm
 import torch.nn as nn
 from decimal import Decimal
-from peft import LoraConfig, get_peft_model
+from huggingface_hub import hf_hub_download
+from peft import LoraConfig, get_peft_model, set_peft_model_state_dict
 from typing import Any, Dict, Optional, Tuple
 from fiery_python import db_pool, logging, SyncLazyResource
 from fiery_python import (
@@ -25,7 +26,10 @@ from .queries.select_promoted_artifact import QUERY as SELECT_PROMOTED_ARTIFACT
 
 logger = logging.get_logger(__name__)
 
-_VIT = "vit_small_patch16_224"
+_VIT_SNAPSHOT = "vit_small_patch16_224.augreg_in21k_ft_in1k"
+_VIT_BASE_MODEL_ID = "timm/vit_small_patch16_224.augreg_in21k_ft_in1k"
+_VIT_REVISION = "7e2c55630205e1266030f18370f4c6ed1a514b52"
+_VIT_WEIGHTS = "model.safetensors"
 _CNN_SMALL = "cnn_small"
 _CNN_TINY = "cnn_tiny"
 _CNN_WIDTHS = {
@@ -189,7 +193,7 @@ class _ModelRegistry:
         if not architecture or not isinstance(architecture, str):
             spec = sidecar.get("spec") or {}
             architecture = spec.get("architecture")
-        if architecture == _VIT:
+        if architecture == _VIT_SNAPSHOT:
             return _ModelRegistry._materialize_screener(sidecar)
         elif architecture in _CNN_WIDTHS:
             return _ModelRegistry._materialize_cnn(architecture)
@@ -209,9 +213,23 @@ class _ModelRegistry:
             targets.append("proj")
         if not targets:
             raise RuntimeError("Empty LoRA target modules")
+        base_model_id = sidecar.get("base_model_id")
+        revision = sidecar.get("revision")
+        if (
+            not base_model_id
+            or not revision
+            or not isinstance(base_model_id, str)
+            or not isinstance(revision, str)
+        ):
+            raise RuntimeError("Empty base_model_id and/or revision")
+        hf_hub_download(
+            repo_id=base_model_id,
+            filename=_VIT_WEIGHTS,
+            revision=revision,
+        )
         backbone = timm.create_model(
-            sidecar.get("architecture") or "vit_small_patch16_224",
-            pretrained=False,
+            _VIT_SNAPSHOT,
+            pretrained=True,
             num_classes=2,
         )
         config = LoraConfig(
@@ -219,6 +237,7 @@ class _ModelRegistry:
             lora_alpha=lora["alpha"],
             lora_dropout=lora["dropout"],
             target_modules=targets,
+            modules_to_save=["head"],
             bias="none",
         )
         return get_peft_model(backbone, config)
@@ -246,7 +265,18 @@ class _ModelRegistry:
             return None, None
         try:
             model = self.materialize(sidecar)
-            model.load_state_dict(state_dict, strict=True)
+            architecture = sidecar.get("architecture")
+            if not architecture or not isinstance(architecture, str):
+                logger.error(
+                    "registry_materialize_failed",
+                    key=storage_path,
+                    error="Missing architecture from sidecar",
+                )
+                return None, None
+            if architecture == _VIT_SNAPSHOT:
+                set_peft_model_state_dict(model, state_dict)
+            else:
+                model.load_state_dict(state_dict, strict=True)
             model.eval()
         except Exception as err:
             logger.error(

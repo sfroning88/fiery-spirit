@@ -11,7 +11,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fiery_python import ModelRole, ModelTier, TrainingPrecision, TrainingStage
 from ml.models import LoadedModel
-from ml.registry import SeismicCnn, _ModelRegistry
+from ml.registry import (
+    SeismicCnn,
+    _ModelRegistry,
+    _VIT_BASE_MODEL_ID,
+    _VIT_REVISION,
+    _VIT_SNAPSHOT,
+    _VIT_WEIGHTS,
+)
 
 KEY = (ModelTier.CLOUD, ModelRole.SCREENER)
 NOW = datetime.now(tz=timezone.utc)
@@ -24,8 +31,8 @@ def _artifact_row(**overrides):
         "role": ModelRole.SCREENER.value,
         "stage": TrainingStage.LORA.value,
         "precision": TrainingPrecision.FP32.value,
-        "architecture": "vit_small_patch16_224",
-        "param_count": 22_000_000,
+        "architecture": _VIT_SNAPSHOT,
+        "param_count": 22_100_000,
         "sparsity": "0.0",
         "storage_path": "cloud/screener/art-1.safetensors",
         "signature": "sig-art-1",
@@ -46,8 +53,8 @@ def _loaded(artifact_id: str = "art-1") -> LoadedModel:
         role=ModelRole.SCREENER,
         stage=TrainingStage.LORA,
         precision=TrainingPrecision.FP32,
-        architecture="vit_small_patch16_224",
-        param_count=22_000_000,
+        architecture=_VIT_SNAPSHOT,
+        param_count=22_100_000,
         sparsity=Decimal("0.0"),
         storage_path="cloud/screener/art-1.safetensors",
         signature="sig-art-1",
@@ -209,7 +216,7 @@ def test_load_caches_model_and_metadata():
     metadata = registry.get_metadata(KEY)
     assert metadata["tier"] == ModelTier.CLOUD
     assert metadata["role"] == ModelRole.SCREENER
-    assert metadata["architecture"] == "vit_small_patch16_224"
+    assert metadata["architecture"] == _VIT_SNAPSHOT
     assert metadata["storage_path"] == "cloud/screener/art-1.safetensors"
     assert metadata["signature"] == "sig-art-1"
     assert metadata["promoted"] is True
@@ -276,9 +283,11 @@ def test_load_model_entry_builds_loaded_model():
     registry = _ModelRegistry()
     artifact = MagicMock(name="weights")
     row = _artifact_row(parent_id="parent-9")
-    state_dict = {"weight": object()}
+    state_dict = {"lora_A": object()}
     sidecar = {
-        "architecture": "vit_small_patch16_224",
+        "architecture": _VIT_SNAPSHOT,
+        "base_model_id": _VIT_BASE_MODEL_ID,
+        "revision": _VIT_REVISION,
         "lora": {
             "rank": 8,
             "alpha": 16,
@@ -299,16 +308,18 @@ def test_load_model_entry_builds_loaded_model():
             return_value=(state_dict, sidecar),
         ),
         patch.object(registry, "materialize", return_value=artifact),
+        patch("ml.registry.set_peft_model_state_dict") as set_adapter,
     ):
         entry, loaded = registry._load_model_entry(row, "art-1")
 
-    artifact.load_state_dict.assert_called_once_with(state_dict, strict=True)
+    set_adapter.assert_called_once_with(artifact, state_dict)
+    artifact.load_state_dict.assert_not_called()
     artifact.eval.assert_called_once()
     assert loaded is artifact
     assert entry is not None
     assert entry.artifact_id == "art-1"
     assert entry.parent_id == "parent-9"
-    assert entry.param_count == 22_000_000
+    assert entry.param_count == 22_100_000
     assert entry.sparsity == Decimal("0.0")
     assert entry.storage_path == "cloud/screener/art-1.safetensors"
     assert entry.signature == "sig-art-1"
@@ -320,7 +331,7 @@ def test_load_model_entry_builds_loaded_model():
 
 def test_materialize_vit_delegates_to_screener():
     sidecar = {
-        "architecture": "vit_small_patch16_224",
+        "architecture": _VIT_SNAPSHOT,
         "lora": {
             "rank": 8,
             "alpha": 16,
@@ -358,14 +369,14 @@ def test_materialize_unknown_architecture():
 
 def test_materialize_screener_requires_lora():
     with pytest.raises(RuntimeError, match="sidecar missing lora"):
-        _ModelRegistry._materialize_screener({"architecture": "vit_small_patch16_224"})
+        _ModelRegistry._materialize_screener({"architecture": _VIT_SNAPSHOT})
 
 
 def test_materialize_screener_requires_target_modules():
     with pytest.raises(RuntimeError, match="Empty LoRA"):
         _ModelRegistry._materialize_screener(
             {
-                "architecture": "vit_small_patch16_224",
+                "architecture": _VIT_SNAPSHOT,
                 "lora": {
                     "rank": 8,
                     "alpha": 16,
@@ -374,3 +385,57 @@ def test_materialize_screener_requires_target_modules():
                 },
             }
         )
+
+
+def test_materialize_screener_requires_base_pin():
+    with pytest.raises(RuntimeError, match="Empty base_model_id"):
+        _ModelRegistry._materialize_screener(
+            {
+                "architecture": _VIT_SNAPSHOT,
+                "lora": {
+                    "rank": 8,
+                    "alpha": 16,
+                    "dropout": 0.1,
+                    "target_modules": {"query": True},
+                },
+            }
+        )
+
+
+def test_materialize_screener_wraps_pinned_backbone():
+    backbone = MagicMock(name="backbone")
+    wrapped = MagicMock(name="peft")
+    sidecar = {
+        "architecture": _VIT_SNAPSHOT,
+        "base_model_id": _VIT_BASE_MODEL_ID,
+        "revision": _VIT_REVISION,
+        "lora": {
+            "rank": 8,
+            "alpha": 16,
+            "dropout": 0.1,
+            "target_modules": {"query": True, "output": True},
+        },
+    }
+    with (
+        patch(
+            "ml.registry.hf_hub_download",
+            return_value="/tmp/vit/model.safetensors",
+        ) as download,
+        patch("ml.registry.timm.create_model", return_value=backbone) as create_model,
+        patch("ml.registry.get_peft_model", return_value=wrapped) as get_peft_model,
+    ):
+        result = _ModelRegistry._materialize_screener(sidecar)
+    assert result is wrapped
+    download.assert_called_once_with(
+        repo_id=_VIT_BASE_MODEL_ID,
+        filename=_VIT_WEIGHTS,
+        revision=_VIT_REVISION,
+    )
+    create_model.assert_called_once_with(
+        _VIT_SNAPSHOT,
+        pretrained=True,
+        num_classes=2,
+    )
+    config = get_peft_model.call_args[0][1]
+    assert config.modules_to_save == ["head"]
+    assert set(config.target_modules) == {"qkv", "proj"}

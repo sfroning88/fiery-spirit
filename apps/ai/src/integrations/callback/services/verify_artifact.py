@@ -40,6 +40,8 @@ class CallbackVerifyArtifact:
                 "threshold": str(payload.threshold),
                 "tier": payload.tier.value,
                 "transform_hash": payload.transform_hash,
+                "base_model_id": payload.base_model_id or "",
+                "revision": payload.revision or "",
             },
             separators=(",", ":"),
             sort_keys=True,
