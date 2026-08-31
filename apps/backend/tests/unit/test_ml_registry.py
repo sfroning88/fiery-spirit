@@ -282,9 +282,6 @@ def test_load_model_entry_returns_none_when_materialize_fails():
 def test_load_model_entry_builds_loaded_model():
     registry = _ModelRegistry()
     artifact = MagicMock(name="weights")
-    incompatible = MagicMock()
-    incompatible.unexpected_keys = []
-    artifact.load_state_dict.return_value = incompatible
     row = _artifact_row(parent_id="parent-9")
     state_dict = {"lora_A": object()}
     sidecar = {
@@ -311,10 +308,12 @@ def test_load_model_entry_builds_loaded_model():
             return_value=(state_dict, sidecar),
         ),
         patch.object(registry, "materialize", return_value=artifact),
+        patch("ml.registry.set_peft_model_state_dict") as set_adapter,
     ):
         entry, loaded = registry._load_model_entry(row, "art-1")
 
-    artifact.load_state_dict.assert_called_once_with(state_dict, strict=False)
+    set_adapter.assert_called_once_with(artifact, state_dict)
+    artifact.load_state_dict.assert_not_called()
     artifact.eval.assert_called_once()
     assert loaded is artifact
     assert entry is not None

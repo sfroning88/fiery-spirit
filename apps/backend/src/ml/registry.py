@@ -9,7 +9,7 @@ import timm
 import torch.nn as nn
 from decimal import Decimal
 from huggingface_hub import hf_hub_download
-from peft import LoraConfig, get_peft_model
+from peft import LoraConfig, get_peft_model, set_peft_model_state_dict
 from typing import Any, Dict, Optional, Tuple
 from fiery_python import db_pool, logging, SyncLazyResource
 from fiery_python import (
@@ -274,15 +274,7 @@ class _ModelRegistry:
                 )
                 return None, None
             if architecture == _VIT_SNAPSHOT:
-                incompatible = model.load_state_dict(state_dict, strict=False)
-                if incompatible.unexpected_keys:
-                    logger.error(
-                        "registry_materialize_failed",
-                        key=storage_path,
-                        unexpected=incompatible.unexpected_keys,
-                        error="Unexpected adapter keys",
-                    )
-                    return None, None
+                set_peft_model_state_dict(model, state_dict)
             else:
                 model.load_state_dict(state_dict, strict=True)
             model.eval()
