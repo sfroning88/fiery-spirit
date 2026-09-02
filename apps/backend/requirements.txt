@@ -198,6 +198,8 @@ torch==2.13.0
     #   peft
     #   timm
     #   torchvision
+torchao==0.18.0
+    # via -r requirements.in
 torchvision==0.28.0
     # via timm
 tqdm==4.70.0

@@ -130,9 +130,9 @@ async def refine_shards(request: Request, payload: RefineRequest) -> RefineRespo
         specs = [
             {
                 "func": RefineBackgroundJobs.background_refine_shards,
-                "args": (contract, version.id),
+                "args": (contract, version.id, payload.max_samples),
                 "job_id": f"refine_shards_{contract.id}_{version.id}",
-                "job_timeout": 6000,
+                "job_timeout": 3600,
             }
         ]
         jobs = queue.enqueue_jobs(specs)

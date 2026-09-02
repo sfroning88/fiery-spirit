@@ -41,10 +41,14 @@ class RefineShardWriter:
     """Stream unrefined R2 and refine shards back to refined R2"""
 
     @classmethod
-    def run(cls, contract: TrainingContract, version_id: str) -> int:
+    def run(
+        cls, contract: TrainingContract, version_id: str, max_samples: int = 5
+    ) -> int:
         """Read unrefined samples, apply transform, store refined shards; return sample_count"""
         if not contract.id:
             raise error("Training contract missing id")
+        if max_samples <= 0:
+            raise ValueError("max_samples must be positive")
         if contract.deformation_id:
             params = RefinePersistService.select_deformation(contract.id)
             if not params:
@@ -83,6 +87,7 @@ class RefineShardWriter:
                     split,
                     params,
                     manifest,
+                    max_samples,
                 )
             manifest_path = BlobStorageServices.put_manifest(
                 contract.id, transform_hash, manifest.dumps()
@@ -129,47 +134,58 @@ class RefineShardWriter:
         split: TrainingSplit,
         params: _Params,
         manifest: RefineShardManifest,
+        max_samples: int,
     ) -> int:
         buffer: List[Tuple[str, np.ndarray, Dict[str, Any]]] = []
         approx_bytes = 0
         shard_index = 0
         kept = 0
-        if isinstance(params, TrainingDeformation):
-            samples: List[_Sample] = (
-                RefinePersistService.select_interferograms(
-                    split, _BASE_ID, TRAINING_DB_FETCH_SIZE
+        after_id = _BASE_ID
+        remaining = max_samples
+        while remaining > 0:
+            limit = min(TRAINING_DB_FETCH_SIZE, remaining)
+            page: List[_Sample] = []
+            if isinstance(params, TrainingDeformation):
+                page.extend(
+                    RefinePersistService.select_interferograms(split, after_id, limit)
                 )
-                or []
-            )
-        elif isinstance(params, TrainingSeismic):
-            samples = (
-                RefinePersistService.select_seismic_events(
-                    split, _BASE_ID, TRAINING_DB_FETCH_SIZE
+            elif isinstance(params, TrainingSeismic):
+                page.extend(
+                    RefinePersistService.select_seismic_events(split, after_id, limit)
                 )
-                or []
-            )
-        else:
-            assert_never(params)
-        for sample in samples:
-            transformed = cls._transform_shard(sample, params, manifest)
-            if transformed is None:
-                continue
-            key, array, label = transformed
-            buffer.append((key, array, label))
-            approx_bytes += int(array.nbytes) + _LABEL_OVERHEAD
-            kept += 1
-            if approx_bytes >= _TARGET_SHARD_BYTES:
-                cls._flush_shard(
-                    contract_id,
-                    transform_hash,
-                    split,
-                    shard_index,
-                    buffer,
-                    manifest,
-                )
-                buffer = []
-                approx_bytes = 0
-                shard_index += 1
+            else:
+                assert_never(params)
+            if not page:
+                break
+            for sample in page:
+                remaining -= 1
+                transformed = cls._transform_shard(sample, params, manifest)
+                if transformed is None:
+                    if remaining <= 0:
+                        break
+                    continue
+                key, array, label = transformed
+                buffer.append((key, array, label))
+                approx_bytes += int(array.nbytes) + _LABEL_OVERHEAD
+                kept += 1
+                if approx_bytes >= _TARGET_SHARD_BYTES:
+                    cls._flush_shard(
+                        contract_id,
+                        transform_hash,
+                        split,
+                        shard_index,
+                        buffer,
+                        manifest,
+                    )
+                    buffer = []
+                    approx_bytes = 0
+                    shard_index += 1
+                if remaining <= 0:
+                    break
+            after_id = page[-1].id
+            if not after_id:
+                break
+            page.clear()
         if buffer:
             cls._flush_shard(
                 contract_id,

@@ -79,7 +79,7 @@ class TrainPersistService:
                     TrainPersistService.upsert_pretrain(pretrain)
                 session.hyperparameter_pretrain_id = pretrain.id
             elif session.stage is TrainingStage.DISTILL:
-                distill = TrainingHyperparameterDistill()
+                distill = TrainingHyperparameterDistill(student_architecture="cnn_tiny")
                 distill.id = distill.deterministic_id()
                 hyperparameters = TrainPersistService.select_distill(distill.id)
                 if hyperparameters:

@@ -6,7 +6,7 @@ Deterministic uuid generation utils
 
 import json
 import uuid
-from typing import Any
+from typing import Any, Dict, List
 
 _UUID_NAMESPACE = uuid.UUID("8c9b8f3e-4d2a-5f1b-9e7c-2a1d6b4f0e35")
 
@@ -26,3 +26,13 @@ class UuidUtils:
             encoded.append((type_name, value))
         name = json.dumps(encoded, separators=(",", ":"))
         return str(uuid.uuid5(namespace, name))
+
+    @staticmethod
+    def dedupe_uuid(rows: List[Dict]) -> List[Dict]:
+        by_id: Dict[str, Dict] = {}
+        for row in rows:
+            row_id = row.get("id")
+            if not row_id:
+                continue
+            by_id[str(row_id)] = row
+        return list(by_id.values())

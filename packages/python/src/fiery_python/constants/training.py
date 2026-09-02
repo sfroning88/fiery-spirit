@@ -4,8 +4,8 @@ Created Date: 8.19.2026
 Definitions for Training structures
 """
 
-TRAINING_DB_FETCH_SIZE = 10
-TRAINING_DB_PAGE_SIZE = 100
+TRAINING_DB_FETCH_SIZE = 100
+TRAINING_DB_PAGE_SIZE = 1000
 TRAINING_SPLIT_ENUM = ("ai", "training_split")
 TRAINING_SAMPLE_SOURCE_ENUM = ("ai", "training_sample_source")
 TRAINING_SIGNAL_ENUM = ("ai", "training_signal")

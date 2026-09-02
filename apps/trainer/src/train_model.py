@@ -175,6 +175,7 @@ def _train_quantize_model(
     model: nn.Module, loaders: Dict[str, DataLoader], spec: dict
 ) -> nn.Module:
     import torch
+    from torchao.quantization.pt2e import allow_exported_model_train_eval
     from torchao.quantization.pt2e.quantize_pt2e import (
         prepare_pt2e,
         prepare_qat_pt2e,
@@ -190,6 +191,7 @@ def _train_quantize_model(
         raise RuntimeError("Missing calibrate or train loader")
     example, _targets = next(iter(calibrate))
     example = example.cpu()
+    spec["example_shape"] = list(example.shape)
     model = model.cpu()
     exported = torch.export.export(
         model,
@@ -199,13 +201,17 @@ def _train_quantize_model(
     quantizer = _x86_quantizer()
     if method == TrainingQuantizeMethod.PTQ.value:
         prepared = prepare_pt2e(exported, quantizer)
+        allow_exported_model_train_eval(prepared)
         prepared.eval()
         with torch.no_grad():
             for features, _targets in calibrate:
                 prepared(features.cpu())
-        return convert_pt2e(prepared)
+        converted = convert_pt2e(prepared)
+        allow_exported_model_train_eval(converted)
+        return converted
     elif method == TrainingQuantizeMethod.QAT.value:
         prepared = prepare_qat_pt2e(exported, quantizer)
+        allow_exported_model_train_eval(prepared)
         prepared.train()
         optimizer = torch.optim.AdamW(
             (param for param in prepared.parameters() if param.requires_grad),
@@ -221,7 +227,9 @@ def _train_quantize_model(
                 loss.backward()
                 optimizer.step()
         prepared.eval()
-        return convert_pt2e(prepared)
+        converted = convert_pt2e(prepared)
+        allow_exported_model_train_eval(converted)
+        return converted
     raise RuntimeError("Unsupported quantize method")
 
 

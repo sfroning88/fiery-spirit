@@ -15,10 +15,7 @@ from fiery_python import (
 )
 from fiery_python import (
     TrainingSignal,
-    TrainingStage,
     TrainingStatus,
-    TrainingTargetModules,
-    TrainingHyperparameterLora,
     TrainingSession,
 )
 from .schemas import TrainRequest, TrainResponse
@@ -139,7 +136,7 @@ async def train_spawn(request: Request, payload: TrainRequest) -> TrainResponse:
                 "func": TrainBackgroundJobs.background_spawn_training,
                 "args": (session.id, payload.parent_id),
                 "job_id": f"train_spawn_{payload.version_id}_{session.id}",
-                "job_timeout": 6000,
+                "job_timeout": 7200,
             }
         ]
         jobs = queue.enqueue_jobs(specs)

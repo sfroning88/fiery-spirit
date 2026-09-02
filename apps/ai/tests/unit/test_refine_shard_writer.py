@@ -29,7 +29,7 @@ from fiery_python import (
     TransformationRejected,
 )
 from integrations.refine.services.shard_manifest import RefineShardManifest
-from integrations.refine.services.shard_writer import RefineShardWriter
+from integrations.refine.services.shard_writer import RefineShardWriter, _BASE_ID
 
 
 def _deformation() -> TrainingDeformation:
@@ -341,7 +341,7 @@ def test_write_split_flushes_when_target_bytes_hit(
     with (
         patch(
             f"integrations.refine.services.shard_writer.RefinePersistService.{select_samples}",
-            return_value=samples,
+            side_effect=[samples, []],
         ),
         patch.object(
             RefineShardWriter,
@@ -360,6 +360,7 @@ def test_write_split_flushes_when_target_bytes_hit(
             TrainingSplit.TRAIN,
             params,
             manifest,
+            max_samples=5,
         )
     assert kept_count == 2
     assert flush.call_count == 2
@@ -400,14 +401,16 @@ def test_run_upserts_completed_and_returns_count(
         patch(
             "integrations.refine.services.shard_writer.RefinePersistService.upsert_version"
         ) as upsert_version,
-        patch.object(RefineShardWriter, "_write_split", return_value=3),
+        patch.object(RefineShardWriter, "_write_split", return_value=3) as write_split,
         patch(
             "integrations.refine.services.shard_writer.BlobStorageServices.put_manifest",
             return_value="contract-1/hash-1/manifest.json",
         ),
     ):
-        count = RefineShardWriter.run(contract, version.id)
+        count = RefineShardWriter.run(contract, version.id, max_samples=7)
     assert count == 3 * len(TrainingSplit)
+    assert write_split.call_args.args[5] == 7
+    assert write_split.call_count == len(TrainingSplit)
     assert upsert_version.call_args_list[0].args[0].status is TrainingStatus.EXECUTING
     assert upsert_version.call_args_list[-1].args[0].status is TrainingStatus.COMPLETED
     assert upsert_version.call_args_list[-1].args[0].sample_count == 0
@@ -455,3 +458,172 @@ def test_run_marks_failed_and_reraises(
         with pytest.raises(RuntimeError, match="r2 down"):
             RefineShardWriter.run(contract, version.id)
     assert upsert_version.call_args_list[-1].args[0].status is TrainingStatus.FAILED
+
+
+def test_run_rejects_non_positive_max_samples():
+    with pytest.raises(ValueError, match="max_samples must be positive"):
+        RefineShardWriter.run(_contract_deformation(), _version().id, max_samples=0)
+    with pytest.raises(ValueError, match="max_samples must be positive"):
+        RefineShardWriter.run(_contract_deformation(), _version().id, max_samples=-1)
+
+
+@pytest.mark.parametrize(
+    "params, sample_fn, contract, select_samples, select_params, hash_fn, apply_fn, raw, kept, reject_reason, label_value, missing",
+    _CASES,
+)
+def test_write_split_pages_until_empty(
+    params,
+    sample_fn,
+    contract,
+    select_samples,
+    select_params,
+    hash_fn,
+    apply_fn,
+    raw,
+    kept,
+    reject_reason,
+    label_value,
+    missing,
+):
+    first = sample_fn(id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1")
+    second = sample_fn(id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2")
+
+    def _pages(_split, after_id, limit):
+        assert limit == 1
+        if after_id == _BASE_ID:
+            return [first]
+        if after_id == first.id:
+            return [second]
+        return []
+
+    manifest = RefineShardManifest("contract-1", "hash-1", params)
+    with (
+        patch(
+            f"integrations.refine.services.shard_writer.RefinePersistService.{select_samples}",
+            side_effect=_pages,
+        ) as select,
+        patch.object(
+            RefineShardWriter,
+            "_transform_shard",
+            side_effect=[
+                (first.id, kept, {"label": label_value}),
+                (second.id, kept, {"label": label_value}),
+            ],
+        ),
+        patch.object(RefineShardWriter, "_flush_shard") as flush,
+        patch("integrations.refine.services.shard_writer.TRAINING_DB_FETCH_SIZE", 1),
+    ):
+        kept_count = RefineShardWriter._write_split(
+            "contract-1",
+            "hash-1",
+            TrainingSplit.TRAIN,
+            params,
+            manifest,
+            max_samples=10,
+        )
+    assert kept_count == 2
+    assert select.call_count == 3
+    assert flush.call_count == 1
+    assert select.call_args_list[0].args[1] == _BASE_ID
+    assert select.call_args_list[1].args[1] == first.id
+    assert select.call_args_list[2].args[1] == second.id
+
+
+@pytest.mark.parametrize(
+    "params, sample_fn, contract, select_samples, select_params, hash_fn, apply_fn, raw, kept, reject_reason, label_value, missing",
+    _CASES,
+)
+def test_write_split_stops_after_max_samples(
+    params,
+    sample_fn,
+    contract,
+    select_samples,
+    select_params,
+    hash_fn,
+    apply_fn,
+    raw,
+    kept,
+    reject_reason,
+    label_value,
+    missing,
+):
+    samples = [
+        sample_fn(id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
+        sample_fn(id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2"),
+        sample_fn(id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3"),
+    ]
+    manifest = RefineShardManifest("contract-1", "hash-1", params)
+    with (
+        patch(
+            f"integrations.refine.services.shard_writer.RefinePersistService.{select_samples}",
+            return_value=samples,
+        ) as select,
+        patch.object(
+            RefineShardWriter,
+            "_transform_shard",
+            side_effect=[
+                (samples[0].id, kept, {"label": label_value}),
+                (samples[1].id, kept, {"label": label_value}),
+            ],
+        ),
+        patch.object(RefineShardWriter, "_flush_shard") as flush,
+    ):
+        kept_count = RefineShardWriter._write_split(
+            "contract-1",
+            "hash-1",
+            TrainingSplit.TRAIN,
+            params,
+            manifest,
+            max_samples=2,
+        )
+    assert kept_count == 2
+    assert select.call_count == 1
+    assert select.call_args.args[2] == 2
+    assert flush.call_count == 1
+
+
+@pytest.mark.parametrize(
+    "params, sample_fn, contract, select_samples, select_params, hash_fn, apply_fn, raw, kept, reject_reason, label_value, missing",
+    _CASES,
+)
+def test_write_split_counts_rejects_toward_max_samples(
+    params,
+    sample_fn,
+    contract,
+    select_samples,
+    select_params,
+    hash_fn,
+    apply_fn,
+    raw,
+    kept,
+    reject_reason,
+    label_value,
+    missing,
+):
+    samples = [
+        sample_fn(id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
+        sample_fn(id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2"),
+    ]
+    manifest = RefineShardManifest("contract-1", "hash-1", params)
+    with (
+        patch(
+            f"integrations.refine.services.shard_writer.RefinePersistService.{select_samples}",
+            return_value=samples,
+        ),
+        patch.object(
+            RefineShardWriter,
+            "_transform_shard",
+            side_effect=[None, (samples[1].id, kept, {"label": label_value})],
+        ),
+        patch.object(RefineShardWriter, "_flush_shard") as flush,
+    ):
+        kept_count = RefineShardWriter._write_split(
+            "contract-1",
+            "hash-1",
+            TrainingSplit.TRAIN,
+            params,
+            manifest,
+            max_samples=1,
+        )
+    assert kept_count == 0
+    assert flush.call_count == 0

@@ -15,14 +15,16 @@ class RefineBackgroundJobs:
     """Operations for background jobs from Refine"""
 
     @staticmethod
-    def background_refine_shards(contract: TrainingContract, version_id: str) -> None:
+    def background_refine_shards(
+        contract: TrainingContract, version_id: str, max_samples: int
+    ) -> None:
         """Background: Refine shards from storage"""
         if not contract.id:
             logger.error("contract_missing_id", version_id=version_id)
             raise
         logging.bind_job_context(session_id=contract.id)
         try:
-            sample_count = RefineShardWriter.run(contract, version_id)
+            sample_count = RefineShardWriter.run(contract, version_id, max_samples)
             logger.info(
                 "refine_shards_job_completed",
                 contract_id=contract.id,

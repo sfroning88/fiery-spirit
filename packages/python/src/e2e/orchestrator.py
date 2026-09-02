@@ -6,6 +6,19 @@ Unified test orchestrator for worker pipelines
 
 Usage: python3 -m src.e2e.orchestrator <workflow>
 Workflows: ingest|refine|train|promote|registry|inference
+Additional Kwargs:
+    [ingest] -source <hephaestus|okada|llaima>
+    [refine] -shards <satellite|sensor
+    [ingest|refine] -samples <max_samples>
+    [train] -job <pretrain|lora|distill|prune|quantize>
+    [inference] -signal <deformation|seismic>
+    [ingest|refine|train] -timeout <seconds|none>
+
+For example:
+python3 -m src.e2e.orchestrator ingest -source hephaestus -samples 10 -timeout none
+python3 -m src.e2e.orchestrator refine -shards sensor -samples 10 -timeout 300
+python3 -m src.e2e.orchestrator train -job lora -timeout none
+python3 -m src.e2e.orchestrator inference -signal deformation
 
 Notes:
 - Tests run against the real Supabase project (tables + storage buckets).
@@ -18,7 +31,7 @@ Setup Steps:
 1) pnpm use:local
 2) pnpm redis:up
 3) cd packages/python
-4) python -m src.e2e.orchestrator <workflow>
+4) python -m src.e2e.orchestrator <workflow> <**kwargs>
 
 If Creating or Activating venv:
 1) python3 -m venv .venv
@@ -34,7 +47,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
 
@@ -169,20 +182,47 @@ def _await_workers_ready(specs: Tuple[WorkerSpec, ...]) -> None:
         print(f"{spec.domain} API ready")
 
 
-def _run_workflow(workflow: str) -> None:
+_TIMEOUT_UNSET = object()
+
+
+def _run_workflow(
+    workflow: str,
+    *,
+    source: Optional[str] = None,
+    shards: Optional[str] = None,
+    job: Optional[str] = None,
+    signal: Optional[str] = None,
+    samples: Optional[int] = None,
+    timeout: Any = _TIMEOUT_UNSET,
+) -> None:
     """Dispatch to the script matching the workflow"""
+    wait: Dict[str, Optional[int]] = (
+        {} if timeout is _TIMEOUT_UNSET else {"timeout": timeout}
+    )
     if workflow == "ingest":
         from .scripts.ingest import run_ingest_test
 
-        run_ingest_test()
+        if not source:
+            raise ValueError("ingest requires -source hephaestus|okada|llaima")
+        extra: Dict[str, Any] = dict(wait)
+        if samples is not None:
+            extra["max_samples"] = samples
+        run_ingest_test(source=source, **extra)
     elif workflow == "refine":
         from .scripts.refine import run_refine_test
 
-        run_refine_test()
+        if not shards:
+            raise ValueError("refine requires -shards satellite|sensor")
+        extra: Dict[str, Any] = dict(wait)
+        if samples is not None:
+            extra["max_samples"] = samples
+        run_refine_test(shards=shards, **extra)
     elif workflow == "train":
         from .scripts.train import run_train_test
 
-        run_train_test()
+        if not job:
+            raise ValueError("train requires -job pretrain|lora|distill|prune|quantize")
+        run_train_test(job=job, **wait)
     elif workflow == "promote":
         from .scripts.promote import run_promote_test
 
@@ -194,9 +234,69 @@ def _run_workflow(workflow: str) -> None:
     elif workflow == "inference":
         from .scripts.inference import run_inference_test
 
-        run_inference_test()
+        if not signal:
+            raise ValueError("inference requires -signal deformation|seismic")
+        run_inference_test(signal=signal)
     else:
         raise ValueError(f"Unknown workflow: {workflow}")
+
+
+def _resolve_kwargs(
+    parser: argparse.ArgumentParser,
+    args: argparse.Namespace,
+) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
+    """Bind optional CLI flags to the workflow that owns them"""
+    workflow = args.workflow
+    source = args.source
+    shards = args.shards
+    if args.satellite:
+        if shards and shards != "satellite":
+            parser.error("use either -shards satellite or -satellite")
+        shards = "satellite"
+    if args.sensor:
+        if shards and shards != "sensor":
+            parser.error("use either -shards sensor or -sensor")
+        shards = "sensor"
+    if source is not None and workflow != "ingest":
+        parser.error("-source is only valid for ingest")
+    if args.samples is not None and workflow not in ("ingest", "refine"):
+        parser.error("-samples is only valid for ingest, refine")
+    if shards is not None and workflow != "refine":
+        parser.error("-shards is only valid for refine")
+    if args.job is not None and workflow != "train":
+        parser.error("-job is only valid for train")
+    if args.signal is not None and workflow != "inference":
+        parser.error("-signal is only valid for inference")
+    if workflow == "ingest":
+        if source is None:
+            parser.error("ingest requires -source hephaestus|okada|llaima")
+        if source not in ("hephaestus", "okada", "llaima"):
+            parser.error("ingest requires -source hephaestus|okada|llaima")
+    if workflow == "refine":
+        if shards is None:
+            parser.error("refine requires -shards satellite|sensor")
+        if shards not in ("satellite", "sensor"):
+            parser.error("refine requires -shards satellite|sensor")
+    if workflow == "train" and args.job is None:
+        parser.error("train requires -job pretrain|lora|distill|prune|quantize")
+    if workflow == "inference" and args.signal is None:
+        parser.error("inference requires -signal deformation|seismic")
+    return source, shards, args.job, args.signal
+
+
+def _parse_timeout(parser: argparse.ArgumentParser, raw: Optional[str]) -> Any:
+    """Return wait seconds, None for no timeout, or _TIMEOUT_UNSET if omitted"""
+    if raw is None:
+        return _TIMEOUT_UNSET
+    if raw.lower() == "none":
+        return None
+    try:
+        seconds = int(raw)
+    except ValueError:
+        parser.error("-timeout must be a positive integer or none")
+    if seconds <= 0:
+        parser.error("-timeout must be a positive integer or none")
+    return seconds
 
 
 def main() -> None:
@@ -209,8 +309,54 @@ def main() -> None:
         choices=sorted(WORKFLOW_WORKERS.keys()),
         help="Test workflow to run",
     )
+    parser.add_argument(
+        "-source",
+        choices=("hephaestus", "okada", "llaima"),
+        help="[ingest] hephaestus|okada|llaima",
+    )
+    parser.add_argument(
+        "-samples",
+        type=int,
+        metavar="MAX_SAMPLES",
+        help="[ingest] max_samples for the ingest request",
+    )
+    parser.add_argument(
+        "-shards",
+        choices=("satellite", "sensor"),
+        help="[refine] satellite interferograms or sensor waveforms",
+    )
+    parser.add_argument(
+        "-satellite",
+        action="store_true",
+        help="[refine] alias for -shards satellite",
+    )
+    parser.add_argument(
+        "-sensor",
+        action="store_true",
+        help="[refine] alias for -shards sensor",
+    )
+    parser.add_argument(
+        "-job",
+        choices=("pretrain", "lora", "distill", "prune", "quantize"),
+        help="[train] training stage to spawn",
+    )
+    parser.add_argument(
+        "-signal",
+        choices=("deformation", "seismic"),
+        help="[inference] interferogram or waveform sample",
+    )
+    parser.add_argument(
+        "-timeout",
+        metavar="SECONDS",
+        help="wait timeout in seconds for ingest/refine/train jobs, or none",
+    )
     args = parser.parse_args()
     workflow: str = args.workflow
+    source, shards, job, signal = _resolve_kwargs(parser, args)
+    timeout = _parse_timeout(parser, args.timeout)
+    samples = args.samples
+    if samples is not None and samples <= 0:
+        parser.error("-samples must be a positive integer")
 
     root = _find_monorepo_root()
     specs = WORKFLOW_WORKERS[workflow]
@@ -231,7 +377,15 @@ def main() -> None:
 
             ensure_trainer_deployed(root)
 
-        _run_workflow(workflow)
+        _run_workflow(
+            workflow,
+            source=source,
+            shards=shards,
+            job=job,
+            signal=signal,
+            samples=samples,
+            timeout=timeout,
+        )
 
         print(f"\n{'=' * 60}")
         print(f"{workflow.upper()} WORKFLOW PASSED")

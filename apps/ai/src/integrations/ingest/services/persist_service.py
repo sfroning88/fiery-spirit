@@ -15,6 +15,7 @@ from fiery_python import (
     TrainingInterferogram,
     TrainingDeformationSource,
     TrainingSeismicEvent,
+    UuidUtils,
 )
 from ..queries.upsert_dataset_ingest import QUERY as UPSERT_INGEST
 from ..queries.upsert_training_interferograms import (
@@ -59,10 +60,12 @@ class IngestPersistService:
     def upsert_deformation_sources(
         deformation_sources: List[TrainingDeformationSource],
     ) -> None:
-        insert_values = [
-            deformation_source.prepare_for_storage(include_id=True)
-            for deformation_source in deformation_sources
-        ]
+        insert_values = UuidUtils.dedupe_uuid(
+            [
+                deformation_source.prepare_for_storage(include_id=True)
+                for deformation_source in deformation_sources
+            ]
+        )
         with db_pool.get_cursor() as cursor:
             execute_values(
                 cursor,
@@ -74,10 +77,12 @@ class IngestPersistService:
 
     @staticmethod
     def upsert_interferograms(interferograms: List[TrainingInterferogram]) -> None:
-        insert_values = [
-            interferogram.prepare_for_storage(include_id=True)
-            for interferogram in interferograms
-        ]
+        insert_values = UuidUtils.dedupe_uuid(
+            [
+                interferogram.prepare_for_storage(include_id=True)
+                for interferogram in interferograms
+            ]
+        )
         with db_pool.get_cursor() as cursor:
             execute_values(
                 cursor,
@@ -89,10 +94,12 @@ class IngestPersistService:
 
     @staticmethod
     def upsert_seismic_events(seismic_events: List[TrainingSeismicEvent]) -> None:
-        insert_values = [
-            seismic_event.prepare_for_storage(include_id=True)
-            for seismic_event in seismic_events
-        ]
+        insert_values = UuidUtils.dedupe_uuid(
+            [
+                seismic_event.prepare_for_storage(include_id=True)
+                for seismic_event in seismic_events
+            ]
+        )
         with db_pool.get_cursor() as cursor:
             execute_values(
                 cursor,
@@ -107,14 +114,18 @@ class IngestPersistService:
         deformation_sources: List[TrainingDeformationSource],
         interferograms: List[TrainingInterferogram],
     ) -> None:
-        source_values = [
-            deformation_source.prepare_for_storage(include_id=True)
-            for deformation_source in deformation_sources
-        ]
-        interferogram_values = [
-            interferogram.prepare_for_storage(include_id=True)
-            for interferogram in interferograms
-        ]
+        source_values = UuidUtils.dedupe_uuid(
+            [
+                deformation_source.prepare_for_storage(include_id=True)
+                for deformation_source in deformation_sources
+            ]
+        )
+        interferogram_values = UuidUtils.dedupe_uuid(
+            [
+                interferogram.prepare_for_storage(include_id=True)
+                for interferogram in interferograms
+            ]
+        )
         with db_pool.get_cursor() as cursor:
             execute_values(
                 cursor,

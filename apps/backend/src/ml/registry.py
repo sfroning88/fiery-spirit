@@ -6,10 +6,20 @@ Inference-side cache of trained models
 
 import threading
 import timm
+import torch
 import torch.nn as nn
 from decimal import Decimal
 from huggingface_hub import hf_hub_download
 from peft import LoraConfig, get_peft_model, set_peft_model_state_dict
+from torchao.quantization.pt2e import allow_exported_model_train_eval
+from torchao.quantization.pt2e.quantize_pt2e import (
+    convert_pt2e,
+    prepare_pt2e,
+)
+from torchao.quantization.pt2e.quantizer.x86_inductor_quantizer import (
+    X86InductorQuantizer,
+    get_default_x86_inductor_quantization_config,
+)
 from typing import Any, Dict, Optional, Tuple
 from fiery_python import db_pool, logging, SyncLazyResource
 from fiery_python import (
@@ -196,7 +206,7 @@ class _ModelRegistry:
         if architecture == _VIT_SNAPSHOT:
             return _ModelRegistry._materialize_screener(sidecar)
         elif architecture in _CNN_WIDTHS:
-            return _ModelRegistry._materialize_cnn(architecture)
+            return _ModelRegistry._materialize_cnn(architecture, sidecar)
         else:
             raise RuntimeError(f"Unknown architecture: {architecture}")
 
@@ -243,8 +253,47 @@ class _ModelRegistry:
         return get_peft_model(backbone, config)
 
     @staticmethod
-    def _materialize_cnn(architecture: str) -> nn.Module:
+    def _materialize_cnn(architecture: str, sidecar: dict) -> nn.Module:
+        if _ModelRegistry._is_quantized(sidecar):
+            return _ModelRegistry._materialize_quantized_cnn(architecture, sidecar)
         return SeismicCnn(widths=_CNN_WIDTHS[architecture])
+
+    @staticmethod
+    def _is_quantized(sidecar: dict) -> bool:
+        spec = sidecar.get("spec") or {}
+        stage = spec.get("stage")
+        precision = spec.get("precision")
+        return bool(
+            sidecar.get("example_shape")
+            or spec.get("example_shape")
+            or spec.get("quantize")
+            or stage == TrainingStage.QUANTIZE.value
+            or precision == TrainingPrecision.INT8.value
+        )
+
+    @staticmethod
+    def _example_nchw(sidecar: dict) -> tuple[int, int, int, int]:
+        spec = sidecar.get("spec") or {}
+        raw = sidecar.get("example_shape") or spec.get("example_shape")
+        if not isinstance(raw, (list, tuple)) or len(raw) != 4:
+            raise RuntimeError("sidecar missing example_shape")
+        return (int(raw[0]), int(raw[1]), int(raw[2]), int(raw[3]))
+
+    @staticmethod
+    def _materialize_quantized_cnn(architecture: str, sidecar: dict) -> nn.Module:
+        example_shape = _ModelRegistry._example_nchw(sidecar)
+        fp32 = SeismicCnn(widths=_CNN_WIDTHS[architecture]).eval()
+        example = torch.zeros(example_shape)
+        exported = torch.export.export(
+            fp32,
+            (example,),
+            dynamic_shapes=({0: torch.export.Dim("batch")},),
+        ).module()
+        quantizer = X86InductorQuantizer()
+        quantizer.set_global(get_default_x86_inductor_quantization_config())
+        model = convert_pt2e(prepare_pt2e(exported, quantizer))
+        allow_exported_model_train_eval(model)
+        return model
 
     def _load_model_entry(
         self, row: Dict[str, Any], artifact_id: str
