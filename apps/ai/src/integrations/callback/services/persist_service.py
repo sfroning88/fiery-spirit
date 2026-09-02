@@ -12,6 +12,7 @@ from fiery_python import (
     MODEL_DB_PAGE_SIZE,
     ModelArtifact,
     ModelMetric,
+    UuidUtils,
 )
 from ..queries.select_model_artifact import QUERY as SELECT_ARTIFACT
 from ..queries.upsert_model_artifact import QUERY as UPSERT_ARTIFACT

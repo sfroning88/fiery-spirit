@@ -130,7 +130,7 @@ def test_entrypoint_saves_then_callbacks():
     assert result == {
         "ok": True,
         "spec": "sess-1",
-        "storage_path": "unused",
+        "storage_path": "cloud/screener/sess-1.safetensors",
     }
 
 
@@ -185,6 +185,35 @@ def test_entrypoint_saves_distilled_student_only():
     assert "lora" not in sidecar
     assert callback.call_args.kwargs["architecture"] == "cnn_tiny"
     assert callback.call_args.kwargs["param_count"] == student.weight.numel()
+
+
+def test_entrypoint_persists_quantize_example_shape():
+    model = _TinyModel()
+    spec = _spec(
+        stage=TrainingStage.QUANTIZE.value,
+        tier=ModelTier.EDGE.value,
+        role=ModelRole.STUDENT.value,
+        precision=TrainingPrecision.INT8.value,
+        quantize={"method": "ptq"},
+        example_shape=[1, 1, 16, 16],
+    )
+    spec.pop("lora")
+    with (
+        patch("src.entrypoint.build_loaders", return_value={"train": object()}),
+        patch("src.entrypoint.build_job", return_value=model),
+        patch("src.entrypoint.train_model", return_value=model),
+        patch("src.entrypoint.score_model", return_value=(_metrics(), _decision())),
+        patch("src.entrypoint.ModelStorageServices.save_artifact") as save,
+        patch(
+            "src.entrypoint.ModelStorageServices.head_hmac",
+            return_value="b" * 64,
+        ),
+        patch("src.entrypoint.send_callback"),
+    ):
+        entrypoint(spec, "cnn_tiny")
+    sidecar = save.call_args[0][1]
+    assert sidecar["example_shape"] == [1, 1, 16, 16]
+    assert sidecar["spec"]["example_shape"] == [1, 1, 16, 16]
 
 
 def test_entrypoint_scores_and_saves_rebound_model():

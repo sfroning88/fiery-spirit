@@ -64,7 +64,7 @@ async def ingest_source(request: Request, payload: IngestRequest) -> IngestRespo
                 "func": IngestBackgroundJobs.background_ingest_source,
                 "args": (payload.source, ingest.id, payload.max_samples),
                 "job_id": f"ingest_source_{payload.source.value}_{ingest.id}",
-                "job_timeout": 6000,
+                "job_timeout": 21600,
             }
         ]
         jobs = queue.enqueue_jobs(specs)

@@ -68,6 +68,8 @@ def entrypoint(spec: Dict, architecture: str) -> Dict:
                 "spec": spec,
                 "decision": decision,
             }
+            if spec.get("quantize"):
+                sidecar["example_shape"] = spec.get("example_shape")
             if spec.get("lora"):
                 from peft import get_peft_model_state_dict
 
@@ -86,7 +88,7 @@ def entrypoint(spec: Dict, architecture: str) -> Dict:
             break
         except Exception as err:
             logger.warning(
-                "lora_screener_failed",
+                "modal_entrypoint_failed",
                 spec=spec["session_id"],
                 attempt=attempt,
                 error=str(err),
@@ -104,7 +106,7 @@ def entrypoint(spec: Dict, architecture: str) -> Dict:
         return {
             "ok": True,
             "spec": spec["session_id"],
-            "storage_path": spec["storage_path"],
+            "storage_path": storage_path,
         }
     else:
         return {

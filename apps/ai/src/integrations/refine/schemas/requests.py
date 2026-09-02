@@ -13,3 +13,4 @@ class RefineRequest(BaseModel):
     """Request model for running refine job"""
 
     contract_id: Annotated[str, AfterValidator(SchemaUtils.valid_uuid)]
+    max_samples: int = 5

@@ -22,7 +22,7 @@ QUERY = sql.SQL("""
         promoted,
         promoted_at,
         session_id::text,
-        parent_id::text,
+        parent_id::text
     FROM {table}
     WHERE id = %s::uuid
 """).format(

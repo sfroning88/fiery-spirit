@@ -190,6 +190,7 @@ def _train_quantize_model(
         raise RuntimeError("Missing calibrate or train loader")
     example, _targets = next(iter(calibrate))
     example = example.cpu()
+    spec["example_shape"] = list(example.shape)
     model = model.cpu()
     exported = torch.export.export(
         model,
@@ -198,14 +199,14 @@ def _train_quantize_model(
     ).module()
     quantizer = _x86_quantizer()
     if method == TrainingQuantizeMethod.PTQ.value:
-        prepared = prepare_pt2e(exported, quantizer)
+        prepared = _allow_exported_train_eval(prepare_pt2e(exported, quantizer))
         prepared.eval()
         with torch.no_grad():
             for features, _targets in calibrate:
                 prepared(features.cpu())
-        return convert_pt2e(prepared)
+        return _allow_exported_train_eval(convert_pt2e(prepared))
     elif method == TrainingQuantizeMethod.QAT.value:
-        prepared = prepare_qat_pt2e(exported, quantizer)
+        prepared = _allow_exported_train_eval(prepare_qat_pt2e(exported, quantizer))
         prepared.train()
         optimizer = torch.optim.AdamW(
             (param for param in prepared.parameters() if param.requires_grad),
@@ -221,7 +222,7 @@ def _train_quantize_model(
                 loss.backward()
                 optimizer.step()
         prepared.eval()
-        return convert_pt2e(prepared)
+        return _allow_exported_train_eval(convert_pt2e(prepared))
     raise RuntimeError("Unsupported quantize method")
 
 
@@ -294,6 +295,13 @@ def _prune_method(criterion: str):
     if criterion == TrainingPruningCriterion.L2_MAGNITUDE.value:
         return prune.L1Unstructured
     raise RuntimeError(f"Unsupported pruning_criterion: {criterion}")
+
+
+def _allow_exported_train_eval(model: nn.Module) -> nn.Module:
+    from torchao.quantization.pt2e import allow_exported_model_train_eval
+
+    allow_exported_model_train_eval(model)
+    return model
 
 
 def _x86_quantizer():

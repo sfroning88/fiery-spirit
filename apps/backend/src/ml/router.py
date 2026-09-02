@@ -54,7 +54,7 @@ async def promote_artifact(
                 await run_in_threadpool(model_registry.load, key, force=True)
                 model.ready = model_registry.is_ready(key)
 
-        return ModelPromoteResponse(evaluted_models=evaluated_models)
+        return ModelPromoteResponse(evaluated_models=evaluated_models)
     except RuntimeError as err:
         logger.error(
             "model_promotion_unavailable",

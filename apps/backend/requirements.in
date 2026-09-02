@@ -4,3 +4,4 @@
 # Model inference
 timm>=1.0.28
 peft>=0.20.0
+torchao>=0.18.0

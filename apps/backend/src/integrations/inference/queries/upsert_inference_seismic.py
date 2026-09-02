@@ -27,7 +27,7 @@ QUERY = sql.SQL("""
     VALUES (
         %(label)s::{label_enum},
         %(probabilities)s,
-        %(class_order)s,
+        %(class_order)s::{label_enum}[],
         %(threshold_used)s,
         %(abstention_band)s,
         %(abstained)s,

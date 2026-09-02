@@ -229,8 +229,13 @@ def test_train_quantize_model_ptq_calls_prepare_and_convert():
             "torchao.quantization.pt2e.quantize_pt2e.convert_pt2e",
             return_value=converted,
         ) as convert,
+        patch(
+            "src.train_model._allow_exported_train_eval",
+            side_effect=lambda model: model,
+        ),
     ):
         result = train_model(model, loaders, spec)
     prepare.assert_called_once()
     convert.assert_called_once_with(prepared)
     assert result is converted
+    assert spec["example_shape"] == [4, 4]

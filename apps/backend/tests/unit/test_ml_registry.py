@@ -7,6 +7,7 @@ Unit tests for the inference-side model registry cache
 from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
+import importlib.util
 
 import pytest
 from fiery_python import ModelRole, ModelTier, TrainingPrecision, TrainingStage
@@ -355,11 +356,73 @@ def test_materialize_cnn_small_and_tiny():
 
 
 def test_materialize_uses_spec_architecture_when_top_level_missing():
+    sidecar = {"spec": {"architecture": "cnn_tiny"}}
     with patch.object(
         _ModelRegistry, "_materialize_cnn", return_value=MagicMock()
     ) as cnn:
-        _ModelRegistry.materialize({"spec": {"architecture": "cnn_tiny"}})
-    cnn.assert_called_once_with("cnn_tiny")
+        _ModelRegistry.materialize(sidecar)
+    cnn.assert_called_once_with("cnn_tiny", sidecar)
+
+
+def test_materialize_routes_quantize_sidecar_to_pt2e():
+    sidecar = {
+        "architecture": "cnn_tiny",
+        "example_shape": [1, 1, 16, 16],
+        "spec": {
+            "stage": TrainingStage.QUANTIZE.value,
+            "precision": TrainingPrecision.INT8.value,
+            "quantize": {"method": "ptq"},
+        },
+    }
+    stub = MagicMock(name="quantized")
+    with patch.object(
+        _ModelRegistry, "_materialize_quantized_cnn", return_value=stub
+    ) as quantized:
+        assert _ModelRegistry.materialize(sidecar) is stub
+    quantized.assert_called_once_with("cnn_tiny", sidecar)
+
+
+@pytest.mark.skipif(
+    importlib.util.find_spec("torchao") is None, reason="torchao is not installed"
+)
+def test_materialize_quantized_cnn_rebuilds_pt2e_graph():
+    sidecar = {
+        "architecture": "cnn_tiny",
+        "example_shape": [1, 1, 16, 16],
+        "spec": {
+            "stage": TrainingStage.QUANTIZE.value,
+            "precision": TrainingPrecision.INT8.value,
+            "quantize": {"method": "ptq"},
+        },
+    }
+    converted = MagicMock(name="converted")
+    exported = MagicMock(name="exported")
+    exported.module.return_value = MagicMock(name="exported_module")
+    prepared = MagicMock(name="prepared")
+    with (
+        patch("ml.registry.torch.export.export", return_value=exported) as export,
+        patch("ml.registry.prepare_pt2e", return_value=prepared) as prepare,
+        patch("ml.registry.convert_pt2e", return_value=converted) as convert,
+        patch("ml.registry.X86InductorQuantizer"),
+        patch("ml.registry.get_default_x86_inductor_quantization_config"),
+    ):
+        result = _ModelRegistry.materialize(sidecar)
+    assert result is converted
+    export.assert_called_once()
+    prepare.assert_called_once()
+    convert.assert_called_once_with(prepared)
+
+
+def test_materialize_quantized_cnn_requires_example_shape():
+    sidecar = {
+        "architecture": "cnn_tiny",
+        "spec": {
+            "stage": TrainingStage.QUANTIZE.value,
+            "quantize": {"method": "ptq"},
+        },
+    }
+    with pytest.raises(RuntimeError, match="sidecar missing example_shape"):
+        _ModelRegistry.materialize(sidecar)
 
 
 def test_materialize_unknown_architecture():
