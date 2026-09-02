@@ -175,6 +175,7 @@ def _train_quantize_model(
     model: nn.Module, loaders: Dict[str, DataLoader], spec: dict
 ) -> nn.Module:
     import torch
+    from torchao.quantization.pt2e import allow_exported_model_train_eval
     from torchao.quantization.pt2e.quantize_pt2e import (
         prepare_pt2e,
         prepare_qat_pt2e,
@@ -199,14 +200,18 @@ def _train_quantize_model(
     ).module()
     quantizer = _x86_quantizer()
     if method == TrainingQuantizeMethod.PTQ.value:
-        prepared = _allow_exported_train_eval(prepare_pt2e(exported, quantizer))
+        prepared = prepare_pt2e(exported, quantizer)
+        allow_exported_model_train_eval(prepared)
         prepared.eval()
         with torch.no_grad():
             for features, _targets in calibrate:
                 prepared(features.cpu())
-        return _allow_exported_train_eval(convert_pt2e(prepared))
+        converted = convert_pt2e(prepared)
+        allow_exported_model_train_eval(converted)
+        return converted
     elif method == TrainingQuantizeMethod.QAT.value:
-        prepared = _allow_exported_train_eval(prepare_qat_pt2e(exported, quantizer))
+        prepared = prepare_qat_pt2e(exported, quantizer)
+        allow_exported_model_train_eval(prepared)
         prepared.train()
         optimizer = torch.optim.AdamW(
             (param for param in prepared.parameters() if param.requires_grad),
@@ -222,7 +227,9 @@ def _train_quantize_model(
                 loss.backward()
                 optimizer.step()
         prepared.eval()
-        return _allow_exported_train_eval(convert_pt2e(prepared))
+        converted = convert_pt2e(prepared)
+        allow_exported_model_train_eval(converted)
+        return converted
     raise RuntimeError("Unsupported quantize method")
 
 
@@ -295,13 +302,6 @@ def _prune_method(criterion: str):
     if criterion == TrainingPruningCriterion.L2_MAGNITUDE.value:
         return prune.L1Unstructured
     raise RuntimeError(f"Unsupported pruning_criterion: {criterion}")
-
-
-def _allow_exported_train_eval(model: nn.Module) -> nn.Module:
-    from torchao.quantization.pt2e import allow_exported_model_train_eval
-
-    allow_exported_model_train_eval(model)
-    return model
 
 
 def _x86_quantizer():

@@ -74,8 +74,8 @@ class IngestOkadaSource:
                     IngestPersistService.upsert_okada_page(
                         source_page, interferogram_page
                     )
-                    source_page = []
-                    interferogram_page = []
+                    source_page.clear()
+                    interferogram_page.clear()
                 if asset_count >= max_samples:
                     break
             if interferogram_page:

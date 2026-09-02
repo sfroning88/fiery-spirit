@@ -11,6 +11,7 @@ import torch.nn as nn
 from decimal import Decimal
 from huggingface_hub import hf_hub_download
 from peft import LoraConfig, get_peft_model, set_peft_model_state_dict
+from torchao.quantization.pt2e import allow_exported_model_train_eval
 from torchao.quantization.pt2e.quantize_pt2e import (
     convert_pt2e,
     prepare_pt2e,
@@ -290,7 +291,9 @@ class _ModelRegistry:
         ).module()
         quantizer = X86InductorQuantizer()
         quantizer.set_global(get_default_x86_inductor_quantization_config())
-        return convert_pt2e(prepare_pt2e(exported, quantizer))
+        model = convert_pt2e(prepare_pt2e(exported, quantizer))
+        allow_exported_model_train_eval(model)
+        return model
 
     def _load_model_entry(
         self, row: Dict[str, Any], artifact_id: str

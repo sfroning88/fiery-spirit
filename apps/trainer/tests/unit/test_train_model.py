@@ -229,10 +229,7 @@ def test_train_quantize_model_ptq_calls_prepare_and_convert():
             "torchao.quantization.pt2e.quantize_pt2e.convert_pt2e",
             return_value=converted,
         ) as convert,
-        patch(
-            "src.train_model._allow_exported_train_eval",
-            side_effect=lambda model: model,
-        ),
+        patch("torchao.quantization.pt2e.allow_exported_model_train_eval"),
     ):
         result = train_model(model, loaders, spec)
     prepare.assert_called_once()

@@ -403,6 +403,7 @@ def test_materialize_quantized_cnn_rebuilds_pt2e_graph():
         patch("ml.registry.torch.export.export", return_value=exported) as export,
         patch("ml.registry.prepare_pt2e", return_value=prepared) as prepare,
         patch("ml.registry.convert_pt2e", return_value=converted) as convert,
+        patch("ml.registry.allow_exported_model_train_eval") as allow_train_eval,
         patch("ml.registry.X86InductorQuantizer"),
         patch("ml.registry.get_default_x86_inductor_quantization_config"),
     ):
@@ -411,6 +412,7 @@ def test_materialize_quantized_cnn_rebuilds_pt2e_graph():
     export.assert_called_once()
     prepare.assert_called_once()
     convert.assert_called_once_with(prepared)
+    allow_train_eval.assert_called_once_with(converted)
 
 
 def test_materialize_quantized_cnn_requires_example_shape():

@@ -144,15 +144,14 @@ class RefineShardWriter:
         remaining = max_samples
         while remaining > 0:
             limit = min(TRAINING_DB_FETCH_SIZE, remaining)
+            page: List[_Sample] = []
             if isinstance(params, TrainingDeformation):
-                page: List[_Sample] = (
+                page.extend(
                     RefinePersistService.select_interferograms(split, after_id, limit)
-                    or []
                 )
             elif isinstance(params, TrainingSeismic):
-                page: List[_Sample] = (
+                page.extend(
                     RefinePersistService.select_seismic_events(split, after_id, limit)
-                    or []
                 )
             else:
                 assert_never(params)
@@ -186,6 +185,7 @@ class RefineShardWriter:
             after_id = page[-1].id
             if not after_id:
                 break
+            page.clear()
         if buffer:
             cls._flush_shard(
                 contract_id,

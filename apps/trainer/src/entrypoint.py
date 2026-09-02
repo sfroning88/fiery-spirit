@@ -69,7 +69,9 @@ def entrypoint(spec: Dict, architecture: str) -> Dict:
                 "decision": decision,
             }
             if spec.get("quantize"):
-                sidecar["example_shape"] = spec.get("example_shape")
+                example_shape = spec.get("example_shape")
+                if example_shape is not None:
+                    sidecar["example_shape"] = example_shape
             if spec.get("lora"):
                 from peft import get_peft_model_state_dict
 

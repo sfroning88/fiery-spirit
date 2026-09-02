@@ -259,8 +259,8 @@ def _resolve_kwargs(
         shards = "sensor"
     if source is not None and workflow != "ingest":
         parser.error("-source is only valid for ingest")
-    if args.samples is not None and workflow != "ingest":
-        parser.error("-samples is only valid for ingest")
+    if args.samples is not None and workflow not in ("ingest", "refine"):
+        parser.error("-samples is only valid for ingest, refine")
     if shards is not None and workflow != "refine":
         parser.error("-shards is only valid for refine")
     if args.job is not None and workflow != "train":
