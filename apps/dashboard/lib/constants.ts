@@ -1,3 +1,5 @@
+import { ModelTier, ModelRole, TrainingSampleSource } from "@fiery/types";
+
 export const PROVIDER_STALE_TIME = 60 * 1000;
 
 export const COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
@@ -16,6 +18,18 @@ export const QUERY_STALE_TIME = 60 * 60 * 5;
 
 export const QUERY_KEYS = {
   user: (userId: string) => ["user", userId] as const,
+  volcanoes: (userId: string) => ["volcanoes", userId] as const,
+  volcano: (volcanoId: string) => ["volcano", volcanoId] as const,
+  interferogram: (interferogramId: string) =>
+    ["interferogram", interferogramId] as const,
+  seismicEvent: (seismicEventId: string) =>
+    ["seismicEvent", seismicEventId] as const,
+  source: (source: TrainingSampleSource) => ["source", source] as const,
+  version: (versionId: string) => ["version", versionId] as const,
+  contract: (contractId: string) => ["contract", contractId] as const,
+  session: (sessionId: string) => ["session", sessionId] as const,
+  artifact: (tier: ModelTier, role: ModelRole) =>
+    ["artifact", tier, role] as const,
 };
 
 export const CACHE_STALE_TIME = 60 * 60 * 60;

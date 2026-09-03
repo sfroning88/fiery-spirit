@@ -69,7 +69,7 @@ async def promote_artifact(
         raise error("Model promotion failed", status_code=500)
 
 
-@router.post("/ml/reload", dependencies=[Depends(dependency.get_token_header)])
+@router.post("/ml/refresh", dependencies=[Depends(dependency.get_token_header)])
 @limiter.limit("6/hour")
 async def reload_registry(
     request: Request, payload: ModelRefreshRequest

@@ -50,7 +50,7 @@ ML_PROMOTE_PATH = f"/api/ml/promote"
 ML_PROMOTE_URL = f"{BACKEND_URL}{ML_PROMOTE_PATH}"
 
 # -- Model registry (served by apps/backend) --
-ML_RELOAD_PATH = f"/api/ml/reload"
+ML_RELOAD_PATH = f"/api/ml/refresh"
 ML_RELOAD_URL = f"{BACKEND_URL}{ML_RELOAD_PATH}"
 
 # -- Inference (served by apps/backend) --

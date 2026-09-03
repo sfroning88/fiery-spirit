@@ -5,7 +5,7 @@ Request models for Inferences
 """
 
 from pydantic import BaseModel, AfterValidator
-from typing import Annotated, List, Optional
+from typing import Annotated, Optional
 from fiery_python import ModelTier, ModelRole, SchemaUtils
 
 
