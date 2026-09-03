@@ -17,7 +17,7 @@ from ...fiery_python import (
 
 
 def run_reload_test() -> Dict[Tuple[ModelTier, ModelRole], Dict[str, Any]]:
-    """Simulate CRON: POST /api/ml/reload per (tier, role) registry slot"""
+    """Simulate CRON: POST /api/ml/refresh per (tier, role) registry slot"""
     print("Model registry reload (CRON simulation) start")
 
     reloaded: Dict[Tuple[ModelTier, ModelRole], Dict[str, Any]] = {}

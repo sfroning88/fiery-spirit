@@ -31,7 +31,7 @@ WORKER_TIMEOUT: float = 600
 
 async def main():
     async with httpx.AsyncClient() as client:
-        endpoint = "/api/ml/reload"
+        endpoint = "/api/ml/refresh"
         for tier, role in MODEL_REGISTRY_SLOTS:
             for attempt in range(WORKER_RETRIES):
                 try:

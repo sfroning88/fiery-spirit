@@ -42,11 +42,11 @@ export function createRoute<T extends string>(template: T): BuildRoute<T> {
   return Object.assign(builder, { template }) as BuildRoute<T>;
 }
 
-export const API_ROUTES = {
+export const IAM_ROUTES = {
   currentUser: createRoute("/api/auth/current-user"),
 };
 
-export type ApiRoute = (typeof API_ROUTES)[keyof typeof API_ROUTES];
+export type iamRoutes = (typeof IAM_ROUTES)[keyof typeof IAM_ROUTES];
 
 export function base64UrlDecodeToUtf8(str: string): string {
   const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
