@@ -129,7 +129,10 @@ def test_load_artifact_deserializes_after_hmac_check(monkeypatch):
             return_value={"Metadata": {HMAC_META_KEY: weights_sig}},
         ),
     ):
-        loaded_state, loaded_sidecar = ModelStorageServices.load_artifact(_WEIGHTS_KEY)
+        loaded_state, loaded_sidecar = ModelStorageServices.load_artifact(
+            _WEIGHTS_KEY,
+            is_weights=True,
+        )
 
     torch.testing.assert_close(loaded_state["weight"], state_dict["weight"])
     assert loaded_sidecar["architecture"] == "vit_small_patch16_224"
@@ -147,7 +150,7 @@ def test_load_artifact_refuses_missing_hmac_metadata(monkeypatch):
 
     with patch.object(models_s3, "get_object", return_value=obj):
         with pytest.raises(RuntimeError, match="missing artifact-hmac-sha256"):
-            ModelStorageServices.load_artifact(_WEIGHTS_KEY)
+            ModelStorageServices.load_artifact(_WEIGHTS_KEY, is_weights=True)
 
 
 def test_load_artifact_refuses_hmac_mismatch(monkeypatch):
@@ -159,7 +162,7 @@ def test_load_artifact_refuses_hmac_mismatch(monkeypatch):
 
     with patch.object(models_s3, "get_object", return_value=obj):
         with pytest.raises(RuntimeError, match="HMAC verification failed"):
-            ModelStorageServices.load_artifact(_WEIGHTS_KEY)
+            ModelStorageServices.load_artifact(_WEIGHTS_KEY, is_weights=True)
 
 
 def test_head_hmac_returns_metadata_digest():

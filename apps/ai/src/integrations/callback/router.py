@@ -91,7 +91,7 @@ async def callback_train(
             promoted=False,
             promoted_at=None,
             session_id=session.id,
-            parent_id=None,
+            parent_id=payload.parent_id,
         )
         artifact.id = artifact.deterministic_id()
 

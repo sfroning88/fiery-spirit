@@ -42,6 +42,7 @@ class CallbackVerifyArtifact:
                 "transform_hash": payload.transform_hash,
                 "base_model_id": payload.base_model_id or "",
                 "revision": payload.revision or "",
+                "parent_id": payload.parent_id or "",
             },
             separators=(",", ":"),
             sort_keys=True,

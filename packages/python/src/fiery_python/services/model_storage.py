@@ -9,7 +9,7 @@ import hmac
 import json
 import os
 from safetensors.torch import save, load
-from typing import Tuple
+from typing import Tuple, Union, assert_never
 from ..constants import MODEL_BUCKET_NAME
 from ..core import logging, models_s3
 
@@ -73,10 +73,24 @@ class ModelStorageServices:
         return body
 
     @classmethod
-    def save_artifact(cls, state_dict: dict, sidecar: dict, weights_key: str) -> str:
-        """Serialize payload with state_dict/sidecar and upload to s3://{MODEL_BUCKET_NAME}/{key}"""
-        weights = save(state_dict)
-        sig = cls._artifact_hmac_hex(weights)
+    def save_artifact(
+        cls,
+        body_or_weights: Union[bytes, dict],
+        sidecar: dict,
+        weights_key: str,
+    ) -> str:
+        """Serialize payload with body/dict + sidecar and upload to s3://{MODEL_BUCKET_NAME}/{key}"""
+        if not body_or_weights:
+            raise ValueError("missing required body_or_weights")
+        body = None
+        weights = None
+        if isinstance(body_or_weights, bytes):
+            body = body_or_weights
+        elif isinstance(body_or_weights, dict):
+            weights = save(body_or_weights)
+        else:
+            assert_never(body_or_weights)
+        sig = cls._artifact_hmac_hex(body or weights)
         sidecar = {**sidecar, "weights_hmac": sig}
         sidecar_body = json.dumps(
             sidecar, sort_keys=True, separators=(",", ":")
@@ -84,7 +98,7 @@ class ModelStorageServices:
         models_s3.put_bytes(
             MODEL_BUCKET_NAME,
             weights_key,
-            weights,
+            body or weights,
             content_type="application/octet-stream",
             metadata={_ARTIFACT_HMAC_META_KEY: sig},
         )
@@ -98,13 +112,26 @@ class ModelStorageServices:
         return weights_key
 
     @classmethod
-    def load_artifact(cls, weights_key: str) -> Tuple[dict, dict]:
-        """Download .safetensors from bucket, verify HMAC metadata, then deserialize with state_dict"""
-        weights = cls._get_verified_bytes(weights_key)
+    def load_artifact(
+        cls,
+        weights_key: str,
+        *,
+        is_body: bool = False,
+        is_weights: bool = False,
+    ) -> Tuple[Union[bytes, dict], dict]:
+        """Download body/weights from bucket, verify HMAC metadata, then deserialize with state_dict"""
+        if (not is_body and not is_weights) or (is_body and is_weights):
+            raise RuntimeError("malformed body or weights call")
+        body = None
+        weights = None
+        if is_body:
+            body = cls._get_verified_bytes(weights_key)
+        elif is_weights:
+            weights = cls._get_verified_bytes(weights_key)
         sidecar_body = cls._get_verified_bytes(cls.sidecar_key(weights_key))
         sidecar = json.loads(sidecar_body.decode("utf-8"))
         if not hmac.compare_digest(
             sidecar.get("weights_hmac", ""), cls.head_hmac(weights_key)
         ):
             raise RuntimeError("sidecar weights_hmac does not match object HEAD")
-        return load(weights), sidecar
+        return body or load(weights), sidecar

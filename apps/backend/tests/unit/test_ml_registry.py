@@ -7,7 +7,6 @@ Unit tests for the inference-side model registry cache
 from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
-import importlib.util
 
 import pytest
 from fiery_python import ModelRole, ModelTier, TrainingPrecision, TrainingStage
@@ -287,6 +286,7 @@ def test_load_model_entry_builds_loaded_model():
     state_dict = {"lora_A": object()}
     sidecar = {
         "architecture": _VIT_SNAPSHOT,
+        "stage": TrainingStage.LORA.value,
         "base_model_id": _VIT_BASE_MODEL_ID,
         "revision": _VIT_REVISION,
         "lora": {
@@ -332,6 +332,7 @@ def test_load_model_entry_builds_loaded_model():
 
 def test_materialize_vit_delegates_to_screener():
     sidecar = {
+        "stage": TrainingStage.LORA.value,
         "architecture": _VIT_SNAPSHOT,
         "lora": {
             "rank": 8,
@@ -348,87 +349,63 @@ def test_materialize_vit_delegates_to_screener():
     screener.assert_called_once_with(sidecar)
 
 
-def test_materialize_cnn_small_and_tiny():
-    small = _ModelRegistry.materialize({"architecture": "cnn_small"})
-    tiny = _ModelRegistry.materialize({"architecture": "cnn_tiny"})
+def test_materialize_cnn_pretrain_and_distill():
+    small = _ModelRegistry.materialize({"stage": TrainingStage.PRETRAIN.value})
+    tiny = _ModelRegistry.materialize({"stage": TrainingStage.DISTILL.value})
     assert isinstance(small, SeismicCnn)
     assert isinstance(tiny, SeismicCnn)
 
 
-def test_materialize_uses_spec_architecture_when_top_level_missing():
-    sidecar = {"spec": {"architecture": "cnn_tiny"}}
+def test_materialize_cnn_delegates_with_stage():
+    sidecar = {"stage": TrainingStage.PRETRAIN.value}
     with patch.object(
         _ModelRegistry, "_materialize_cnn", return_value=MagicMock()
     ) as cnn:
         _ModelRegistry.materialize(sidecar)
-    cnn.assert_called_once_with("cnn_tiny", sidecar)
+    cnn.assert_called_once_with(TrainingStage.PRETRAIN)
 
 
-def test_materialize_routes_quantize_sidecar_to_pt2e():
-    sidecar = {
-        "architecture": "cnn_tiny",
-        "example_shape": [1, 1, 16, 16],
-        "spec": {
-            "stage": TrainingStage.QUANTIZE.value,
-            "precision": TrainingPrecision.INT8.value,
-            "quantize": {"method": "ptq"},
-        },
-    }
-    stub = MagicMock(name="quantized")
-    with patch.object(
-        _ModelRegistry, "_materialize_quantized_cnn", return_value=stub
-    ) as quantized:
-        assert _ModelRegistry.materialize(sidecar) is stub
-    quantized.assert_called_once_with("cnn_tiny", sidecar)
-
-
-@pytest.mark.skipif(
-    importlib.util.find_spec("torchao") is None, reason="torchao is not installed"
-)
-def test_materialize_quantized_cnn_rebuilds_pt2e_graph():
-    sidecar = {
-        "architecture": "cnn_tiny",
-        "example_shape": [1, 1, 16, 16],
-        "spec": {
-            "stage": TrainingStage.QUANTIZE.value,
-            "precision": TrainingPrecision.INT8.value,
-            "quantize": {"method": "ptq"},
-        },
-    }
-    converted = MagicMock(name="converted")
+def test_load_model_entry_loads_exported_quantize_without_eval():
+    registry = _ModelRegistry()
+    exported_module = MagicMock(name="exported_module")
     exported = MagicMock(name="exported")
-    exported.module.return_value = MagicMock(name="exported_module")
-    prepared = MagicMock(name="prepared")
-    with (
-        patch("ml.registry.torch.export.export", return_value=exported) as export,
-        patch("ml.registry.prepare_pt2e", return_value=prepared) as prepare,
-        patch("ml.registry.convert_pt2e", return_value=converted) as convert,
-        patch("ml.registry.allow_exported_model_train_eval") as allow_train_eval,
-        patch("ml.registry.X86InductorQuantizer"),
-        patch("ml.registry.get_default_x86_inductor_quantization_config"),
-    ):
-        result = _ModelRegistry.materialize(sidecar)
-    assert result is converted
-    export.assert_called_once()
-    prepare.assert_called_once()
-    convert.assert_called_once_with(prepared)
-    allow_train_eval.assert_called_once_with(converted)
-
-
-def test_materialize_quantized_cnn_requires_example_shape():
+    exported.module.return_value = exported_module
+    payload = b"pt2-bytes"
     sidecar = {
-        "architecture": "cnn_tiny",
-        "spec": {
-            "stage": TrainingStage.QUANTIZE.value,
-            "quantize": {"method": "ptq"},
+        "stage": TrainingStage.QUANTIZE.value,
+        "decision": {
+            "threshold": 0.5,
+            "abstention_band": "0.00000",
+            "transform_hash": "a" * 64,
+            "op_version": 1,
         },
     }
-    with pytest.raises(RuntimeError, match="sidecar missing example_shape"):
-        _ModelRegistry.materialize(sidecar)
+    row = _artifact_row(
+        tier=ModelTier.EDGE.value,
+        role=ModelRole.STUDENT.value,
+        stage=TrainingStage.QUANTIZE.value,
+        architecture="cnn_tiny",
+        storage_path="edge/student/art-1.safetensors",
+    )
+    with (
+        patch(
+            "ml.registry.ModelStorageServices.load_artifact",
+            return_value=(payload, sidecar),
+        ),
+        patch.object(registry, "materialize") as materialize,
+        patch("ml.registry.torch.export.load", return_value=exported) as load_export,
+    ):
+        entry, loaded = registry._load_model_entry(row, "art-1")
+    materialize.assert_not_called()
+    load_export.assert_called_once()
+    exported_module.eval.assert_not_called()
+    assert loaded is exported_module
+    assert entry is not None
+    assert entry.stage is TrainingStage.QUANTIZE
 
 
-def test_materialize_unknown_architecture():
-    with pytest.raises(RuntimeError, match="Unknown architecture"):
+def test_materialize_requires_stage():
+    with pytest.raises(RuntimeError, match="Stage from sidecar missing or malformed"):
         _ModelRegistry.materialize({"architecture": "resnet18"})
 
 

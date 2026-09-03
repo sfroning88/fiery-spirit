@@ -36,3 +36,4 @@ class CallbackRequest(BaseModel):
     op_version: int
     base_model_id: Optional[str] = None
     revision: Optional[str] = None
+    parent_id: Optional[str] = None

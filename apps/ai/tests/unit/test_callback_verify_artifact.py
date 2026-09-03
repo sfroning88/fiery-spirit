@@ -62,6 +62,7 @@ def _body_hmac(payload: CallbackRequest, secret: bytes) -> str:
             "nonce": payload.nonce or "",
             "op_version": payload.op_version,
             "param_count": payload.param_count,
+            "parent_id": payload.parent_id or "",
             "precision": payload.precision.value,
             "revision": payload.revision or "",
             "role": payload.role.value,

@@ -16,6 +16,8 @@ sys.path.insert(0, str(_ROOT / "packages" / "python" / "src"))
 
 from fiery_python import (
     STORAGE_OP_VERSION,
+    TRAINING_CONTRACT_DEFORMATION_VERSION,
+    TRAINING_CONTRACT_SEISMIC_VERSION,
     TrainingNormalize,
     TrainingWindow,
     TrainingDeformation,
@@ -28,12 +30,12 @@ _BANDPASS_ORDER = 10
 
 DEFORMATION_CONTRACT = (
     "deformation",
-    1,
+    TRAINING_CONTRACT_DEFORMATION_VERSION,
 )
 
 SEISMIC_CONTRACT = (
     "seismic",
-    1,
+    TRAINING_CONTRACT_SEISMIC_VERSION,
 )
 
 deformation = TrainingDeformation(

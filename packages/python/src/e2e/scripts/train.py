@@ -15,6 +15,8 @@ from typing import Any, Dict, List, Optional
 from ..endpoints import TRAIN_URL, endpoint_test
 from ..helpers import latest_artifact_id, wait_for_jobs, wait_for_session
 from ...fiery_python import (
+    TRAINING_CONTRACT_DEFORMATION_VERSION,
+    TRAINING_CONTRACT_SEISMIC_VERSION,
     ModelRole,
     ModelTier,
     Transformation,
@@ -50,7 +52,9 @@ def run_train_test(job: str, timeout: Optional[int] = _JOB_TIMEOUT_SECONDS) -> N
             class_id="ignored-for-hash",
         )
         transform_hash = Transformation.transform_hash_deformation(deformation)
-        training_contract_id = UuidUtils.deterministic_uuid("deformation", 1)
+        training_contract_id = UuidUtils.deterministic_uuid(
+            "deformation", TRAINING_CONTRACT_DEFORMATION_VERSION
+        )
     else:
         seismic = TrainingSeismic(
             nfft=256,
@@ -66,7 +70,9 @@ def run_train_test(job: str, timeout: Optional[int] = _JOB_TIMEOUT_SECONDS) -> N
             class_id="ignored-for-hash",
         )
         transform_hash = Transformation.transform_hash_seismic(seismic)
-        training_contract_id = UuidUtils.deterministic_uuid("seismic", 1)
+        training_contract_id = UuidUtils.deterministic_uuid(
+            "seismic", TRAINING_CONTRACT_SEISMIC_VERSION
+        )
     dataset_version_id = UuidUtils.deterministic_uuid(
         training_contract_id, transform_hash
     )

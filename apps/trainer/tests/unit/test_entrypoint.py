@@ -5,7 +5,7 @@ Unit tests for trainer entrypoint
 """
 
 from decimal import Decimal
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import torch
 from torch import nn
@@ -209,11 +209,17 @@ def test_entrypoint_persists_quantize_example_shape():
             return_value="b" * 64,
         ),
         patch("src.entrypoint.send_callback"),
+        patch("torch.export.export", return_value=MagicMock()) as export,
+        patch("torch.export.save", side_effect=lambda _ep, buf: buf.write(b"pt2")),
     ):
         entrypoint(spec, "cnn_tiny")
+    export.assert_called_once()
+    payload = save.call_args[0][0]
     sidecar = save.call_args[0][1]
+    assert payload == b"pt2"
     assert sidecar["example_shape"] == [1, 1, 16, 16]
     assert sidecar["spec"]["example_shape"] == [1, 1, 16, 16]
+    assert sidecar["stage"] == TrainingStage.QUANTIZE.value
 
 
 def test_entrypoint_scores_and_saves_rebound_model():
