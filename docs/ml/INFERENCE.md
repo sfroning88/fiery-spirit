@@ -35,8 +35,12 @@ class InferenceAbstainReason(str, Enum):
 ### Model Serialization
 
 Each `model` is retrieved from its `s3 location` as a **self-consistent artifact**.
-Artifact retrieval fetches the `.safetensors` object and its `JSON sidecar`.
 After verification the model loads to its `key = (tier, role)` slot in `registry`.
+
+Artifact retrieval fetches either:
+
+- the `.safetensors` object and its `JSON sidecar` (`FP32` artifacts)
+- the `bytes` package and its `JSON sidecar` (`INT8` artifacts)
 
 The `registry` saves the model to disk in the local in-memory process.
 The artifact bundle allows the model to be loaded without `training-serving skew`.

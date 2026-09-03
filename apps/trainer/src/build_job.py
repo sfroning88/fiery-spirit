@@ -164,7 +164,7 @@ def _load_parent(spec: dict) -> nn.Module:
     if not architecture or not isinstance(architecture, str):
         raise RuntimeError("Missing parent_architecture from spec")
     model = _make_cnn(architecture)
-    state_dict, _sidecar = ModelStorageServices.load_artifact(path)
+    state_dict, _sidecar = ModelStorageServices.load_artifact(path, is_weights=True)
     missing, unexpected = model.load_state_dict(state_dict, strict=True)
     if missing or unexpected:
         raise RuntimeError("Parent state_dict does not match architecture")

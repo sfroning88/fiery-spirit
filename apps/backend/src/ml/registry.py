@@ -4,6 +4,7 @@ Created Date: 8.20.2026
 Inference-side cache of trained models
 """
 
+import io
 import threading
 import timm
 import torch
@@ -11,15 +12,7 @@ import torch.nn as nn
 from decimal import Decimal
 from huggingface_hub import hf_hub_download
 from peft import LoraConfig, get_peft_model, set_peft_model_state_dict
-from torchao.quantization.pt2e import allow_exported_model_train_eval
-from torchao.quantization.pt2e.quantize_pt2e import (
-    convert_pt2e,
-    prepare_pt2e,
-)
-from torchao.quantization.pt2e.quantizer.x86_inductor_quantizer import (
-    X86InductorQuantizer,
-    get_default_x86_inductor_quantization_config,
-)
+from safetensors.torch import load
 from typing import Any, Dict, Optional, Tuple
 from fiery_python import db_pool, logging, SyncLazyResource
 from fiery_python import (
@@ -40,11 +33,11 @@ _VIT_SNAPSHOT = "vit_small_patch16_224.augreg_in21k_ft_in1k"
 _VIT_BASE_MODEL_ID = "timm/vit_small_patch16_224.augreg_in21k_ft_in1k"
 _VIT_REVISION = "7e2c55630205e1266030f18370f4c6ed1a514b52"
 _VIT_WEIGHTS = "model.safetensors"
-_CNN_SMALL = "cnn_small"
-_CNN_TINY = "cnn_tiny"
 _CNN_WIDTHS = {
-    _CNN_SMALL: (32, 64, 128),
-    _CNN_TINY: (16, 32, 64),
+    TrainingStage.PRETRAIN: (32, 64, 128),
+    TrainingStage.DISTILL: (16, 32, 64),
+    TrainingStage.PRUNE: (16, 32, 64),
+    TrainingStage.QUANTIZE: (16, 32, 64),
 }
 _NUM_SEISMIC_CLASSES = 4
 
@@ -199,20 +192,24 @@ class _ModelRegistry:
 
     @staticmethod
     def materialize(sidecar: dict) -> nn.Module:
-        architecture = sidecar.get("architecture")
-        if not architecture or not isinstance(architecture, str):
-            spec = sidecar.get("spec") or {}
-            architecture = spec.get("architecture")
-        if architecture == _VIT_SNAPSHOT:
+        try:
+            stage = (
+                TrainingStage(sidecar.get("stage"))
+                if (sidecar.get("stage") and isinstance(sidecar.get("stage"), str))
+                else None
+            )
+        except ValueError:
+            stage = None
+        if not stage:
+            raise RuntimeError("Stage from sidecar missing or malformed")
+        if stage is TrainingStage.LORA:
             return _ModelRegistry._materialize_screener(sidecar)
-        elif architecture in _CNN_WIDTHS:
-            return _ModelRegistry._materialize_cnn(architecture, sidecar)
         else:
-            raise RuntimeError(f"Unknown architecture: {architecture}")
+            return _ModelRegistry._materialize_cnn(stage)
 
     @staticmethod
     def _materialize_screener(sidecar: dict) -> nn.Module:
-        lora = sidecar.get("lora") or (sidecar.get("spec") or {}).get("lora")
+        lora = sidecar.get("lora")
         if not lora:
             raise RuntimeError("sidecar missing lora")
         modules = lora.get("target_modules") or {}
@@ -253,47 +250,8 @@ class _ModelRegistry:
         return get_peft_model(backbone, config)
 
     @staticmethod
-    def _materialize_cnn(architecture: str, sidecar: dict) -> nn.Module:
-        if _ModelRegistry._is_quantized(sidecar):
-            return _ModelRegistry._materialize_quantized_cnn(architecture, sidecar)
-        return SeismicCnn(widths=_CNN_WIDTHS[architecture])
-
-    @staticmethod
-    def _is_quantized(sidecar: dict) -> bool:
-        spec = sidecar.get("spec") or {}
-        stage = spec.get("stage")
-        precision = spec.get("precision")
-        return bool(
-            sidecar.get("example_shape")
-            or spec.get("example_shape")
-            or spec.get("quantize")
-            or stage == TrainingStage.QUANTIZE.value
-            or precision == TrainingPrecision.INT8.value
-        )
-
-    @staticmethod
-    def _example_nchw(sidecar: dict) -> tuple[int, int, int, int]:
-        spec = sidecar.get("spec") or {}
-        raw = sidecar.get("example_shape") or spec.get("example_shape")
-        if not isinstance(raw, (list, tuple)) or len(raw) != 4:
-            raise RuntimeError("sidecar missing example_shape")
-        return (int(raw[0]), int(raw[1]), int(raw[2]), int(raw[3]))
-
-    @staticmethod
-    def _materialize_quantized_cnn(architecture: str, sidecar: dict) -> nn.Module:
-        example_shape = _ModelRegistry._example_nchw(sidecar)
-        fp32 = SeismicCnn(widths=_CNN_WIDTHS[architecture]).eval()
-        example = torch.zeros(example_shape)
-        exported = torch.export.export(
-            fp32,
-            (example,),
-            dynamic_shapes=({0: torch.export.Dim("batch")},),
-        ).module()
-        quantizer = X86InductorQuantizer()
-        quantizer.set_global(get_default_x86_inductor_quantization_config())
-        model = convert_pt2e(prepare_pt2e(exported, quantizer))
-        allow_exported_model_train_eval(model)
-        return model
+    def _materialize_cnn(stage: TrainingStage) -> nn.Module:
+        return SeismicCnn(widths=_CNN_WIDTHS[stage])
 
     def _load_model_entry(
         self, row: Dict[str, Any], artifact_id: str
@@ -304,7 +262,9 @@ class _ModelRegistry:
             logger.error("missing required storage_path")
             return None, None
         try:
-            state_dict, sidecar = ModelStorageServices.load_artifact(storage_path)
+            payload, sidecar = ModelStorageServices.load_artifact(
+                storage_path, is_body=True
+            )
         except Exception as err:
             logger.error(
                 "registry_load_failed",
@@ -313,20 +273,30 @@ class _ModelRegistry:
             )
             return None, None
         try:
-            model = self.materialize(sidecar)
-            architecture = sidecar.get("architecture")
-            if not architecture or not isinstance(architecture, str):
-                logger.error(
-                    "registry_materialize_failed",
-                    key=storage_path,
-                    error="Missing architecture from sidecar",
-                )
-                return None, None
-            if architecture == _VIT_SNAPSHOT:
-                set_peft_model_state_dict(model, state_dict)
+            stage = (
+                TrainingStage(sidecar.get("stage"))
+                if (sidecar.get("stage") and isinstance(sidecar.get("stage"), str))
+                else None
+            )
+            if not stage:
+                raise ValueError
+            if stage is TrainingStage.QUANTIZE:
+                model = torch.export.load(io.BytesIO(payload)).module()
             else:
-                model.load_state_dict(state_dict, strict=True)
-            model.eval()
+                state_dict = payload if isinstance(payload, dict) else load(payload)
+                model = self.materialize(sidecar)
+                if stage is TrainingStage.LORA:
+                    set_peft_model_state_dict(model, state_dict)
+                else:
+                    model.load_state_dict(state_dict, strict=True)
+                model.eval()
+        except ValueError:
+            logger.error(
+                "registry_materialize_failed",
+                key=storage_path,
+                error="Stage from sidecar missing or malformed",
+            )
+            return None, None
         except Exception as err:
             logger.error(
                 "registry_materialize_failed",

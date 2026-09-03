@@ -178,7 +178,7 @@ def test_build_distill_job_pairs_student_and_frozen_teacher():
                 **_parent_spec(),
             }
         )
-    load.assert_called_once_with("edge/student/sess.safetensors")
+    load.assert_called_once_with("edge/student/sess.safetensors", is_weights=True)
     assert isinstance(pair, DistillPair)
     assert isinstance(pair.student, SeismicCnn)
     assert isinstance(pair.teacher, SeismicCnn)

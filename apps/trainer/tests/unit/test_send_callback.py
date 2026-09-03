@@ -87,6 +87,7 @@ def test_send_callback_posts_hmac_header():
             "nonce": "nonce-1",
             "op_version": decision["op_version"],
             "param_count": 10,
+            "parent_id": "",
             "precision": TrainingPrecision.FP32.value,
             "revision": "",
             "role": ModelRole.SCREENER.value,
@@ -117,6 +118,7 @@ def test_send_callback_posts_hmac_header():
     assert kwargs["json"]["storage_path"] == _WEIGHTS_KEY
     assert kwargs["json"]["threshold"] == decision["threshold"]
     assert kwargs["json"]["op_version"] == 1
+    assert kwargs["json"]["parent_id"] is None
     response.raise_for_status.assert_called_once()
 
 

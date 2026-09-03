@@ -207,7 +207,7 @@ _SELECT_LATEST_ARTIFACT = sql.SQL("""
     WHERE tier = %s::{tier_enum}
         AND role = %s::{role_enum}
         AND stage = %s::{stage_enum}
-    ORDER BY promoted_at DESC NULLS LAST, created_at DESC
+    ORDER BY created_at DESC
     LIMIT 1
 """).format(
     table=sql.Identifier(*MODEL_ARTIFACT_TABLE),

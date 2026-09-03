@@ -7,7 +7,11 @@ Refine shards testing script
 from typing import Any, List, Optional
 from ..endpoints import REFINE_URL, endpoint_test
 from ..helpers import wait_for_jobs
-from ...fiery_python import UuidUtils
+from ...fiery_python import (
+    TRAINING_CONTRACT_DEFORMATION_VERSION,
+    TRAINING_CONTRACT_SEISMIC_VERSION,
+    UuidUtils,
+)
 
 _MAX_SAMPLES = 100
 _JOB_TIMEOUT_SECONDS = 3000
@@ -26,7 +30,12 @@ def run_refine_test(
     if shards not in ("satellite", "sensor"):
         raise ValueError("refine requires -shards satellite|sensor")
     signal = "seismic" if shards == "sensor" else "deformation"
-    training_contract_id = UuidUtils.deterministic_uuid(signal, 1)
+    version = (
+        TRAINING_CONTRACT_SEISMIC_VERSION
+        if shards == "sensor"
+        else TRAINING_CONTRACT_DEFORMATION_VERSION
+    )
+    training_contract_id = UuidUtils.deterministic_uuid(signal, version)
 
     response: Any = endpoint_test(
         REFINE_URL,

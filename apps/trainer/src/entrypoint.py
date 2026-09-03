@@ -27,6 +27,7 @@ _VIT_PARAMS = 22_100_000
 
 
 def entrypoint(spec: Dict, architecture: str) -> Dict:
+    import io
     import torch
 
     storage_path = None
@@ -65,27 +66,43 @@ def entrypoint(spec: Dict, architecture: str) -> Dict:
             cpu_model = model.cpu()
             sidecar = {
                 "architecture": architecture,
+                "stage": spec["stage"],
                 "spec": spec,
                 "decision": decision,
             }
+            payload: bytes | dict
             if spec.get("quantize"):
                 example_shape = spec.get("example_shape")
-                if example_shape is not None:
-                    sidecar["example_shape"] = example_shape
-            if spec.get("lora"):
+                if (
+                    not isinstance(example_shape, (list, tuple))
+                    or len(example_shape) != 4
+                ):
+                    raise RuntimeError("Missing example_shape from spec")
+                sidecar["example_shape"] = list(example_shape)
+                example = torch.zeros(tuple(int(dim) for dim in example_shape))
+                exported = torch.export.export(
+                    cpu_model,
+                    (example,),
+                    dynamic_shapes=({0: torch.export.Dim("batch")},),
+                )
+                buffer = io.BytesIO()
+                torch.export.save(exported, buffer)
+                payload = buffer.getvalue()
+                param_count = sum(param.numel() for param in cpu_model.parameters())
+            elif spec.get("lora"):
                 from peft import get_peft_model_state_dict
 
                 sidecar["lora"] = spec["lora"]
                 sidecar["base_model_id"] = spec["base_model_id"]
                 sidecar["revision"] = spec["revision"]
-                state_dict = get_peft_model_state_dict(cpu_model)
+                payload = get_peft_model_state_dict(cpu_model)
                 param_count = _VIT_PARAMS + sum(
-                    tensor.numel() for tensor in state_dict.values()
+                    tensor.numel() for tensor in payload.values()
                 )
             else:
-                state_dict = cpu_model.state_dict()
+                payload = cpu_model.state_dict()
                 param_count = sum(param.numel() for param in cpu_model.parameters())
-            ModelStorageServices.save_artifact(state_dict, sidecar, storage_path)
+            ModelStorageServices.save_artifact(payload, sidecar, storage_path)
             signature = ModelStorageServices.head_hmac(storage_path)
             break
         except Exception as err:

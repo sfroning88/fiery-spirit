@@ -52,6 +52,7 @@ def send_callback(
         "op_version": decision["op_version"],
         "base_model_id": spec.get("base_model_id") or "",
         "revision": spec.get("revision") or "",
+        "parent_id": spec.get("parent_id"),
     }
     canonical = json.dumps(
         {
@@ -71,6 +72,7 @@ def send_callback(
             "transform_hash": decision["transform_hash"],
             "base_model_id": spec.get("base_model_id") or "",
             "revision": spec.get("revision") or "",
+            "parent_id": spec.get("parent_id") or "",
         },
         separators=(",", ":"),
         sort_keys=True,
