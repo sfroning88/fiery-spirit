@@ -38,7 +38,7 @@ export class ApiAiService extends ApiService {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contractId: request.contractId,
+        contract_id: request.contractId,
         max_samples: request.maxSamples,
       }),
     });

@@ -34,7 +34,6 @@ export function useFeedback(userId: string) {
         artifact_id: args.artifactId,
         corrected_deformation: args.correctedDeformation,
         corrected_seismic: args.correctedSeismic,
-        note: args.note,
       });
       await Promise.all([
         queryClient.invalidateQueries({

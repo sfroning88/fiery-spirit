@@ -17,6 +17,11 @@ export class VolcanoService {
   }
 
   async inference(args: ApiInferenceRequest): Promise<ApiInferenceResponse> {
+    if (
+      (!args.interferogramId && !args.seismicEventId) ||
+      (args.interferogramId && args.seismicEventId)
+    )
+      throw new Error("Malformed inference");
     return await this.backendService.inference(args);
   }
 
@@ -31,6 +36,14 @@ export class VolcanoService {
     artifactId: string,
   ): Promise<void> {
     let data = null;
+    if (
+      (!correctedDeformation && !correctedSeismic) ||
+      (correctedDeformation && correctedSeismic) ||
+      (!interferogramId && !seismicEventId) ||
+      (interferogramId && seismicEventId)
+    ) {
+      throw new Error("Malformed feedback");
+    }
     if (correctedDeformation && interferogramId) {
       data = {
         agreed: agreed,

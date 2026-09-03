@@ -15,9 +15,9 @@ export type EvaluatedModel = {
   artifact_id: string;
   tier: ModelTier;
   role: ModelRole;
-  evaluated_at: Date | null;
+  evaluated_at: string | null;
   promoted: boolean;
-  promoted_at: Date | null;
+  promoted_at: string | null;
   denied_reason: string | null;
   ready: boolean;
 };

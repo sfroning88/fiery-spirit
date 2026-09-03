@@ -13,19 +13,20 @@ import { inferenceAction } from "../(actions)/volcano-action";
 export function useInference(userId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (args: ApiInferenceRequest): Promise<ApiInferenceResponse> =>
-      inferenceAction(args),
+    mutationFn: (
+      args: ApiInferenceRequest,
+    ): Promise<ApiInferenceResponse | null> => inferenceAction(args),
     onSuccess: async (data, args) => {
       posthog.capture(POSTHOG_EVENTS.inference, {
         user_id: userId,
         volcano_id: args.volcanoId,
         interferogram_id: args.interferogramId,
         seismic_event_id: args.seismicEventId,
-        probabilities: data.result.probabilities,
-        label: data.result.label,
-        score: data.result.score,
-        abstained: data.result.abstained,
-        abstained_reason: data.result.abstained_reason,
+        probabilities: data?.result.probabilities,
+        label: data?.result.label,
+        score: data?.result.score,
+        abstained: data?.result.abstained,
+        abstained_reason: data?.result.abstained_reason,
       });
       await Promise.all([
         queryClient.invalidateQueries({

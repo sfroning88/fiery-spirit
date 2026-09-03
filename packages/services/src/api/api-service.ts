@@ -40,6 +40,8 @@ export class ApiService {
     } catch (error) {
       clearTimeout(timeoutId);
       throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 

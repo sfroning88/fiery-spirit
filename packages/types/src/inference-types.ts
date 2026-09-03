@@ -24,7 +24,7 @@ export type InferenceOutcome = {
   abstained: boolean;
   abstained_reason: string | null;
   latency_ms: number | null;
-  inferred_at: Date;
+  inferred_at: string;
   probabilities: Record<string, number>[];
   label: TrainingDeformationLabel | TrainingSeismicLabel | null;
   score: number | null;

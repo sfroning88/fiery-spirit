@@ -16,7 +16,7 @@ export function useTrain(userId: string) {
     mutationFn: async (args: ApiTrainRequest): Promise<ApiTrainResponse> =>
       trainAction(args),
     onSuccess: async (data, args) => {
-      posthog.capture(POSTHOG_EVENTS.refine, {
+      posthog.capture(POSTHOG_EVENTS.train, {
         user_id: userId,
         job_count: data.jobIds.length,
         contractId: args.contractId,

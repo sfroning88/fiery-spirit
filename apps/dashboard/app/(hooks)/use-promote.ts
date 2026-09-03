@@ -15,7 +15,7 @@ export function usePromote(userId: string) {
         user_id: userId,
         artifact_count: data.evaluatedModels.length,
       });
-      await Promise.all([
+      await Promise.all(
         data.evaluatedModels.map((evaluatedModel) =>
           queryClient.invalidateQueries({
             queryKey: QUERY_KEYS.artifact(
@@ -24,7 +24,7 @@ export function usePromote(userId: string) {
             ),
           }),
         ),
-      ]);
+      );
     },
   });
 }

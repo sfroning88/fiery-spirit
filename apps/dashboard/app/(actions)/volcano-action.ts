@@ -24,7 +24,12 @@ const inferenceSchema = z.object({
 
 export const inferenceAction = selfUserAction(
   inferenceSchema,
-  async (ctx): Promise<ApiInferenceResponse> => {
+  async (ctx): Promise<ApiInferenceResponse | null> => {
+    if (
+      (!ctx.interferogramId && !ctx.seismicEventId) ||
+      (ctx.interferogramId && ctx.seismicEventId)
+    )
+      return null;
     return await volcanoService.inference({
       tier: ctx.tier,
       role: ctx.role,
@@ -48,6 +53,13 @@ const feedbackSchema = z.object({
 export const feedbackAction = selfUserAction(
   feedbackSchema,
   async (ctx): Promise<void> => {
+    if (
+      (!ctx.correctedDeformation && !ctx.correctedSeismic) ||
+      (ctx.correctedDeformation && ctx.correctedSeismic) ||
+      (!ctx.interferogramId && !ctx.seismicEventId) ||
+      (ctx.interferogramId && ctx.seismicEventId)
+    )
+      return;
     await volcanoService.feedback(
       ctx.agreed,
       ctx.correctedDeformation,
