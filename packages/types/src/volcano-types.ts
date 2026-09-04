@@ -21,7 +21,7 @@ export { VolcanoZone, VolcanoActivitySource, VolcanoAlertLevel };
 export type Volcano = PrismaVolcano;
 export type VolcanoActivity = PrismaVolcanoActivity;
 
-export type VolcanoSignalBundle<TSample, TInference> = {
+type VolcanoSignalBundle<TSample, TInference> = {
   sample: TSample | null;
   inference: TInference | null;
   feedback: InferenceFeedback | null;
