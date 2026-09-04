@@ -1,17 +1,21 @@
 import "server-only";
 
-import type {
-  ApiKeyRequest,
-  ApiJobsResponse,
-  ApiIngestRequest,
-  ApiRefineRequest,
-  ApiRefineResponse,
-  ApiTrainRequest,
-  ApiTrainResponse,
-  ApiPromoteResponse,
-  ApiRefreshResponse,
+import { db } from "@fiery/db";
+import {
+  type ModelDashboard,
+  modelDashboardInclude,
+  type ApiKeyRequest,
+  type ApiJobsResponse,
+  type ApiIngestRequest,
+  type ApiRefineRequest,
+  type ApiRefineResponse,
+  type ApiTrainRequest,
+  type ApiTrainResponse,
+  type ApiPromoteResponse,
+  type ApiRefreshResponse,
 } from "@fiery/types";
 import { ApiAiService, ApiBackendService } from "@fiery/services";
+import { toModelDashboard } from "@fiery/utils";
 
 export class AdminService {
   private aiService: ApiAiService;
@@ -43,5 +47,12 @@ export class AdminService {
 
   async refresh(args: ApiKeyRequest): Promise<ApiRefreshResponse> {
     return await this.backendService.refresh(args);
+  }
+
+  async fetchModels(): Promise<ModelDashboard[]> {
+    const rows = await db.modelArtifact.findMany({
+      include: modelDashboardInclude,
+    });
+    return rows.map(toModelDashboard);
   }
 }

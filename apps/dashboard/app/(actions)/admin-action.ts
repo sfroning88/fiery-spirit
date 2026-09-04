@@ -6,6 +6,7 @@ import { AdminService } from "@lib/services";
 import {
   ModelTier,
   ModelRole,
+  ModelDashboard,
   TrainingSampleSource,
   TrainingStage,
   type ApiJobsResponse,
@@ -102,5 +103,14 @@ export const refreshAction = platformAdminAction(
       tier: ctx.tier,
       role: ctx.role,
     });
+  },
+);
+
+const fetchModelsSchema = z.void();
+
+export const fetchModelsAction = platformAdminAction(
+  fetchModelsSchema,
+  async (): Promise<ModelDashboard[]> => {
+    return await adminService.fetchModels();
   },
 );
