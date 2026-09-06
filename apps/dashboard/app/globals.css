@@ -6,6 +6,6 @@ body {
   color: var(--color-foreground);
   font-family: var(--font-sans);
   background-color: var(--color-background);
-  background-image: var(--background-image-fhp-hero);
+  background-image: var(--background-image-fiery-hero);
   background-attachment: fixed;
 }

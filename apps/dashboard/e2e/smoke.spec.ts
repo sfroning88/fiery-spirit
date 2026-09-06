@@ -41,12 +41,25 @@ test("home page open admin link navigates to admin", async ({ page }) => {
   await expect(page).toHaveURL((url) => url.pathname === routes.admin.root);
 });
 
-test("unauthenticated visit to home redirects to login", async ({
-  browser,
-}) => {
+test("unauthenticated visit to home stays in browser", async ({ browser }) => {
   const context = await browser.newContext({ storageState: undefined });
   const page = await context.newPage();
   await page.goto(routes.base.home);
+  await expect(page).toHaveURL((url) => url.pathname === routes.base.home);
+  await expect(page.getByTestId(TEST_IDS.homeScreen)).toBeVisible();
+  await expect(page.getByTestId(TEST_IDS.dashboardHeading)).toBeVisible();
+  await expect(page.getByTestId(TEST_IDS.openAdminLink)).toHaveCount(0);
+  await expect(page.getByTestId(TEST_IDS.myProfileButton)).toHaveCount(0);
+  await expect(page.getByTestId(TEST_IDS.createProfileLink)).toBeVisible();
+  await page.getByTestId(TEST_IDS.createProfileLink).click();
+  await expect(page).toHaveURL((url) => url.pathname === routes.auth.login);
+  await context.close();
+});
+
+test("unauthenticated visit to admin returns to login", async ({ browser }) => {
+  const context = await browser.newContext({ storageState: undefined });
+  const page = await context.newPage();
+  await page.goto(routes.admin.root);
   await expect(page).toHaveURL((url) => url.pathname === routes.auth.login);
   await context.close();
 });

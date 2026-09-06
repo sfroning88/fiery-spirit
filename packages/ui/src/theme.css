@@ -1,63 +1,62 @@
 /**
- * @fiery/ui — design tokens (Focus Healthcare Partners inspired)
- * Blue/white palette and display typography aligned with focushealthcarepartners.com
- * Cinzel/serif stack
+ * @fiery/ui — design tokens (volcanic)
+ * Crimson / ash-brown palette
  */
 
 @theme {
-  /* —— Base palette: navy / steel blue / mist (light gradient-friendly) —— */
-  --color-fhp-navy-950: #020910;
-  --color-fhp-navy-900: #061228;
-  --color-fhp-navy-800: #0a1a36;
-  --color-fhp-navy-700: #0e2244;
-  --color-fhp-blue-800: #153a5c;
-  --color-fhp-blue-700: #1c4a6e;
-  --color-fhp-blue-600: #2563a0;
-  --color-fhp-blue-500: #2f7ab8;
-  --color-fhp-blue-400: #4a94c8;
-  --color-fhp-blue-300: #7eb3dc;
-  --color-fhp-blue-200: #b0d0eb;
-  --color-fhp-blue-100: #d4e6f4;
-  --color-fhp-blue-50: #e8f2fa;
-  --color-fhp-mist: #f0f6fb;
-  --color-fhp-white: #ffffff;
+  /* —— Base palette: basalt ash / ember crimson / pumice —— */
+  --color-fiery-navy-950: #140c09;
+  --color-fiery-navy-900: #1c120e;
+  --color-fiery-navy-800: #2a1a14;
+  --color-fiery-navy-700: #3a241c;
+  --color-fiery-blue-800: #5c1518;
+  --color-fiery-blue-700: #7a1c22;
+  --color-fiery-blue-600: #9b1c2e;
+  --color-fiery-blue-500: #c41e3a;
+  --color-fiery-blue-400: #d4564c;
+  --color-fiery-blue-300: #e08a7c;
+  --color-fiery-blue-200: #e8c4b4;
+  --color-fiery-blue-100: #f3ddd2;
+  --color-fiery-blue-50: #faf1eb;
+  --color-fiery-mist: #f4ebe4;
+  --color-fiery-white: #fffefc;
 
   /* —— Semantic (maps to app chrome & Tailwind utilities) —— */
-  --color-background: var(--color-fhp-mist);
-  --color-foreground: var(--color-fhp-navy-900);
-  --color-card: var(--color-fhp-white);
-  --color-card-foreground: var(--color-fhp-navy-900);
-  --color-surface-dark: #111827;
-  --color-surface-dark-foreground: #ffffff;
-  --color-primary: var(--color-fhp-navy-800);
-  --color-primary-foreground: var(--color-fhp-white);
-  --color-secondary: var(--color-fhp-blue-100);
-  --color-secondary-foreground: var(--color-fhp-navy-800);
-  --color-muted: var(--color-fhp-blue-100);
-  --color-muted-foreground: var(--color-fhp-blue-800);
-  --color-accent: var(--color-fhp-blue-600);
-  --color-accent-foreground: var(--color-fhp-white);
-  --color-border: var(--color-fhp-blue-200);
-  --color-input: var(--color-fhp-blue-200);
-  --color-ring: var(--color-fhp-blue-500);
+  --color-background: var(--color-fiery-mist);
+  --color-foreground: var(--color-fiery-navy-900);
+  --color-card: var(--color-fiery-white);
+  --color-card-foreground: var(--color-fiery-navy-900);
+  --color-surface-dark: #1a120f;
+  --color-surface-dark-foreground: #fffefc;
+  --color-primary: var(--color-fiery-navy-800);
+  --color-primary-foreground: var(--color-fiery-white);
+  --color-secondary: var(--color-fiery-blue-100);
+  --color-secondary-foreground: var(--color-fiery-navy-800);
+  --color-muted: var(--color-fiery-blue-100);
+  --color-muted-foreground: var(--color-fiery-blue-800);
+  --color-accent: var(--color-fiery-blue-600);
+  --color-accent-foreground: var(--color-fiery-white);
+  --color-border: var(--color-fiery-blue-200);
+  --color-input: var(--color-fiery-blue-200);
+  --color-ring: var(--color-fiery-blue-500);
 
-  /* —— Surfaces: hero / panel gradients —— */
-  --background-image-fhp-hero: linear-gradient(
+  /* —— Surfaces: lava field / ash fall —— */
+  --background-image-fiery-hero: linear-gradient(
     165deg,
-    var(--color-fhp-blue-50) 0%,
-    var(--color-fhp-white) 38%,
-    var(--color-fhp-mist) 100%
+    var(--color-fiery-blue-50) 0%,
+    var(--color-fiery-white) 38%,
+    var(--color-fiery-mist) 100%
   );
-  --background-image-fhp-ribbon: linear-gradient(
+  --background-image-fiery-ribbon: linear-gradient(
     90deg,
-    var(--color-fhp-navy-800) 0%,
-    var(--color-fhp-blue-600) 50%,
-    var(--color-fhp-blue-400) 100%
+    var(--color-fiery-navy-800) 0%,
+    var(--color-fiery-blue-600) 50%,
+    var(--color-fiery-blue-400) 100%
   );
-  --background-image-fhp-deep: linear-gradient(
+  --background-image-fiery-deep: linear-gradient(
     180deg,
-    var(--color-fhp-navy-900) 0%,
-    var(--color-fhp-blue-800) 100%
+    var(--color-fiery-navy-900) 0%,
+    var(--color-fiery-blue-800) 100%
   );
 
   /* —— Type: display = Trajan-style stack (Cinzel from next/font in app); body = Geist —— */

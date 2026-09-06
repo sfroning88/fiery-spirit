@@ -1,12 +1,23 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { requireUser } from "@fiery/auth/server";
+import { getSession } from "@fiery/auth/server";
+import { AppUserProfileNotFoundError, UserService } from "@fiery/services";
 import { MyProfileButton } from "@/app/(components)/(privacy)/MyProfileButton";
 import { routes } from "@lib/routes";
 import { TEST_IDS } from "@lib/test-ids";
 
 export default async function HomePage() {
-  const { appUser, supabaseUser } = await requireUser();
+  const { supabaseUser } = await getSession();
+  let appUser = null;
+  if (supabaseUser) {
+    try {
+      appUser = await UserService.ensureAppUserFromSupabaseAuth(supabaseUser);
+    } catch (error) {
+      if (error instanceof AppUserProfileNotFoundError) {
+        appUser = null;
+      }
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6" data-testid={TEST_IDS.homeScreen}>
@@ -18,14 +29,29 @@ export default async function HomePage() {
           >
             Dashboard
           </h1>
-          <div className="mt-1 flex items-center gap-3">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              {appUser.name} · {appUser.email}
-            </p>
-            <MyProfileButton userId={supabaseUser.id} />
-          </div>
+          {supabaseUser && appUser ? (
+            <div className="mt-1 flex items-center gap-3">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                {appUser.name} · {appUser.email}
+              </p>
+              <MyProfileButton userId={supabaseUser.id} />
+            </div>
+          ) : (
+            <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Create profile to unlock all features
+              </p>
+              <Link
+                href={`${routes.auth.login}?next=${routes.base.home}`}
+                data-testid={TEST_IDS.createProfileLink}
+                className="inline-flex w-fit shrink-0 text-sm font-medium text-zinc-900 underline underline-offset-4 dark:text-zinc-100"
+              >
+                Create profile
+              </Link>
+            </div>
+          )}
         </div>
-        {appUser.isPlatformAdmin ? (
+        {appUser && appUser.isPlatformAdmin ? (
           <Link
             href={routes.admin.root}
             data-testid={TEST_IDS.openAdminLink}
