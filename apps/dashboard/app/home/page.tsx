@@ -15,6 +15,8 @@ export default async function HomePage() {
     } catch (error) {
       if (error instanceof AppUserProfileNotFoundError) {
         appUser = null;
+      } else {
+        throw error;
       }
     }
   }
