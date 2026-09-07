@@ -6,14 +6,13 @@ import { VolcanoDashboard } from "@fiery/types";
 import { fetchVolcanoesAction } from "../(actions)/volcano-action";
 
 export function useFetchVolcanoes(
-  userId: string,
+  userId: string | null,
   initialData?: VolcanoDashboard[],
 ) {
   return useQuery<VolcanoDashboard[]>({
-    queryKey: QUERY_KEYS.volcanoes(userId),
+    queryKey: QUERY_KEYS.volcanoes(userId || "public"),
     queryFn: () => fetchVolcanoesAction(),
     staleTime: QUERY_STALE_TIME,
-    enabled: !!userId,
     initialData,
   });
 }

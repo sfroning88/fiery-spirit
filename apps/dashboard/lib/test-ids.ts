@@ -2,6 +2,7 @@ export const TEST_IDS = {
   homeScreen: "home-screen",
   dashboardHeading: "dashboard-heading",
   openAdminLink: "open-admin-link",
+  createProfileLink: "create-profile-link",
   myProfileButton: "my-profile-button",
   myProfileDialog: "my-profile-dialog",
   myProfileCloseButton: "my-profile-close-button",

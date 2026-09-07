@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { selfUserAction } from "@fiery/auth/server";
+import { createPublicAction, selfUserAction } from "@fiery/auth/server";
 import { VolcanoService } from "@lib/services";
 import {
   ModelTier,
@@ -75,7 +75,7 @@ export const feedbackAction = selfUserAction(
 
 const fetchVolcanoesSchema = z.void();
 
-export const fetchVolcanoesAction = selfUserAction(
+export const fetchVolcanoesAction = createPublicAction(
   fetchVolcanoesSchema,
   async (): Promise<VolcanoDashboard[]> => {
     return await volcanoService.fetchVolcanoes();

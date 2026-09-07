@@ -52,7 +52,7 @@ export function KpiCard({
     <div
       className={`rounded-sm px-3 md:px-4 py-2.5 md:py-3 ${
         accent
-          ? "bg-fhp-blue-800 text-white"
+          ? "bg-fiery-blue-800 text-white"
           : "border border-white/10 text-white"
       }`}
     >
@@ -82,7 +82,7 @@ export function ValueBox({
     <div
       className={`rounded-sm px-2 md:px-4 py-2.5 md:py-3 text-center ${
         highlight
-          ? "bg-fhp-blue-800/60 border border-fhp-blue-600/40"
+          ? "bg-fiery-blue-800/60 border border-fiery-blue-600/40"
           : "bg-white/3 border border-white/10"
       }`}
     >
@@ -200,7 +200,7 @@ export function FeedbackThanksIcon({
   const Icon = variant === "up" ? ThumbsUp : ThumbsDown;
   return (
     <Icon
-      className={`${iconClass} shrink-0 text-fhp-blue-400 ${className ?? ""}`}
+      className={`${iconClass} shrink-0 text-fiery-blue-400 ${className ?? ""}`}
       strokeWidth={2}
     />
   );

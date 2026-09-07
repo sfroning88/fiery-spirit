@@ -16,14 +16,7 @@ function isPublicPath(pathname: string): boolean {
 
 function requiresAuthentication(pathname: string): boolean {
   if (isPublicPath(pathname)) return false;
-  const isHomeArea =
-    pathname === authRoutes.home || pathname.startsWith(`${authRoutes.home}/`);
-  return (
-    isHomeArea ||
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/console") ||
-    pathname.startsWith("/admin")
-  );
+  return pathname.startsWith("/admin");
 }
 
 export async function updateSession(request: NextRequest) {

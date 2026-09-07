@@ -6,15 +6,15 @@ import { VolcanoService } from "@/lib/services";
 const volcanoService = new VolcanoService();
 
 export async function fetchVolcanoesCached(
-  userId: string,
+  userId: string | null,
 ): Promise<VolcanoDashboard[]> {
   return unstable_cache(
     async () => {
       return await volcanoService.fetchVolcanoes();
     },
-    [...QUERY_KEYS.volcanoes(userId)],
+    [...QUERY_KEYS.volcanoes(userId || "public")],
     {
-      tags: [...QUERY_KEYS.volcanoes(userId)],
+      tags: [...QUERY_KEYS.volcanoes(userId || "public")],
       revalidate: CACHE_STALE_TIME,
     },
   )();

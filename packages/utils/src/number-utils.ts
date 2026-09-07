@@ -37,19 +37,6 @@ export function formatPercent(value: unknown): string {
   return `${n.toFixed(2)}%`;
 }
 
-export enum OccupancyTier {
-  high = "high",
-  mid = "mid",
-  low = "low",
-}
-
-export function getOccupancyTier(occ: unknown): OccupancyTier {
-  const n = toNum(occ);
-  if (n >= 80) return OccupancyTier.high;
-  if (n >= 65) return OccupancyTier.mid;
-  return OccupancyTier.low;
-}
-
 export function formatDate(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date;
   return d.toLocaleDateString("en-US", {
