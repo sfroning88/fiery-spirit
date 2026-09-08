@@ -5,6 +5,7 @@ import { Badge, Dot } from "@fiery/ui";
 import { formatDecimal } from "@fiery/utils";
 import type { VolcanoDashboard } from "@fiery/types";
 import { httpSafeImageUrl } from "@/lib/utils";
+import { TEST_IDS } from "@lib/test-ids";
 
 type HomeVolcanoProps = {
   volcano: VolcanoDashboard;
@@ -18,14 +19,14 @@ export function HomeVolcano({ volcano, isMobile }: HomeVolcanoProps) {
   const imageSrc = httpSafeImageUrl(volcano.imagePath);
 
   return (
-    <div className="min-w-0">
+    <div data-testid={TEST_IDS.volcanoPopup} className="min-w-0">
       {imageSrc ? (
         <Image
           src={imageSrc}
           alt={volcano.name}
           width={288}
           height={160}
-          className="mb-2 h-32 w-full rounded-sm object-cover"
+          unoptimized
         />
       ) : null}
       <div className="flex items-center gap-2 flex-wrap">

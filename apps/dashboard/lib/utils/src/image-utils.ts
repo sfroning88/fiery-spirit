@@ -1,5 +1,3 @@
-const HTTP_PROTOCOLS = new Set(["http:", "https:"]);
-
 export function httpSafeImageUrl(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -10,7 +8,7 @@ export function httpSafeImageUrl(value: unknown): string | null {
   }
   try {
     const url = new URL(trimmed);
-    if (!HTTP_PROTOCOLS.has(url.protocol)) return null;
+    if (url.protocol !== "https:") return null;
     return url.href;
   } catch {
     return null;

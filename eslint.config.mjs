@@ -60,6 +60,8 @@ export default defineConfig([
         "**/build/**",
         "**/coverage/**",
         "**/prisma/src/generated/**",
+        "**/public/maplibre/**",
+        "**/public/**/*.mjs",
         "**/*.py",
         "**/__pycache__/**",
         "**/.venv/**",

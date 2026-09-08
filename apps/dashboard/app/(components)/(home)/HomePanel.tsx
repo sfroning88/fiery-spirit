@@ -111,7 +111,10 @@ export function HomePanel({ initialData }: HomePanelProps) {
       ) : !listed.length ? (
         <p className="text-white/40 text-sm">No volcanoes yet...</p>
       ) : (
-        <div className="h-[70vh] overflow-hidden border border-white/10 rounded-md bg-surface-dark">
+        <div
+          data-testid={TEST_IDS.homeMap}
+          className="h-[70vh] overflow-hidden border border-white/10 rounded-md bg-surface-dark"
+        >
           <HomeMap
             volcanoes={listed}
             selectedId={selectedId}
