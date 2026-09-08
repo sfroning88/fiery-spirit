@@ -28,6 +28,9 @@
 /out/
 *.next
 
+# maplibre
+/maplibre/
+
 # pyproject
 /build
 /build/**

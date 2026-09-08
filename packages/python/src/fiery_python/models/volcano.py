@@ -30,6 +30,7 @@ class Volcano(BaseFiery):
     is_glaciated: bool = False
     is_instrumented: bool = False
     is_held_out: bool = False
+    image_path: Optional[str] = None
 
     def deterministic_id(self) -> Optional[str]:
         """Stable id derived from (gvp_number or country, name, zone, name)"""

@@ -45,6 +45,7 @@ model Volcano {
     isGlaciated                 Boolean @map("is_glaciated") @default(false)
     isInstrumented              Boolean @map("is_instrumented") @default(false)
     isHeldOut                   Boolean @map("is_held_out") @default(false)
+    imagePath                   String? @map("image_path")
 
     createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
     updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)

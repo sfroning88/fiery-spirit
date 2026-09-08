@@ -16,7 +16,8 @@ QUERY = sql.SQL("""
         volcanic_class,
         is_glaciated,
         is_instrumented,
-        is_held_out
+        is_held_out,
+        image_path
     FROM {table}
     ORDER BY id
     LIMIT %s

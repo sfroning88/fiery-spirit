@@ -53,6 +53,7 @@ def test_select_volcanoes_maps_rows():
             "is_glaciated": True,
             "is_instrumented": True,
             "is_held_out": True,
+            "image_path": None,
         },
         {
             "id": "vol-2",
@@ -67,6 +68,7 @@ def test_select_volcanoes_maps_rows():
             "is_glaciated": False,
             "is_instrumented": True,
             "is_held_out": False,
+            "image_path": None,
         },
     ]
     with patch(
