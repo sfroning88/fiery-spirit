@@ -1,9 +1,11 @@
-import type {
-  ModelTier,
-  ModelRole,
-  ModelMetricName,
-  TrainingSignal,
-  TrainingStatus,
+import {
+  type ModelTier,
+  type ModelRole,
+  type ModelMetricName,
+  type TrainingSignal,
+  type TrainingStatus,
+  TrainingStage,
+  TrainingSampleSource,
 } from "@fiery/types";
 
 export const tierColors: Record<ModelTier, string> = {
@@ -62,4 +64,32 @@ export const statusLabel: Record<TrainingStatus, string> = {
   completed: "Completed",
   failed: "Failed",
   cancelled: "Cancelled",
+};
+
+export const sourceValues = [
+  TrainingSampleSource.hephaestus,
+  TrainingSampleSource.okada,
+  TrainingSampleSource.llaima,
+] as const;
+
+export const sourceLabel: Record<(typeof sourceValues)[number], string> = {
+  hephaestus: "Hephaestus",
+  okada: "Okada",
+  llaima: "Llaima",
+};
+
+export const stageValues = [
+  TrainingStage.pretrain,
+  TrainingStage.lora,
+  TrainingStage.distill,
+  TrainingStage.prune,
+  TrainingStage.quantize,
+] as const;
+
+export const stageLabel: Record<(typeof stageValues)[number], string> = {
+  pretrain: "Pretrain",
+  lora: "LoRA",
+  distill: "Distill",
+  prune: "Prune",
+  quantize: "Quantize",
 };

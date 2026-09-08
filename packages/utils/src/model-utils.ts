@@ -1,30 +1,5 @@
-import {
-  ModelDashboard,
-  ModelDashboardRow,
-  ModelMetric,
-  TrainingSampleSource,
-  TrainingSignal,
-} from "@fiery/types";
+import { ModelDashboard, ModelDashboardRow, ModelMetric } from "@fiery/types";
 import { toNum } from "./number-utils";
-
-export function uniqueModels(
-  models: ModelDashboard[],
-  key: (model: ModelDashboard) => string,
-): ModelDashboard[] {
-  const seen = new Set<string>();
-  const unique: ModelDashboard[] = [];
-  for (const model of models) {
-    const next = key(model);
-    if (seen.has(next)) continue;
-    seen.add(next);
-    unique.push(model);
-  }
-  return unique;
-}
-
-export function ingestSources(signal: TrainingSignal): TrainingSampleSource[] {
-  return signal === "seismic" ? ["llaima"] : ["hephaestus", "okada"];
-}
 
 export function toModelDashboard(row: ModelDashboardRow): ModelDashboard {
   return {

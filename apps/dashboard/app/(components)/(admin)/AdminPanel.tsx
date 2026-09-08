@@ -13,8 +13,14 @@ import { useUserId } from "@/app/(hooks)/use-user-id";
 import { AdminModel } from "./AdminModel";
 import { MOBILE_BREAKPOINT } from "@/lib/constants";
 import { TEST_IDS } from "@lib/test-ids";
-import { ingestSources, uniqueModels, formatNullableInt } from "@fiery/utils";
-import type { ModelDashboard } from "@fiery/types";
+import { SignalDropdown, SourceDropdown, StageDropdown } from "@fiery/ui";
+import { dateLikeToMs, formatNullableInt } from "@fiery/utils";
+import {
+  ModelDashboard,
+  TrainingSampleSource,
+  TrainingSignal,
+  TrainingStage,
+} from "@fiery/types";
 
 type AdminPanelProps = {
   initialData?: ModelDashboard[];
@@ -37,10 +43,43 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
   const batchMutation = useBatch(userId);
   const promoteMutation = usePromote(userId);
   const refreshMutation = useRefresh(userId);
-  const listed = models ?? [];
-  const hasModels = listed.length > 0;
+
   const [maxSamplesInput, setMaxSamplesInput] = useState("");
   const maxSamples = formatNullableInt(maxSamplesInput);
+  const [source, setSource] = useState<"hephaestus" | "okada" | "llaima">(
+    TrainingSampleSource.hephaestus,
+  );
+  const [stage, setStage] = useState<TrainingStage>(TrainingStage.lora);
+  const [signal, setSignal] = useState<TrainingSignal>(
+    TrainingSignal.deformation,
+  );
+
+  const listed = models ?? [];
+  const ranked = [...listed].sort((modelA, modelB) => {
+    if (modelA.promoted !== modelB.promoted) return modelA.promoted ? -1 : 1;
+    return dateLikeToMs(modelB.promotedAt) - dateLikeToMs(modelA.promotedAt);
+  });
+
+  let lastDeformationModel: ModelDashboard | null = null;
+  let lastSeismicModel: ModelDashboard | null = null;
+
+  for (const model of ranked) {
+    switch (model.session.signal) {
+      case TrainingSignal.deformation:
+        if (!lastDeformationModel) lastDeformationModel = model;
+        break;
+      case TrainingSignal.seismic:
+        if (!lastSeismicModel) lastSeismicModel = model;
+        break;
+    }
+  }
+
+  const lastModel =
+    signal === TrainingSignal.deformation
+      ? lastDeformationModel
+      : lastSeismicModel;
+  const hasLastModel = lastModel != null;
+  const fieldClass = isMobile ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm";
 
   return (
     <div className="space-y-4 font-data">
@@ -62,33 +101,42 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
             onChange={(event) => setMaxSamplesInput(event.target.value)}
             className={`
                             w-28 rounded-md border border-white/20 bg-white/4 font-data text-white/80 placeholder:text-white/30
-                            ${isMobile ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"}
+                            ${fieldClass}
                         `}
+          />
+          <SignalDropdown
+            value={signal}
+            onChange={setSignal}
+            testId={TEST_IDS.signalField}
+            className={fieldClass}
+          />
+          <SourceDropdown
+            value={source}
+            onChange={setSource}
+            testId={TEST_IDS.sourceField}
+            className={fieldClass}
+          />
+          <StageDropdown
+            value={stage}
+            onChange={setStage}
+            testId={TEST_IDS.stageField}
+            className={fieldClass}
           />
           <button
             type="button"
             data-testid={TEST_IDS.ingestButton}
-            disabled={ingestMutation.isPending || !hasModels}
+            disabled={ingestMutation.isPending}
             onClick={() => {
-              const sources = [
-                ...new Set(
-                  listed.flatMap((model) =>
-                    ingestSources(model.session.signal),
-                  ),
-                ),
-              ];
-              sources.forEach((source) =>
-                ingestMutation.mutate({
-                  source,
-                  maxSamples,
-                }),
-              );
+              ingestMutation.mutate({
+                source,
+                maxSamples,
+              });
             }}
             className={`
                             rounded-md border font-data font-medium transition-colors
                             ${isMobile ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"}
                             ${
-                              ingestMutation.isPending || !hasModels
+                              ingestMutation.isPending
                                 ? "border-white/10 bg-white/2 text-white/30 cursor-not-allowed"
                                 : "border-white/20 bg-white/4 text-white/70 hover:bg-white/8"
                             }
@@ -99,23 +147,19 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
           <button
             type="button"
             data-testid={TEST_IDS.refineButton}
-            disabled={refineMutation.isPending || !hasModels}
+            disabled={refineMutation.isPending || !hasLastModel}
             onClick={() => {
-              uniqueModels(
-                listed,
-                (model) => model.session.contract.id,
-              ).forEach((model) =>
-                refineMutation.mutate({
-                  contractId: model.session.contract.id,
-                  maxSamples,
-                }),
-              );
+              if (!lastModel) return;
+              refineMutation.mutate({
+                contractId: lastModel.session.contract.id,
+                maxSamples,
+              });
             }}
             className={`
                             rounded-md border font-data font-medium transition-colors
                             ${isMobile ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"}
                             ${
-                              refineMutation.isPending || !hasModels
+                              refineMutation.isPending || !hasLastModel
                                 ? "border-white/10 bg-white/2 text-white/30 cursor-not-allowed"
                                 : "border-white/20 bg-white/4 text-white/70 hover:bg-white/8"
                             }
@@ -126,26 +170,21 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
           <button
             type="button"
             data-testid={TEST_IDS.trainButton}
-            disabled={trainMutation.isPending || !hasModels}
+            disabled={trainMutation.isPending || !hasLastModel}
             onClick={() => {
-              uniqueModels(
-                listed,
-                (model) =>
-                  `${model.session.contract.id}:${model.session.version.id}:${model.stage}:${model.parentId ?? ""}`,
-              ).forEach((model) =>
-                trainMutation.mutate({
-                  contractId: model.session.contract.id,
-                  versionId: model.session.version.id,
-                  stage: model.stage,
-                  parentId: model.parentId,
-                }),
-              );
+              if (!lastModel) return;
+              trainMutation.mutate({
+                contractId: lastModel.session.contract.id,
+                versionId: lastModel.session.version.id,
+                stage,
+                parentId: lastModel.parentId,
+              });
             }}
             className={`
                             rounded-md border font-data font-medium transition-colors
                             ${isMobile ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"}
                             ${
-                              trainMutation.isPending || !hasModels
+                              trainMutation.isPending || !hasLastModel
                                 ? "border-white/10 bg-white/2 text-white/30 cursor-not-allowed"
                                 : "border-white/20 bg-white/4 text-white/70 hover:bg-white/8"
                             }
@@ -156,23 +195,19 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
           <button
             type="button"
             data-testid={TEST_IDS.batchButton}
-            disabled={batchMutation.isPending || !hasModels}
+            disabled={batchMutation.isPending || !hasLastModel}
             onClick={() => {
-              uniqueModels(
-                listed,
-                (model) => `${model.tier}/${model.role}`,
-              ).forEach((model) =>
-                batchMutation.mutate({
-                  tier: model.tier,
-                  role: model.role,
-                }),
-              );
+              if (!lastModel) return;
+              batchMutation.mutate({
+                tier: lastModel.tier,
+                role: lastModel.role,
+              });
             }}
             className={`
                             rounded-md border font-data font-medium transition-colors
                             ${isMobile ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"}
                             ${
-                              batchMutation.isPending || !hasModels
+                              batchMutation.isPending || !hasLastModel
                                 ? "border-white/10 bg-white/2 text-white/30 cursor-not-allowed"
                                 : "border-white/20 bg-white/4 text-white/70 hover:bg-white/8"
                             }
@@ -200,23 +235,19 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
           <button
             type="button"
             data-testid={TEST_IDS.refreshButton}
-            disabled={refreshMutation.isPending || !hasModels}
+            disabled={refreshMutation.isPending || !hasLastModel}
             onClick={() => {
-              uniqueModels(
-                listed,
-                (model) => `${model.tier}/${model.role}`,
-              ).forEach((model) =>
-                refreshMutation.mutate({
-                  tier: model.tier,
-                  role: model.role,
-                }),
-              );
+              if (!lastModel) return;
+              refreshMutation.mutate({
+                tier: lastModel.tier,
+                role: lastModel.role,
+              });
             }}
             className={`
                             rounded-md border font-data font-medium transition-colors
                             ${isMobile ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"}
                             ${
-                              refreshMutation.isPending || !hasModels
+                              refreshMutation.isPending || !hasLastModel
                                 ? "border-white/10 bg-white/2 text-white/30 cursor-not-allowed"
                                 : "border-white/20 bg-white/4 text-white/70 hover:bg-white/8"
                             }

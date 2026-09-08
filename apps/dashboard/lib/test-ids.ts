@@ -19,4 +19,7 @@ export const TEST_IDS = {
   promoteButton: "promote-button",
   refreshButton: "refresh-button",
   maxSamplesField: "max-samples-field",
+  sourceField: "source-field",
+  stageField: "stage-field",
+  signalField: "signal-field",
 } as const;

@@ -19,23 +19,25 @@
   --color-fiery-crimson-100: #f3ddd2;
   --color-fiery-crimson-50: #faf1eb;
   --color-fiery-pumice: #f4ebe4;
-  --color-fiery-white: #fffefc;
+  --color-fiery-white-100: #fffefc;
+  --color-fiery-white-600: #9c948c;
+  --color-fiery-white-950: #1c1816;
 
   /* —— Semantic (maps to app chrome & Tailwind utilities) —— */
   --color-background: var(--color-fiery-pumice);
   --color-foreground: var(--color-fiery-ash-900);
-  --color-card: var(--color-fiery-white);
+  --color-card: var(--color-fiery-white-100);
   --color-card-foreground: var(--color-fiery-ash-900);
   --color-surface-dark: #1a120f;
   --color-surface-dark-foreground: #fffefc;
   --color-primary: var(--color-fiery-ash-800);
-  --color-primary-foreground: var(--color-fiery-white);
+  --color-primary-foreground: var(--color-fiery-white-100);
   --color-secondary: var(--color-fiery-crimson-100);
   --color-secondary-foreground: var(--color-fiery-ash-800);
   --color-muted: var(--color-fiery-crimson-100);
   --color-muted-foreground: var(--color-fiery-crimson-800);
   --color-accent: var(--color-fiery-crimson-600);
-  --color-accent-foreground: var(--color-fiery-white);
+  --color-accent-foreground: var(--color-fiery-white-100);
   --color-border: var(--color-fiery-crimson-200);
   --color-input: var(--color-fiery-crimson-200);
   --color-ring: var(--color-fiery-crimson-500);
@@ -44,7 +46,7 @@
   --background-image-fiery-hero: linear-gradient(
     165deg,
     var(--color-fiery-crimson-50) 0%,
-    var(--color-fiery-white) 38%,
+    var(--color-fiery-white-100) 38%,
     var(--color-fiery-pumice) 100%
   );
   --background-image-fiery-ribbon: linear-gradient(

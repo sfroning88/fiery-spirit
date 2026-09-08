@@ -21,7 +21,7 @@ export function formatNullableInt(raw: string): number | null {
   if (!trimmed) return null;
   if (!/^\d+$/.test(trimmed)) return null;
   const n = Number.parseInt(trimmed, 10);
-  return n > 0 ? n : null;
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
 }
 
 export function formatCurrency(value: unknown): string {

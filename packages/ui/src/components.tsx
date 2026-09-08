@@ -1,19 +1,14 @@
 import type { ReactNode } from "react";
-import { formatCurrency, formatPercent } from "@fiery/utils";
-import { MetricFormat } from "./types";
-
-function formatMetricValue(value: number, format: MetricFormat): string {
-  return format === "percent" ? formatPercent(value) : formatCurrency(value);
-}
+import { TrainingSignal, TrainingStage } from "@fiery/types";
 import { ThumbsDown, ThumbsUp } from "iconoir-react";
-
-const iconClass = "h-4 w-4 md:h-[18px] md:w-[18px]";
-
-const btnClass = `
-  inline-flex items-center justify-center rounded-md border transition-colors p-1.5 md:p-2
-  border-white/15 bg-white/4 text-white/80 hover:bg-white/8
-  disabled:opacity-40 disabled:pointer-events-none
-`;
+import { iconClass, btnClass, selectClass, onSelectChange } from "./dynamics";
+import {
+  signalLabel,
+  sourceValues,
+  sourceLabel,
+  stageValues,
+  stageLabel,
+} from "./tokens";
 
 export function Dot({ className }: { className?: string }) {
   return (
@@ -34,120 +29,6 @@ export function SectionLabel({ children }: { children: ReactNode }) {
     <h3 className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.15em] text-white/40">
       {children}
     </h3>
-  );
-}
-
-export function KpiCard({
-  label,
-  sublabel,
-  accent,
-  children,
-}: {
-  label: string;
-  sublabel: string;
-  accent?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <div
-      className={`rounded-sm px-3 md:px-4 py-2.5 md:py-3 ${
-        accent
-          ? "bg-fiery-crimson-800 text-white"
-          : "border border-white/10 text-white"
-      }`}
-    >
-      <p className="text-[10px] md:text-[11px] font-medium uppercase tracking-wider text-white/50">
-        {label}
-      </p>
-      <p className="mt-0.5 md:mt-1 text-lg md:text-2xl font-semibold font-data-mono leading-tight">
-        {children}
-      </p>
-      <p className="mt-0.5 text-[10px] md:text-xs text-white/40">{sublabel}</p>
-    </div>
-  );
-}
-
-export function ValueBox({
-  label,
-  value,
-  highlight,
-  format = "currency",
-}: {
-  label: string;
-  value: number | null;
-  highlight?: boolean;
-  format?: MetricFormat;
-}) {
-  return (
-    <div
-      className={`rounded-sm px-2 md:px-4 py-2.5 md:py-3 text-center ${
-        highlight
-          ? "bg-fiery-crimson-800/60 border border-fiery-crimson-600/40"
-          : "bg-white/3 border border-white/10"
-      }`}
-    >
-      {value === null ? (
-        <p
-          className="min-h-6 md:min-h-8 flex items-center justify-center"
-          aria-label="Not available"
-        >
-          <span className="block w-9 md:w-11 max-w-[60%] h-px bg-white/35 rounded-full" />
-        </p>
-      ) : (
-        <p className="text-base md:text-xl font-semibold font-data-mono text-white">
-          {formatMetricValue(value, format)}
-        </p>
-      )}
-      <p className="mt-0.5 text-[9px] md:text-[11px] text-white/40">{label}</p>
-    </div>
-  );
-}
-
-export function DeltaBox({
-  delta,
-  baseline,
-  format = "currency",
-}: {
-  delta: number;
-  baseline: number | null;
-  format?: MetricFormat;
-}) {
-  const pct =
-    baseline != null && baseline !== 0
-      ? ((delta / Math.abs(baseline)) * 100).toFixed(1)
-      : null;
-
-  const isPositive = delta > 0;
-  const isNeutral = delta === 0;
-
-  const color = isNeutral
-    ? "text-white/50"
-    : isPositive
-      ? "text-green-400"
-      : "text-red-400";
-
-  const sign = isPositive ? "+" : "";
-
-  return (
-    <div className="rounded-sm px-2 md:px-4 py-2.5 md:py-3 text-center bg-white/3 border border-white/10">
-      <p
-        className={`text-base md:text-xl font-semibold font-data-mono ${color}`}
-      >
-        {format === "percent"
-          ? `${isPositive ? "+" : ""}${delta.toFixed(2)}%`
-          : `${sign}${formatCurrency(delta)}`}
-      </p>
-      {pct != null ? (
-        <p className={`mt-0.5 text-[9px] md:text-[11px] ${color}`}>
-          {sign}
-          {pct}%
-        </p>
-      ) : (
-        <p className="mt-0.5 text-[9px] md:text-[11px] text-white/40">
-          Variance
-        </p>
-      )}
-    </div>
   );
 }
 
@@ -203,5 +84,91 @@ export function FeedbackThanksIcon({
       className={`${iconClass} shrink-0 text-fiery-crimson-400 ${className ?? ""}`}
       strokeWidth={2}
     />
+  );
+}
+
+export function SignalDropdown({
+  value,
+  onChange,
+  className,
+  testId,
+}: {
+  value: TrainingSignal;
+  onChange: (value: TrainingSignal) => void;
+  className?: string;
+  testId?: string;
+}) {
+  return (
+    <select
+      aria-label="Signal"
+      data-testid={testId}
+      value={value}
+      onChange={onSelectChange(onChange)}
+      className={`${selectClass} ${className ?? ""}`}
+    >
+      {([TrainingSignal.deformation, TrainingSignal.seismic] as const).map(
+        (signal) => (
+          <option key={signal} value={signal}>
+            {signalLabel[signal]}
+          </option>
+        ),
+      )}
+    </select>
+  );
+}
+
+export function SourceDropdown({
+  value,
+  onChange,
+  className,
+  testId,
+}: {
+  value: (typeof sourceValues)[number];
+  onChange: (value: (typeof sourceValues)[number]) => void;
+  className?: string;
+  testId?: string;
+}) {
+  return (
+    <select
+      aria-label="Source"
+      data-testid={testId}
+      value={value}
+      onChange={onSelectChange(onChange)}
+      className={`${selectClass} ${className ?? ""}`}
+    >
+      {sourceValues.map((source) => (
+        <option key={source} value={source}>
+          {sourceLabel[source]}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+export function StageDropdown({
+  value,
+  onChange,
+  className,
+  testId,
+}: {
+  value: TrainingStage;
+  onChange: (value: TrainingStage) => void;
+  className?: string;
+  testId?: string;
+}) {
+  return (
+    <select
+      aria-label="Stage"
+      data-testid={testId}
+      value={value}
+      onChange={onSelectChange(onChange)}
+      className={`${selectClass} ${className ?? ""}`}
+    >
+      {stageValues.map((stage) => (
+        <option key={stage} value={stage}>
+          {stageLabel[stage]}
+        </option>
+      ))}
+    </select>
   );
 }
