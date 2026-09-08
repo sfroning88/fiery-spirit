@@ -32,7 +32,7 @@ export default async function Home() {
         />
         <div className="flex flex-col gap-4">
           <h1 className="max-w-md text-3xl font-semibold leading-tight text-black dark:text-zinc-50">
-            Deep Focus
+            Fiery Spirit
           </h1>
           <p className="max-w-lg text-lg leading-8 text-zinc-600 dark:text-zinc-400">
             {supabaseUser

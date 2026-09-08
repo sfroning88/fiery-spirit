@@ -1,3 +1,5 @@
+const _CALENDAR_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
 export function toNum(value: unknown): number {
   if (value == null) return 0;
   if (typeof value === "number") return value;
@@ -12,6 +14,14 @@ export function formatDecimal(value: unknown): string {
   if (value == null) return "—";
   if (typeof value === "number") return value.toLocaleString();
   return String(value);
+}
+
+export function formatNullableInt(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (!/^\d+$/.test(trimmed)) return null;
+  const n = Number.parseInt(trimmed, 10);
+  return n > 0 ? n : null;
 }
 
 export function formatCurrency(value: unknown): string {
@@ -59,10 +69,8 @@ export function formatDateTime(date: Date | string): string {
   });
 }
 
-const CALENDAR_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
-
 export function parseCalendarDate(raw: string): Date {
-  const match = CALENDAR_DATE_RE.exec(raw);
+  const match = _CALENDAR_DATE_RE.exec(raw);
   if (!match) {
     throw new Error(
       `Invalid calendar date "${raw}" — expected YYYY-MM-DD with no time component`,
@@ -71,24 +79,6 @@ export function parseCalendarDate(raw: string): Date {
   const [, year, month, day] = match;
   return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
 }
-
-export enum SortField {
-  name = "name",
-  msa = "msa",
-  occupancy = "occupancy",
-  snapshots = "snapshots",
-}
-
-export enum SortDir {
-  asc = "asc",
-  desc = "desc",
-}
-
-export type RecencySortable = {
-  timestamp?: unknown;
-  reportedAt?: unknown;
-  createdAt?: unknown;
-};
 
 export function dateLikeToMs(value: unknown): number {
   if (value == null) return 0;
@@ -102,20 +92,4 @@ export function dateLikeToMs(value: unknown): number {
     return Number.isNaN(t) ? 0 : t;
   }
   return 0;
-}
-
-export function getRecencySortKey(item: RecencySortable): number {
-  return dateLikeToMs(item.timestamp ?? item.reportedAt ?? item.createdAt);
-}
-
-export function sortByRecencyDesc<T extends RecencySortable>(
-  items: readonly T[],
-): T[] {
-  return [...items].sort((a, b) => getRecencySortKey(b) - getRecencySortKey(a));
-}
-
-export function getLatestByRecency<T extends RecencySortable>(
-  items: readonly T[] | null | undefined,
-): T | undefined {
-  return sortByRecencyDesc(items ?? [])[0];
 }

@@ -11,4 +11,12 @@ export const TEST_IDS = {
   adminScreen: "admin-screen",
   adminHeading: "admin-heading",
   backToDashboardLink: "back-to-dashboard-link",
+  modelsHeading: "models-heading",
+  ingestButton: "ingest-button",
+  refineButton: "refine-button",
+  trainButton: "train-button",
+  batchButton: "batch-button",
+  promoteButton: "promote-button",
+  refreshButton: "refresh-button",
+  maxSamplesField: "max-samples-field",
 } as const;

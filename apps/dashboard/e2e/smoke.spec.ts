@@ -12,14 +12,27 @@ async function gotoAdmin(page: Page) {
   await expect(page.getByTestId(TEST_IDS.adminScreen)).toBeVisible();
 }
 
-test("home page renders dashboard heading", async ({ page }) => {
+test("home page renders completely", async ({ page }) => {
   await gotoHome(page);
   await expect(page.getByTestId(TEST_IDS.dashboardHeading)).toBeVisible();
 });
 
-test("admin page renders admin heading", async ({ page }) => {
+test("admin page renders completely", async ({ page }) => {
   await gotoAdmin(page);
-  await expect(page.getByTestId(TEST_IDS.adminHeading)).toBeVisible();
+  await Promise.all([
+    expect(page.getByTestId(TEST_IDS.adminHeading)).toBeVisible(),
+    expect(page.getByTestId(TEST_IDS.modelsHeading)).toBeVisible(),
+    expect(page.getByTestId(TEST_IDS.ingestButton)).toBeVisible(),
+    expect(page.getByTestId(TEST_IDS.refineButton)).toBeVisible(),
+    expect(page.getByTestId(TEST_IDS.trainButton)).toBeVisible(),
+    expect(page.getByTestId(TEST_IDS.batchButton)).toBeVisible(),
+    expect(page.getByTestId(TEST_IDS.promoteButton)).toBeVisible(),
+    expect(page.getByTestId(TEST_IDS.refreshButton)).toBeVisible(),
+    expect(page.getByTestId(TEST_IDS.maxSamplesField)).toBeVisible(),
+  ]);
+  const maxSamples = page.getByTestId(TEST_IDS.maxSamplesField);
+  await maxSamples.fill("10");
+  await expect(maxSamples).toHaveValue("10");
 });
 
 test("admin page back to dashboard link navigates to home", async ({
