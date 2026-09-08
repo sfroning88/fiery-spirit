@@ -40,7 +40,7 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Deep Focus",
+  title: "Fiery Spirit",
   description: "Focus Healthcare Partners dashboard",
 };
 

@@ -3,13 +3,16 @@ import Link from "next/link";
 import { routes } from "@lib/routes";
 import { TEST_IDS } from "@lib/test-ids";
 import { requirePlatformAdmin } from "@fiery/auth/server";
+import { ModelDashboard } from "@fiery/types";
+import { fetchModelsCached } from "@/lib/api/cache/models-cache";
+import { AdminSkeleton } from "@/app/(components)/(admin)/AdminSkeleton";
+import { AdminAsync } from "@/app/(components)/(admin)/AdminAsync";
 
 export default async function AdminPage() {
   const { supabaseUser } = await requirePlatformAdmin();
-  if (!supabaseUser) {
-    // temp
-    return <div></div>;
-  }
+  const modelsPromise = fetchModelsCached(supabaseUser.id).catch(
+    (): ModelDashboard[] => [],
+  );
 
   return (
     <div className="flex flex-col gap-6" data-testid={TEST_IDS.adminScreen}>
@@ -22,7 +25,7 @@ export default async function AdminPage() {
             Admin
           </h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Platform admin tools — model training and management.
+            Platform admin tools.
           </p>
         </div>
         <Link
@@ -33,7 +36,9 @@ export default async function AdminPage() {
           Back to dashboard
         </Link>
       </div>
-      <Suspense />
+      <Suspense fallback={<AdminSkeleton />}>
+        <AdminAsync initialDataPromise={modelsPromise} />
+      </Suspense>
     </div>
   );
 }
