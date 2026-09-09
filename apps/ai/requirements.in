@@ -9,4 +9,5 @@ datasets>=4.0.0
 h5py>=3.14.0
 
 # Model training
+torch>=2.13.0
 modal>=1.5.4
