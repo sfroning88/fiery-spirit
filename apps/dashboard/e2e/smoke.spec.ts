@@ -27,8 +27,9 @@ test("home page renders completely", async ({ page }) => {
   await signal.selectOption("seismic");
   await expect(signal).toHaveValue("seismic");
   const map = page.getByTestId(TEST_IDS.homeMap);
-  if (!(await map.isVisible())) {
-    await expect(page.getByText("No volcanoes yet...")).toBeVisible();
+  const emptyState = page.getByTestId("No volcanoes yet...");
+  await expect(map.or(emptyState)).toBeVisible();
+  if (await emptyState.isVisible()) {
     return;
   }
   await expect(map.locator("canvas")).toBeVisible();
