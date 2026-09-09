@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
-import { CACHE_STALE_TIME, QUERY_KEYS } from "@/lib/constants";
+import { CACHE_STALE_TIME } from "@/lib/constants";
+import { QUERY_KEYS } from "@/lib/query-keys";
 import type { VolcanoDashboard } from "@fiery/types";
 import { VolcanoService } from "@/lib/services";
 

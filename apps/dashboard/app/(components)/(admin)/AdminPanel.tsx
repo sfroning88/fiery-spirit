@@ -11,7 +11,7 @@ import { usePromote } from "@/app/(hooks)/use-promote";
 import { useRefresh } from "@/app/(hooks)/use-refresh";
 import { useUserId } from "@/app/(hooks)/use-user-id";
 import { AdminModel } from "./AdminModel";
-import { MOBILE_BREAKPOINT } from "@/lib/constants";
+import { MOBILE_BREAKPOINT, EMPTY_MODELS } from "@/lib/constants";
 import { TEST_IDS } from "@lib/test-ids";
 import { SignalDropdown, SourceDropdown, StageDropdown } from "@fiery/ui";
 import { dateLikeToMs, formatNullableInt } from "@fiery/utils";
@@ -54,7 +54,7 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
     TrainingSignal.deformation,
   );
 
-  const listed = models ?? [];
+  const listed = models ?? EMPTY_MODELS;
   const ranked = [...listed].sort((modelA, modelB) => {
     if (modelA.promoted !== modelB.promoted) return modelA.promoted ? -1 : 1;
     return dateLikeToMs(modelB.promotedAt) - dateLikeToMs(modelA.promotedAt);

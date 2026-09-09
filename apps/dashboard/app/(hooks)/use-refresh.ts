@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import posthog from "posthog-js";
-import { QUERY_KEYS } from "@/lib/constants";
+import { QUERY_KEYS } from "@/lib/query-keys";
 import {
   POSTHOG_EVENTS,
   ApiKeyRequest,

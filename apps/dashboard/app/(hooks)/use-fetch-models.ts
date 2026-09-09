@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { QUERY_KEYS, QUERY_STALE_TIME } from "@/lib/constants";
+import { QUERY_STALE_TIME } from "@/lib/constants";
+import { QUERY_KEYS } from "@/lib/query-keys";
 import { ModelDashboard } from "@fiery/types";
 import { fetchModelsAction } from "../(actions)/admin-action";
 

@@ -17,7 +17,7 @@ const SVZ_BOUNDS: [[number, number], [number, number]] = [
 ];
 
 type HomeMapProps = {
-  volcanoes?: VolcanoDashboard[];
+  volcanoes: readonly VolcanoDashboard[];
   selectedId: string | null;
   onSelect: (volcanoId: string | null) => void;
   isMobile: boolean;
@@ -25,7 +25,7 @@ type HomeMapProps = {
 };
 
 export function HomeMap({
-  volcanoes = [],
+  volcanoes,
   selectedId,
   onSelect,
   isMobile,
