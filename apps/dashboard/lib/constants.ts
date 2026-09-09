@@ -21,3 +21,7 @@ export const PRIVACY_DOC_PATH = "lib/docs/PRIVACY.md";
 export const MOBILE_BREAKPOINT = 768;
 
 export const VOLCANO_SPRITE = "/sprites/volcano.png";
+
+export const EMPTY_VOLCANOES: readonly [] = Object.freeze([]);
+
+export const EMPTY_MODELS: readonly [] = Object.freeze([]);

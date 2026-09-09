@@ -6,7 +6,7 @@ import { useMediaQuery } from "@/app/(hooks)/use-media-query";
 import { useFetchVolcanoes } from "@/app/(hooks)/use-fetch-volcanoes";
 import { useInference } from "@/app/(hooks)/use-inference";
 import { useUserId } from "@/app/(hooks)/use-user-id";
-import { MOBILE_BREAKPOINT } from "@/lib/constants";
+import { MOBILE_BREAKPOINT, EMPTY_VOLCANOES } from "@/lib/constants";
 import { inferenceRequest } from "@/lib/utils";
 import { TEST_IDS } from "@lib/test-ids";
 import { SignalDropdown } from "@fiery/ui";
@@ -39,7 +39,7 @@ export function HomePanel({ initialData }: HomePanelProps) {
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const listed = volcanos ?? [];
+  const listed = volcanos ?? EMPTY_VOLCANOES;
   const selectedVolcano =
     listed.find((volcano) => volcano.id === selectedId) ?? null;
   const request = selectedVolcano
@@ -108,8 +108,6 @@ export function HomePanel({ initialData }: HomePanelProps) {
         <p className="text-red-400 text-sm">
           {error instanceof Error ? error.message : "Could not load volcanoes."}
         </p>
-      ) : !listed.length ? (
-        <p className="text-white/40 text-sm">No volcanoes yet...</p>
       ) : (
         <div
           data-testid={TEST_IDS.homeMap}
