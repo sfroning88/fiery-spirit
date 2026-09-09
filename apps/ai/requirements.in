@@ -1,6 +1,9 @@
 # Python package
 -e ../../packages/python
 
+# PyTorch CPU wheels (Render / Docker Linux)
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 # Uvicorn
 uvicorn>=0.20.0
 
@@ -9,5 +12,5 @@ datasets>=4.0.0
 h5py>=3.14.0
 
 # Model training
-torch>=2.13.0
+torch==2.13.0+cpu
 modal>=1.5.4
