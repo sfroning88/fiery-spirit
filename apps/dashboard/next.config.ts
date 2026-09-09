@@ -23,6 +23,12 @@ function getPostHogRewriteDestinations() {
 const nextConfig: NextConfig = {
   // Monorepo: trace files from repo root (see output caveats in Next.js docs).
   outputFileTracingRoot: path.join(process.cwd(), "../.."),
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "**", pathname: "**" },
+      { protocol: "http", hostname: "**", pathname: "**" },
+    ],
+  },
   // Required so PostHog paths with trailing slashes are not redirected away from the proxy.
   skipTrailingSlashRedirect: true,
   async rewrites() {

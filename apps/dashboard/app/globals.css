@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@fiery/ui/theme.css";
+@import "maplibre-gl/dist/maplibre-gl.css";
 
 body {
   min-height: 100%;
@@ -8,4 +9,39 @@ body {
   background-color: var(--color-background);
   background-image: var(--background-image-fiery-hero);
   background-attachment: fixed;
+}
+
+.volcano-sprite {
+  position: relative;
+  display: block;
+  line-height: 0;
+}
+
+.volcano-sprite--live::after {
+  content: "";
+  position: absolute;
+  inset: 15% 30% 48% 30%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle, #fff8c8 0 1px, transparent 1.5px) 20% 30% / 8px 8px,
+    radial-gradient(circle, #ffe08a 0 1px, transparent 1.5px) 70% 55% / 10px
+      10px;
+  animation: volcano-sparkle 1.8s ease-in-out infinite;
+}
+@keyframes volcano-sparkle {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.15);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .volcano-sprite--live::after {
+    animation: none;
+    opacity: 0.6;
+  }
 }

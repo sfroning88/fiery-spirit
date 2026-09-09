@@ -65,6 +65,7 @@ class InferencePersistService:
                     is_glaciated=row.get("is_glaciated"),
                     is_instrumented=row.get("is_instrumented"),
                     is_held_out=row.get("is_held_out"),
+                    image_path=row.get("image_path"),
                 )
             )
         return volcanoes

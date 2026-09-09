@@ -349,12 +349,12 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
         <p className="text-red-400 text-sm">
           {error instanceof Error ? error.message : "Could not load models."}
         </p>
-      ) : !models?.length ? (
+      ) : !ranked?.length ? (
         <p className="text-white/40 text-sm">No models yet...</p>
       ) : (
         <>
           <ul className="border border-white/10 rounded-md overflow-hidden bg-surface-dark">
-            {models.map((model) => (
+            {ranked.map((model) => (
               <AdminModel key={model.id} model={model} isMobile={isMobile} />
             ))}
           </ul>

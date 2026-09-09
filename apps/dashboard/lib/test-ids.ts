@@ -1,6 +1,10 @@
 export const TEST_IDS = {
   homeScreen: "home-screen",
   dashboardHeading: "dashboard-heading",
+  volcanoesHeading: "volcanoes-heading",
+  inferenceButton: "inference-button",
+  homeMap: "home-map",
+  volcanoPopup: "volcano-popup",
   openAdminLink: "open-admin-link",
   createProfileLink: "create-profile-link",
   myProfileButton: "my-profile-button",

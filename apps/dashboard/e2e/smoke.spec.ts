@@ -14,7 +14,31 @@ async function gotoAdmin(page: Page) {
 
 test("home page renders completely", async ({ page }) => {
   await gotoHome(page);
-  await expect(page.getByTestId(TEST_IDS.dashboardHeading)).toBeVisible();
+  await Promise.all([
+    expect(page.getByTestId(TEST_IDS.dashboardHeading)).toBeVisible(),
+    expect(page.getByTestId(TEST_IDS.volcanoesHeading)).toBeVisible(),
+    expect(page.getByTestId(TEST_IDS.inferenceButton)).toBeVisible(),
+    expect(page.getByTestId(TEST_IDS.signalField)).toBeVisible(),
+    expect(page.getByTestId(TEST_IDS.myProfileButton)).toBeVisible(),
+  ]);
+  await expect(page.getByTestId(TEST_IDS.inferenceButton)).toBeDisabled();
+  const signal = page.getByTestId(TEST_IDS.signalField);
+  await expect(signal).toHaveValue("deformation");
+  await signal.selectOption("seismic");
+  await expect(signal).toHaveValue("seismic");
+  const map = page.getByTestId(TEST_IDS.homeMap);
+  const emptyState = page.getByTestId("No volcanoes yet...");
+  await expect(map.or(emptyState)).toBeVisible();
+  if (await emptyState.isVisible()) {
+    return;
+  }
+  await expect(map.locator("canvas")).toBeVisible();
+  const marker = map.locator(".maplibregl-marker").first();
+  await expect(marker).toBeVisible();
+  await marker.click();
+  const popup = page.getByTestId(TEST_IDS.volcanoPopup);
+  await expect(popup).toBeVisible();
+  await expect(popup.getByText(/interferograms/i)).toBeVisible();
 });
 
 test("admin page renders completely", async ({ page }) => {

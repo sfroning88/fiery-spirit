@@ -5,6 +5,10 @@ import { AppUserProfileNotFoundError, UserService } from "@fiery/services";
 import { MyProfileButton } from "@/app/(components)/(privacy)/MyProfileButton";
 import { routes } from "@lib/routes";
 import { TEST_IDS } from "@lib/test-ids";
+import { VolcanoDashboard } from "@fiery/types";
+import { fetchVolcanoesCached } from "@/lib/api/cache/volcano-cache";
+import { HomeSkeleton } from "@/app/(components)/(home)/HomeSkeleton";
+import { HomeAsync } from "@/app/(components)/(home)/HomeAsync";
 
 export default async function HomePage() {
   const { supabaseUser } = await getSession();
@@ -20,6 +24,9 @@ export default async function HomePage() {
       }
     }
   }
+  const volcanoesPromise = fetchVolcanoesCached(
+    supabaseUser ? supabaseUser.id : null,
+  ).catch((): VolcanoDashboard[] => []);
 
   return (
     <div className="flex flex-col gap-6" data-testid={TEST_IDS.homeScreen}>
@@ -63,7 +70,9 @@ export default async function HomePage() {
           </Link>
         ) : null}
       </div>
-      <Suspense />
+      <Suspense fallback={<HomeSkeleton />}>
+        <HomeAsync initialDataPromise={volcanoesPromise} />
+      </Suspense>
     </div>
   );
 }
