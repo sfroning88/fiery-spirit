@@ -3,7 +3,7 @@ import { TEST_IDS } from "@/lib/test-ids";
 import { routes } from "@lib/routes";
 
 async function gotoHome(page: Page) {
-  await page.goto(routes.base.home);
+  await page.goto(routes.base.root);
   await expect(page.getByTestId(TEST_IDS.homeScreen)).toBeVisible();
 }
 
@@ -66,7 +66,7 @@ test("admin page back to dashboard link navigates to home", async ({
 }) => {
   await gotoAdmin(page);
   await page.getByTestId(TEST_IDS.backToDashboardLink).click();
-  await expect(page).toHaveURL((url) => url.pathname === routes.base.home);
+  await expect(page).toHaveURL((url) => url.pathname === routes.base.root);
 });
 
 test("home page open admin link navigates to admin", async ({ page }) => {
@@ -83,8 +83,8 @@ test("home page open admin link navigates to admin", async ({ page }) => {
 test("unauthenticated visit to home stays in browser", async ({ browser }) => {
   const context = await browser.newContext({ storageState: undefined });
   const page = await context.newPage();
-  await page.goto(routes.base.home);
-  await expect(page).toHaveURL((url) => url.pathname === routes.base.home);
+  await page.goto(routes.base.root);
+  await expect(page).toHaveURL((url) => url.pathname === routes.base.root);
   await expect(page.getByTestId(TEST_IDS.homeScreen)).toBeVisible();
   await expect(page.getByTestId(TEST_IDS.dashboardHeading)).toBeVisible();
   await expect(page.getByTestId(TEST_IDS.openAdminLink)).toHaveCount(0);

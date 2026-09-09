@@ -51,7 +51,7 @@ export default async function HomePage() {
                 Create profile to unlock all features
               </p>
               <Link
-                href={`${routes.auth.login}?next=${routes.base.home}`}
+                href={`${routes.auth.login}?next=${routes.base.root}`}
                 data-testid={TEST_IDS.createProfileLink}
                 className="inline-flex w-fit shrink-0 text-sm font-medium text-zinc-900 underline underline-offset-4 dark:text-zinc-100"
               >

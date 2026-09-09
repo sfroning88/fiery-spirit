@@ -14,7 +14,7 @@ async function globalSetup(_config: FullConfig) {
     throw new Error("PLAYWRIGHT_EMAIL and PLAYWRIGHT_PASSWORD must be set");
   }
 
-  const postLoginUrl = new RegExp(`/home`);
+  const postLoginUrl = (pathname: string) => pathname === "/";
 
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   try {
@@ -46,7 +46,7 @@ async function globalSetup(_config: FullConfig) {
     await passwordInput.waitFor({ state: "visible" });
     await passwordInput.fill(password);
     await Promise.all([
-      page.waitForURL((url) => postLoginUrl.test(url.pathname), {
+      page.waitForURL((url) => postLoginUrl(url.pathname), {
         waitUntil: "domcontentloaded",
         timeout: 30_000,
       }),
