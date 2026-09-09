@@ -36,8 +36,8 @@ export const signalColors: Record<TrainingSignal, string> = {
 };
 
 export const signalLabel: Record<TrainingSignal, string> = {
-  deformation: "Deformation",
-  seismic: "Seismic",
+  deformation: "Ground Deformations",
+  seismic: "Seismic Activity",
 };
 
 export const metricLabel: Record<ModelMetricName, string> = {

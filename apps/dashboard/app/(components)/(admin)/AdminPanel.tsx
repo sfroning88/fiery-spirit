@@ -13,7 +13,12 @@ import { useUserId } from "@/app/(hooks)/use-user-id";
 import { AdminModel } from "./AdminModel";
 import { MOBILE_BREAKPOINT, EMPTY_MODELS } from "@/lib/constants";
 import { TEST_IDS } from "@lib/test-ids";
-import { SignalDropdown, SourceDropdown, StageDropdown } from "@fiery/ui";
+import {
+  SectionLabel,
+  SignalDropdown,
+  SourceDropdown,
+  StageDropdown,
+} from "@fiery/ui";
 import { dateLikeToMs, formatNullableInt } from "@fiery/utils";
 import {
   ModelDashboard,
@@ -83,14 +88,15 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
 
   return (
     <div className="space-y-4 font-data">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="space-y-3">
         <h2
           data-testid={TEST_IDS.modelsHeading}
           className={`font-semibold text-fiery-crimson-400 ${isMobile ? "text-lg" : "text-2xl"}`}
         >
-          Models
+          Machine Learning Pipeline
         </h2>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <SectionLabel>inputs</SectionLabel>
           <input
             type="text"
             inputMode="numeric"
@@ -122,6 +128,9 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
             testId={TEST_IDS.stageField}
             className={fieldClass}
           />
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <SectionLabel>requests</SectionLabel>
           <button
             type="button"
             data-testid={TEST_IDS.ingestButton}

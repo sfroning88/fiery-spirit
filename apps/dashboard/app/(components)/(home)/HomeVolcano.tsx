@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { Badge, Dot } from "@fiery/ui";
 import { formatDecimal } from "@fiery/utils";
 import type { VolcanoDashboard } from "@fiery/types";
 import { httpSafeImageUrl } from "@/lib/utils";
 import { TEST_IDS } from "@lib/test-ids";
+import { IMAGE_LOADING } from "@/lib/constants";
 
 type HomeVolcanoProps = {
   volcano: VolcanoDashboard;
@@ -17,18 +19,32 @@ export function HomeVolcano({ volcano, isMobile }: HomeVolcanoProps) {
   const chipClass = `inline-flex items-center rounded-sm border px-2 py-0.5 font-data font-medium ${chipText}`;
   const metaText = isMobile ? "text-[11px]" : "text-xs";
   const imageSrc = httpSafeImageUrl(volcano.imagePath);
+  const [imageFailed, setImageFailed] = useState(false);
 
   return (
     <div data-testid={TEST_IDS.volcanoPopup} className="min-w-0">
-      {imageSrc ? (
+      {imageSrc && !imageFailed ? (
         <Image
           src={imageSrc}
           alt={volcano.name}
-          width={288}
-          height={160}
-          unoptimized
+          width={256}
+          height={128}
+          sizes="256px"
+          quality={32}
+          className="mb-2 h-32 w-64 object-cover"
+          onError={() => setImageFailed(true)}
         />
-      ) : null}
+      ) : (
+        <Image
+          src={IMAGE_LOADING}
+          alt={volcano.name}
+          width={256}
+          height={256}
+          sizes="256px"
+          quality={16}
+          className="mb-2 h-48 w-64 object-contain"
+        />
+      )}
       <div className="flex items-center gap-2 flex-wrap">
         <p
           className={`font-semibold text-zinc-900 truncate ${isMobile ? "text-sm" : "text-base"}`}

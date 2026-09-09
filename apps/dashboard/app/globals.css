@@ -20,13 +20,13 @@ body {
 .volcano-sprite--live::after {
   content: "";
   position: absolute;
-  inset: 15% 30% 48% 30%;
+  inset: 6% 18% 32% 18%;
   pointer-events: none;
   background:
     radial-gradient(circle, #fff8c8 0 1px, transparent 1.5px) 20% 30% / 8px 8px,
     radial-gradient(circle, #ffe08a 0 1px, transparent 1.5px) 70% 55% / 10px
       10px;
-  animation: volcano-sparkle 1.8s ease-in-out infinite;
+  animation: volcano-sparkle 3s ease-in-out infinite;
 }
 @keyframes volcano-sparkle {
   0%,

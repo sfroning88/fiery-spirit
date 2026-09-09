@@ -17,15 +17,16 @@ test("home page renders completely", async ({ page }) => {
   await Promise.all([
     expect(page.getByTestId(TEST_IDS.dashboardHeading)).toBeVisible(),
     expect(page.getByTestId(TEST_IDS.volcanoesHeading)).toBeVisible(),
-    expect(page.getByTestId(TEST_IDS.inferenceButton)).toBeVisible(),
-    expect(page.getByTestId(TEST_IDS.signalField)).toBeVisible(),
+    expect(page.getByTestId(TEST_IDS.inferenceDeformationButton)).toBeVisible(),
+    expect(page.getByTestId(TEST_IDS.inferenceSeismicButton)).toBeVisible(),
     expect(page.getByTestId(TEST_IDS.myProfileButton)).toBeVisible(),
   ]);
-  await expect(page.getByTestId(TEST_IDS.inferenceButton)).toBeDisabled();
-  const signal = page.getByTestId(TEST_IDS.signalField);
-  await expect(signal).toHaveValue("deformation");
-  await signal.selectOption("seismic");
-  await expect(signal).toHaveValue("seismic");
+  await expect(
+    page.getByTestId(TEST_IDS.inferenceDeformationButton),
+  ).toBeDisabled();
+  await expect(
+    page.getByTestId(TEST_IDS.inferenceSeismicButton),
+  ).toBeDisabled();
   const map = page.getByTestId(TEST_IDS.homeMap);
   await expect(map).toBeVisible();
   await expect(map.locator("canvas")).toBeVisible();
