@@ -8,11 +8,11 @@ import { authRoutes } from "../routes";
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next") ?? authRoutes.home;
+  const nextPath = searchParams.get("next") ?? authRoutes.root;
   const safeNext =
     nextPath.startsWith("/") && !nextPath.startsWith("//")
       ? nextPath
-      : authRoutes.home;
+      : authRoutes.root;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);

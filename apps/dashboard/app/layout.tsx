@@ -3,9 +3,6 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Cinzel, DM_Sans, DM_Mono, Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
-import { getSession } from "@fiery/auth/server";
-import { routes } from "@/lib/routes";
-import Link from "next/link";
 import { CookieBanner } from "@/app/(components)/(privacy)/CookieBanner";
 import { PrivacyNotice } from "@/app/(components)/(privacy)/PrivacyNotice";
 import "./globals.css";
@@ -44,26 +41,17 @@ export const metadata: Metadata = {
   description: "Focus Healthcare Partners dashboard",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { supabaseUser } = await getSession();
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${focusDisplay.variable} ${dmSans.variable} ${dmMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <header>
-          <Link href={routes.base.home}>Dashboard</Link>
-          {supabaseUser ? (
-            <Link href={routes.base.home}>Signed in</Link>
-          ) : (
-            <Link href={routes.auth.login}>Create profile</Link>
-          )}
-        </header>
         <QueryProvider>
           <SupabaseProvider>{children}</SupabaseProvider>
         </QueryProvider>

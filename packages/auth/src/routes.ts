@@ -1,6 +1,5 @@
 export const authRoutes = {
   root: "/" as const,
-  home: "/home" as const,
   noAccess: "/no-access" as const,
   unauthorized: "/unauthorized" as const,
   auth: {
