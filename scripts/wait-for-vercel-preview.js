@@ -1,5 +1,5 @@
 const VERCEL_BOT_LOGIN = "vercel[bot]";
-const MAX_TIMEOUT_MS = 10 * 60 * 1000;
+const MAX_TIMEOUT_MS = 5 * 60 * 1000;
 const POLL_INTERVAL_MS = 10 * 1000;
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
