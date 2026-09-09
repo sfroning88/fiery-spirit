@@ -1,8 +1,8 @@
 export const TEST_IDS = {
   homeScreen: "home-screen",
-  dashboardHeading: "dashboard-heading",
   volcanoesHeading: "volcanoes-heading",
-  inferenceButton: "inference-button",
+  inferenceDeformationButton: "inference-deformation-button",
+  inferenceSeismicButton: "inference-seismic-button",
   homeMap: "home-map",
   volcanoPopup: "volcano-popup",
   openAdminLink: "open-admin-link",
@@ -13,7 +13,6 @@ export const TEST_IDS = {
   myProfileNameField: "my-profile-name-field",
   myProfileEmailField: "my-profile-email-field",
   adminScreen: "admin-screen",
-  adminHeading: "admin-heading",
   backToDashboardLink: "back-to-dashboard-link",
   modelsHeading: "models-heading",
   ingestButton: "ingest-button",

@@ -1,6 +1,9 @@
 # Python package
 -e ../../packages/python
 
+# Uvicorn
+uvicorn>=0.20.0
+
 # Model inference
 timm>=1.0.28
 peft>=0.20.0

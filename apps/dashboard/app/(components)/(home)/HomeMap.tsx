@@ -21,7 +21,6 @@ type HomeMapProps = {
   selectedId: string | null;
   onSelect: (volcanoId: string | null) => void;
   isMobile: boolean;
-  signal: TrainingSignal;
 };
 
 export function HomeMap({
@@ -29,7 +28,6 @@ export function HomeMap({
   selectedId,
   onSelect,
   isMobile,
-  signal,
 }: HomeMapProps) {
   const longitudes = volcanoes.map((volcano) => toNum(volcano.longitude));
   const latitudes = volcanoes.map((volcano) => toNum(volcano.latitude));
@@ -54,7 +52,9 @@ export function HomeMap({
     >
       <NavigationControl position="top-right" />
       {volcanoes.map((volcano) => {
-        const canInfer = inferenceRequest(volcano, signal) != null;
+        const canInfer =
+          inferenceRequest(volcano, TrainingSignal.deformation) != null ||
+          inferenceRequest(volcano, TrainingSignal.seismic) != null;
         return (
           <Marker
             key={volcano.id}
@@ -73,7 +73,13 @@ export function HomeMap({
                   : "volcano-sprite"
               }
             >
-              <Image src={VOLCANO_SPRITE} alt="" width={28} height={28} />
+              <Image
+                src={VOLCANO_SPRITE}
+                alt=""
+                width={28}
+                height={28}
+                className="h-7 w-7 max-w-none"
+              />
             </span>
           </Marker>
         );

@@ -1,6 +1,9 @@
 # Python package
 -e ../../packages/python
 
+# Uvicorn
+uvicorn>=0.20.0
+
 # Hugging Face
 datasets>=4.0.0
 h5py>=3.14.0

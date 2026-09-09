@@ -9,8 +9,8 @@ import { useUserId } from "@/app/(hooks)/use-user-id";
 import { MOBILE_BREAKPOINT, EMPTY_VOLCANOES } from "@/lib/constants";
 import { inferenceRequest } from "@/lib/utils";
 import { TEST_IDS } from "@lib/test-ids";
-import { SignalDropdown } from "@fiery/ui";
 import { VolcanoDashboard, TrainingSignal } from "@fiery/types";
+import { signalLabel } from "@fiery/ui";
 
 const HomeMap = dynamic(() => import("./HomeMap").then((map) => map.HomeMap), {
   ssr: false,
@@ -34,18 +34,19 @@ export function HomePanel({ initialData }: HomePanelProps) {
 
   const inferenceMutation = useInference(userId);
 
-  const [signal, setSignal] = useState<TrainingSignal>(
-    TrainingSignal.deformation,
-  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const listed = volcanos ?? EMPTY_VOLCANOES;
   const selectedVolcano =
     listed.find((volcano) => volcano.id === selectedId) ?? null;
-  const request = selectedVolcano
-    ? inferenceRequest(selectedVolcano, signal)
+  const deformationRequest = selectedVolcano
+    ? inferenceRequest(selectedVolcano, TrainingSignal.deformation)
     : null;
-  const canInfer = request != null;
+  const seismicRequest = selectedVolcano
+    ? inferenceRequest(selectedVolcano, TrainingSignal.seismic)
+    : null;
+  const canInferDeformation = deformationRequest != null;
+  const canInferSeismic = seismicRequest != null;
   const fieldClass = isMobile ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm";
 
   return (
@@ -55,34 +56,55 @@ export function HomePanel({ initialData }: HomePanelProps) {
           data-testid={TEST_IDS.volcanoesHeading}
           className={`font-semibold text-fiery-crimson-400 ${isMobile ? "text-lg" : "text-2xl"}`}
         >
-          Volcanos
+          Fiery Spirit
         </h2>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <SignalDropdown
-            value={signal}
-            onChange={setSignal}
-            testId={TEST_IDS.signalField}
-            className={fieldClass}
-          />
           <button
             type="button"
-            data-testid={TEST_IDS.inferenceButton}
-            disabled={inferenceMutation.isPending || !canInfer}
+            data-testid={TEST_IDS.inferenceDeformationButton}
+            disabled={inferenceMutation.isPending || !canInferDeformation}
             onClick={() => {
-              if (!request) return;
-              inferenceMutation.mutate(request);
+              if (!deformationRequest) return;
+              inferenceMutation.mutate(deformationRequest);
             }}
             className={`
                             rounded-md border font-data font-medium transition-colors
-                            ${isMobile ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"}
+                            ${fieldClass}
                             ${
-                              inferenceMutation.isPending || !canInfer
+                              inferenceMutation.isPending ||
+                              !canInferDeformation
                                 ? "border-white/10 bg-white/2 text-white/30 cursor-not-allowed"
                                 : "border-white/20 bg-white/4 text-white/70 hover:bg-white/8"
                             }
                         `}
           >
-            {inferenceMutation.isPending ? "Inferencing…" : "Live Inference"}
+            {inferenceMutation.isPending &&
+            inferenceMutation.variables?.interferogramId
+              ? "Inferencing…"
+              : signalLabel.deformation}
+          </button>
+          <button
+            type="button"
+            data-testid={TEST_IDS.inferenceSeismicButton}
+            disabled={inferenceMutation.isPending || !canInferSeismic}
+            onClick={() => {
+              if (!seismicRequest) return;
+              inferenceMutation.mutate(seismicRequest);
+            }}
+            className={`
+                            rounded-md border font-data font-medium transition-colors
+                            ${fieldClass}
+                            ${
+                              inferenceMutation.isPending || !canInferSeismic
+                                ? "border-white/10 bg-white/2 text-white/30 cursor-not-allowed"
+                                : "border-white/20 bg-white/4 text-white/70 hover:bg-white/8"
+                            }
+                        `}
+          >
+            {inferenceMutation.isPending &&
+            inferenceMutation.variables?.seismicEventId
+              ? "Inferencing…"
+              : signalLabel.seismic}
           </button>
         </div>
       </div>
@@ -118,7 +140,6 @@ export function HomePanel({ initialData }: HomePanelProps) {
             selectedId={selectedId}
             onSelect={setSelectedId}
             isMobile={isMobile}
-            signal={signal}
           />
         </div>
       )}
