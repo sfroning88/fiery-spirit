@@ -1,6 +1,5 @@
 export const TEST_IDS = {
   homeScreen: "home-screen",
-  dashboardHeading: "dashboard-heading",
   volcanoesHeading: "volcanoes-heading",
   inferenceDeformationButton: "inference-deformation-button",
   inferenceSeismicButton: "inference-seismic-button",
@@ -14,7 +13,6 @@ export const TEST_IDS = {
   myProfileNameField: "my-profile-name-field",
   myProfileEmailField: "my-profile-email-field",
   adminScreen: "admin-screen",
-  adminHeading: "admin-heading",
   backToDashboardLink: "back-to-dashboard-link",
   modelsHeading: "models-heading",
   ingestButton: "ingest-button",

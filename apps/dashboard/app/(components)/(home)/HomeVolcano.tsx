@@ -19,7 +19,8 @@ export function HomeVolcano({ volcano, isMobile }: HomeVolcanoProps) {
   const chipClass = `inline-flex items-center rounded-sm border px-2 py-0.5 font-data font-medium ${chipText}`;
   const metaText = isMobile ? "text-[11px]" : "text-xs";
   const imageSrc = httpSafeImageUrl(volcano.imagePath);
-  const [imageFailed, setImageFailed] = useState(false);
+  const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null);
+  const imageFailed = imageSrc != null && imageSrc === failedImageSrc;
 
   return (
     <div data-testid={TEST_IDS.volcanoPopup} className="min-w-0">
@@ -32,7 +33,7 @@ export function HomeVolcano({ volcano, isMobile }: HomeVolcanoProps) {
           sizes="256px"
           quality={32}
           className="mb-2 h-32 w-64 object-cover"
-          onError={() => setImageFailed(true)}
+          onError={() => setFailedImageSrc(imageSrc)}
         />
       ) : (
         <Image

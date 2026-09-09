@@ -15,7 +15,6 @@ async function gotoAdmin(page: Page) {
 test("home page renders completely", async ({ page }) => {
   await gotoHome(page);
   await Promise.all([
-    expect(page.getByTestId(TEST_IDS.dashboardHeading)).toBeVisible(),
     expect(page.getByTestId(TEST_IDS.volcanoesHeading)).toBeVisible(),
     expect(page.getByTestId(TEST_IDS.inferenceDeformationButton)).toBeVisible(),
     expect(page.getByTestId(TEST_IDS.inferenceSeismicButton)).toBeVisible(),
@@ -44,7 +43,6 @@ test("home page renders completely", async ({ page }) => {
 test("admin page renders completely", async ({ page }) => {
   await gotoAdmin(page);
   await Promise.all([
-    expect(page.getByTestId(TEST_IDS.adminHeading)).toBeVisible(),
     expect(page.getByTestId(TEST_IDS.modelsHeading)).toBeVisible(),
     expect(page.getByTestId(TEST_IDS.ingestButton)).toBeVisible(),
     expect(page.getByTestId(TEST_IDS.refineButton)).toBeVisible(),
@@ -87,7 +85,7 @@ test("unauthenticated visit to home stays in browser", async ({ browser }) => {
   await page.goto(routes.base.root);
   await expect(page).toHaveURL((url) => url.pathname === routes.base.root);
   await expect(page.getByTestId(TEST_IDS.homeScreen)).toBeVisible();
-  await expect(page.getByTestId(TEST_IDS.dashboardHeading)).toBeVisible();
+  await expect(page.getByTestId(TEST_IDS.volcanoesHeading)).toBeVisible();
   await expect(page.getByTestId(TEST_IDS.openAdminLink)).toHaveCount(0);
   await expect(page.getByTestId(TEST_IDS.myProfileButton)).toHaveCount(0);
   await expect(page.getByTestId(TEST_IDS.createProfileLink)).toBeVisible();
