@@ -49,6 +49,7 @@ click==8.3.1
     #   -c constraints.txt
     #   modal
     #   rq
+    #   uvicorn
 croniter==1.4.1
     # via rq
 datasets==5.0.1
@@ -81,6 +82,7 @@ h11==0.16.0
     # via
     #   -c constraints.txt
     #   httpcore
+    #   uvicorn
 h2==4.4.1
     # via grpclib
 h5py==3.16.0
@@ -240,6 +242,10 @@ urllib3==2.5.0
     # via
     #   botocore
     #   requests
+uvicorn==0.52.4
+    # via
+    #   -c constraints.txt
+    #   -r requirements.in
 watchfiles==1.2.0
     # via modal
 wrapt==2.2.1
