@@ -45,12 +45,18 @@ async function globalSetup(_config: FullConfig) {
     await emailInput.fill(email);
     await passwordInput.waitFor({ state: "visible" });
     await passwordInput.fill(password);
+    const submit = page.getByTestId("login-submit");
+    await submit.waitFor({ state: "visible" });
+    await page.waitForFunction(() => {
+      const button = document.querySelector('[data-testid="login-submit"]');
+      return button instanceof HTMLButtonElement && !button.disabled;
+    });
     await Promise.all([
       page.waitForURL((url) => postLoginUrl(url.pathname), {
         waitUntil: "domcontentloaded",
         timeout: 30_000,
       }),
-      page.getByRole("button", { name: "Sign in", exact: true }).click(),
+      submit.click(),
     ]);
 
     const landed = new URL(page.url()).pathname;

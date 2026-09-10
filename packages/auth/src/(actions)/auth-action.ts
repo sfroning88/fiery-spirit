@@ -15,7 +15,7 @@ import { createPublicAction, selfUserAction } from "../guards/action-guards";
 import { invalidateSessionCache } from "../guards/session";
 import { supabaseServerClient } from "../client/server";
 import { authRoutes } from "../routes";
-import { AUTH_QUERY_KEYS } from "../constants";
+import { AUTH_QUERY_KEYS, APP_ORIGIN } from "../constants";
 
 const signInSchema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -65,10 +65,15 @@ export const signupAction = createPublicAction(
   async ({ input }: { input: SignupFields }): Promise<SignupResult> => {
     const { email, password, name } = input;
     try {
+      const supabase = await supabaseServerClient();
       const result = await AuthService.signup({
-        email,
-        password,
-        name,
+        fields: {
+          email,
+          password,
+          name,
+        },
+        origin: APP_ORIGIN,
+        supabaseClient: supabase,
       });
       if (!result.success) return result;
       invalidateSessionCache();

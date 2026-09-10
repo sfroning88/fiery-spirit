@@ -3,3 +3,5 @@ export const AUTH_QUERY_KEYS = {
 } as const;
 
 export const FAILED_ATTEMPTS_LIMIT = 3;
+
+export const APP_ORIGIN = "https://fiery-spirit.vercel.app";

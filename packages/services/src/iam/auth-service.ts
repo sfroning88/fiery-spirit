@@ -2,7 +2,6 @@ import "server-only";
 
 import { db } from "@fiery/db";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getSupabaseAdminClient } from "@fiery/utils/server";
 import {
   SignInResult,
   SignOutResult,
@@ -34,16 +33,21 @@ export const AuthService = {
     return { ok: true };
   },
 
-  async signup(params: SignupFields): Promise<SignupResult> {
-    const { email, password, name } = params;
+  async signup(params: {
+    fields: SignupFields;
+    origin: string;
+    supabaseClient: SupabaseClient;
+  }): Promise<SignupResult> {
+    const { email, password, name } = params.fields;
     const validation = validateSignupFields(email, password, name);
     if (!validation.success) return validation;
-    const supabaseAdmin = getSupabaseAdminClient();
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+    const { error, data } = await params.supabaseClient.auth.signUp({
       email,
       password,
-      user_metadata: { name: name },
-      email_confirm: true,
+      options: {
+        data: { name },
+        emailRedirectTo: `${params.origin}/auth/callback`,
+      },
     });
     if (error) {
       return {
@@ -64,7 +68,7 @@ export const AuthService = {
         throw new Error("Failed to create user in database");
       }
       const dbUser = await db.user.upsert({
-        where: { email: data.user.email },
+        where: { id: data.user.id },
         update: {
           isActive: true,
           name: name,

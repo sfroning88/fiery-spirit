@@ -20,14 +20,19 @@ export function useLogin(initialError?: string | null) {
       setIsLoading(false);
       return;
     }
-    const res = await signInAction({ email, password });
-    if (res && !res.ok) {
-      setError(res.error ?? "Sign in failed");
+    try {
+      const res = await signInAction({ email, password });
+      if (res && !res.ok) {
+        setError(res.error ?? "Sign in failed");
+        setIsLoading(false);
+        return;
+      }
+      if (res?.ok) {
+        window.location.href = authRoutes.root;
+      }
+    } catch {
+      setError("Sign in failed");
       setIsLoading(false);
-      return;
-    }
-    if (res?.ok) {
-      window.location.href = authRoutes.root;
     }
   }
   return { error, isLoading, handleSubmit };

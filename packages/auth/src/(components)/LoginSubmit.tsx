@@ -15,6 +15,7 @@ export function LoginSubmit({ isLoading }: LoginSubmitProps) {
       type={hydrated ? "submit" : "button"}
       disabled={!hydrated || isLoading}
       data-hydrated={hydrated ? "true" : "false"}
+      data-testid="login-submit"
       className="w-full"
     >
       {isLoading ? "Signing in..." : "Sign in"}
