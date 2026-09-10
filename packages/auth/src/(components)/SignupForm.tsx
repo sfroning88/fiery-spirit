@@ -14,12 +14,12 @@ export function SignupForm({ defaultEmail, initialError }: SignupFormProps) {
   return (
     <form className="flex w-full flex-col gap-4" onSubmit={handleSubmit}>
       {error ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-sm font-semibold text-white" role="alert">
           {error}
         </p>
       ) : null}
       <div className="flex flex-col gap-2">
-        <Label htmlFor="email">Email address</Label>
+        <Label htmlFor="email">Email</Label>
         <Input
           id="email"
           name="email"
@@ -31,7 +31,7 @@ export function SignupForm({ defaultEmail, initialError }: SignupFormProps) {
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="name">Full name</Label>
+        <Label htmlFor="name">Username</Label>
         <Input
           id="name"
           name="name"

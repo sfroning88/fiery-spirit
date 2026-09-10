@@ -19,7 +19,7 @@ import { AUTH_QUERY_KEYS, APP_ORIGIN } from "../constants";
 
 const signInSchema = z.object({
   email: z.string().email("Enter a valid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(5, "Password must be at least 5 characters"),
 });
 
 export const signInAction = createPublicAction(

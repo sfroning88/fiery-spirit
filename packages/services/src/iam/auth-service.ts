@@ -21,7 +21,10 @@ export const AuthService = {
       email: params.email,
       password: params.password,
     });
-    if (error) return { ok: false, error: "Invalid email or password" };
+    if (error) {
+      console.error("Error signing in:", error);
+      return { ok: false, error: "Invalid email or password" };
+    }
     return { ok: true };
   },
 

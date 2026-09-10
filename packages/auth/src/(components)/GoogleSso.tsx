@@ -16,7 +16,9 @@ export function GoogleSso() {
         <Google className="h-4 w-4 shrink-0" />
         {isLoading ? "Redirecting..." : "Sign in with Google"}
       </Button>
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="text-xs font-semibold text-white">{error}</p>
+      ) : null}
     </div>
   );
 }

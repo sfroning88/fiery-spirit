@@ -15,7 +15,7 @@ export function useLogin(initialError?: string | null) {
     const fd = new FormData(form);
     const email = String(fd.get("email") ?? "");
     const password = String(fd.get("password") ?? "");
-    if (password.length < 6) {
+    if (password.length < 5) {
       setError("Invalid email or password");
       setIsLoading(false);
       return;

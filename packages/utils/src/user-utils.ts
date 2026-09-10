@@ -21,7 +21,7 @@ export function validateSignupFields(
       user: null,
     };
   }
-  if (password.length < 6) {
+  if (password.length < 5) {
     return {
       success: false,
       error: "Malformed password",
