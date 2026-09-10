@@ -186,6 +186,9 @@ importers:
       '@fiery/types':
         specifier: workspace:*
         version: link:../types
+      '@fiery/ui':
+        specifier: workspace:*
+        version: link:../ui
       '@supabase/ssr':
         specifier: ^0.6.1
         version: 0.6.1(@supabase/supabase-js@2.100.1)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useState } from "react";
+import { useCallback, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import posthog from "posthog-js";
 import ReactMarkdown from "react-markdown";
@@ -8,6 +8,7 @@ import { useCookieBannerDismissed } from "@/app/(hooks)/use-cookie-banner-dismis
 import { useMediaQuery } from "@/app/(hooks)/use-media-query";
 import { MOBILE_BREAKPOINT } from "@/lib/constants";
 import { POSTHOG_EVENTS } from "@fiery/types";
+import { useModalFocus } from "@/app/(hooks)/use-modal-focus";
 import { useGetPrivacyContent } from "@/app/(hooks)/use-get-privacy-content";
 
 export function PrivacyNotice() {
@@ -22,10 +23,11 @@ export function PrivacyNotice() {
     setIsOpen(true);
     posthog.capture(POSTHOG_EVENTS.privacy_policy_opened);
   };
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setIsOpen(false);
     posthog.capture(POSTHOG_EVENTS.privacy_policy_closed);
-  };
+  }, []);
+  const dialogRef = useModalFocus(isOpen, handleClose);
   const modalContent = isOpen ? (
     <>
       <div
@@ -34,11 +36,17 @@ export function PrivacyNotice() {
         aria-hidden
       />
       <div
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card border border-border shadow-lg z-110 flex flex-col gap-4 overflow-hidden transition-all duration-300 max-w-2xl max-h-[80vh] w-[90vw] rounded-sm"
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal
+        aria-labelledby="privacy-title"
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card border border-border shadow-lg z-110 flex flex-col gap-4 overflow-hidden transition-all duration-300 max-w-2xl max-h-[80vh] w-[90vw] rounded-sm outline-none"
         style={{ padding: isMobile ? "0.75rem" : "1.5rem" }}
       >
         <div className="flex items-center justify-between shrink-0">
           <h2
+            id="privacy-title"
             className={`font-semibold truncate ${isMobile ? "text-base" : "text-xl"}`}
           >
             Privacy Policy

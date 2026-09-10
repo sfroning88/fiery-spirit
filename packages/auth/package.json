@@ -20,6 +20,7 @@
     "@fiery/db": "workspace:*",
     "@fiery/services": "workspace:*",
     "@fiery/types": "workspace:*",
+    "@fiery/ui": "workspace:*",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.1",
     "iconoir-react": "^7.11.0",

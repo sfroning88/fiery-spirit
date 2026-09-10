@@ -1,4 +1,9 @@
-import type { ReactNode } from "react";
+import type {
+  ButtonHTMLAttributes,
+  InputHTMLAttributes,
+  LabelHTMLAttributes,
+  ReactNode,
+} from "react";
 import { TrainingSignal, TrainingStage } from "@fiery/types";
 import { ThumbsDown, ThumbsUp } from "iconoir-react";
 import { iconClass, btnClass, selectClass, onSelectChange } from "./dynamics";
@@ -21,6 +26,50 @@ export function Badge({ children }: { children: ReactNode }) {
     <span className="inline-flex items-center rounded-sm border border-white/15 px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs text-white/50 font-data-mono whitespace-nowrap">
       {children}
     </span>
+  );
+}
+
+export function Button({
+  children,
+  className,
+  type = "button",
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type={type}
+      className={`inline-flex items-center justify-center gap-2 rounded-md border border-white font-data font-semibold transition-colors px-3 py-1.5 text-xs md:px-4 md:py-2 md:text-sm bg-white/4 text-white hover:bg-white/12 disabled:border-white/40 disabled:bg-white/2 disabled:text-white/50 disabled:cursor-not-allowed disabled:hover:bg-white/2 ${className ?? ""}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+export function Input({
+  className,
+  ...props
+}: InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      className={`block rounded-md border border-white bg-white/4 font-data font-semibold text-white placeholder:text-white/50 px-3 py-1.5 text-xs md:px-4 md:py-2 md:text-sm read-only:opacity-60 disabled:opacity-60 ${className ?? ""}`}
+      {...props}
+    />
+  );
+}
+
+export function Label({
+  children,
+  className,
+  ...props
+}: LabelHTMLAttributes<HTMLLabelElement>) {
+  return (
+    <label
+      className={`block text-sm font-semibold text-white ${className ?? ""}`}
+      {...props}
+    >
+      {children}
+    </label>
   );
 }
 

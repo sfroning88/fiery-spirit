@@ -1,6 +1,9 @@
 export {
   Badge,
+  Button,
   Dot,
+  Input,
+  Label,
   SectionLabel,
   FeedbackThanksIcon,
   FeedbackThumbs,

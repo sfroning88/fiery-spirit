@@ -90,7 +90,14 @@ test("unauthenticated visit to home stays in browser", async ({ browser }) => {
   await expect(page.getByTestId(TEST_IDS.myProfileButton)).toHaveCount(0);
   await expect(page.getByTestId(TEST_IDS.createProfileLink)).toBeVisible();
   await page.getByTestId(TEST_IDS.createProfileLink).click();
-  await expect(page).toHaveURL((url) => url.pathname === routes.auth.login);
+  await expect(page.getByTestId(TEST_IDS.signupDialog)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /complete registration/i }),
+  ).toBeVisible();
+  await page.getByTestId(TEST_IDS.signupCloseButton).click();
+  await page.getByTestId(TEST_IDS.signInButton).click();
+  await expect(page.getByTestId(TEST_IDS.loginDialog)).toBeVisible();
+  await expect(page).toHaveURL((url) => url.pathname === routes.base.root);
   await context.close();
 });
 

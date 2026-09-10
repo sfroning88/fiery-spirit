@@ -14,6 +14,8 @@ import { AdminModel } from "./AdminModel";
 import { MOBILE_BREAKPOINT, EMPTY_MODELS } from "@/lib/constants";
 import { TEST_IDS } from "@lib/test-ids";
 import {
+  Button,
+  Input,
   SectionLabel,
   SignalDropdown,
   SourceDropdown,
@@ -97,7 +99,7 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
         </h2>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <SectionLabel>inputs</SectionLabel>
-          <input
+          <Input
             type="text"
             inputMode="numeric"
             data-testid={TEST_IDS.maxSamplesField}
@@ -105,10 +107,7 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
             placeholder="Max samples"
             value={maxSamplesInput}
             onChange={(event) => setMaxSamplesInput(event.target.value)}
-            className={`
-                            w-28 rounded-md border border-white/20 bg-white/4 font-data text-white/80 placeholder:text-white/30
-                            ${fieldClass}
-                        `}
+            className="w-28"
           />
           <SignalDropdown
             value={signal}
@@ -131,8 +130,7 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <SectionLabel>requests</SectionLabel>
-          <button
-            type="button"
+          <Button
             data-testid={TEST_IDS.ingestButton}
             disabled={ingestMutation.isPending}
             onClick={() => {
@@ -141,20 +139,10 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
                 maxSamples,
               });
             }}
-            className={`
-                            rounded-md border font-data font-medium transition-colors
-                            ${isMobile ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"}
-                            ${
-                              ingestMutation.isPending
-                                ? "border-white/10 bg-white/2 text-white/30 cursor-not-allowed"
-                                : "border-white/20 bg-white/4 text-white/70 hover:bg-white/8"
-                            }
-                        `}
           >
             {ingestMutation.isPending ? "Ingesting…" : "Ingest Samples"}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
             data-testid={TEST_IDS.refineButton}
             disabled={refineMutation.isPending || !hasLastModel}
             onClick={() => {
@@ -164,20 +152,10 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
                 maxSamples,
               });
             }}
-            className={`
-                            rounded-md border font-data font-medium transition-colors
-                            ${isMobile ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"}
-                            ${
-                              refineMutation.isPending || !hasLastModel
-                                ? "border-white/10 bg-white/2 text-white/30 cursor-not-allowed"
-                                : "border-white/20 bg-white/4 text-white/70 hover:bg-white/8"
-                            }
-                        `}
           >
             {refineMutation.isPending ? "Refining…" : "Refine Shards"}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
             data-testid={TEST_IDS.trainButton}
             disabled={trainMutation.isPending || !hasLastModel}
             onClick={() => {
@@ -189,20 +167,10 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
                 parentId: lastModel.parentId,
               });
             }}
-            className={`
-                            rounded-md border font-data font-medium transition-colors
-                            ${isMobile ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"}
-                            ${
-                              trainMutation.isPending || !hasLastModel
-                                ? "border-white/10 bg-white/2 text-white/30 cursor-not-allowed"
-                                : "border-white/20 bg-white/4 text-white/70 hover:bg-white/8"
-                            }
-                        `}
           >
             {trainMutation.isPending ? "Training…" : "Train Model"}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
             data-testid={TEST_IDS.batchButton}
             disabled={batchMutation.isPending || !hasLastModel}
             onClick={() => {
@@ -212,37 +180,17 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
                 role: lastModel.role,
               });
             }}
-            className={`
-                            rounded-md border font-data font-medium transition-colors
-                            ${isMobile ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"}
-                            ${
-                              batchMutation.isPending || !hasLastModel
-                                ? "border-white/10 bg-white/2 text-white/30 cursor-not-allowed"
-                                : "border-white/20 bg-white/4 text-white/70 hover:bg-white/8"
-                            }
-                        `}
           >
             {batchMutation.isPending ? "Caching…" : "Cache Inferences"}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
             data-testid={TEST_IDS.promoteButton}
             disabled={promoteMutation.isPending}
             onClick={() => promoteMutation.mutate()}
-            className={`
-                            rounded-md border font-data font-medium transition-colors
-                            ${isMobile ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"}
-                            ${
-                              promoteMutation.isPending
-                                ? "border-white/10 bg-white/2 text-white/30 cursor-not-allowed"
-                                : "border-white/20 bg-white/4 text-white/70 hover:bg-white/8"
-                            }
-                        `}
           >
             {promoteMutation.isPending ? "Evaluating…" : "Evaluate Models"}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
             data-testid={TEST_IDS.refreshButton}
             disabled={refreshMutation.isPending || !hasLastModel}
             onClick={() => {
@@ -252,18 +200,9 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
                 role: lastModel.role,
               });
             }}
-            className={`
-                            rounded-md border font-data font-medium transition-colors
-                            ${isMobile ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"}
-                            ${
-                              refreshMutation.isPending || !hasLastModel
-                                ? "border-white/10 bg-white/2 text-white/30 cursor-not-allowed"
-                                : "border-white/20 bg-white/4 text-white/70 hover:bg-white/8"
-                            }
-                        `}
           >
             {refreshMutation.isPending ? "Refreshing…" : "Refresh Model"}
-          </button>
+          </Button>
         </div>
       </div>
 
