@@ -3,8 +3,8 @@ import type { ChangeEvent } from "react";
 export const iconClass = "h-4 w-4 md:h-[18px] md:w-[18px]";
 
 export const btnClass = `
-  inline-flex items-center justify-center rounded-md border transition-colors p-1.5 md:p-2
-  border-white/15 bg-white/4 text-white/80 hover:bg-white/8
+  inline-flex items-center justify-center rounded-md border border-white font-semibold transition-colors p-1.5 md:p-2
+  bg-white/4 text-white hover:bg-white/12
   disabled:opacity-40 disabled:pointer-events-none
 `;
 

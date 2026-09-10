@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { SignupButton } from "@/app/(components)/(privacy)/SignupButton";
+import { LoginButton } from "@/app/(components)/(privacy)/LoginButton";
 import { getSession } from "@fiery/auth/server";
 import { AppUserProfileNotFoundError, UserService } from "@fiery/services";
 import { MyProfileButton } from "@/app/(components)/(privacy)/MyProfileButton";
@@ -40,17 +42,9 @@ export default async function HomePage() {
               <MyProfileButton userId={supabaseUser.id} />
             </div>
           ) : (
-            <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Create profile to unlock all features
-              </p>
-              <Link
-                href={`${routes.auth.login}?next=${routes.base.root}`}
-                data-testid={TEST_IDS.createProfileLink}
-                className="inline-flex w-fit shrink-0 text-sm font-medium text-zinc-900 underline underline-offset-4 dark:text-zinc-100"
-              >
-                Create profile
-              </Link>
+            <div className="mt-1 flex flex-wrap items-center gap-3">
+              <SignupButton defaultEmail={supabaseUser?.email ?? undefined} />
+              <LoginButton defaultEmail={supabaseUser?.email ?? undefined} />
             </div>
           )}
         </div>

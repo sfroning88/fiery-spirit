@@ -1,29 +1,26 @@
 # Identity Access Management
 
-Last updated: **August 2026**
+Last updated: **September 2026**
 
 ## Users
 
 Basic email and password user management. There are two separate user entities:
 
 - `Supabase User`: Tracks active sessions by `Supabase auth`
-- `Platform User`: Tracks permissions and memberships by profile
+- `Platform User`: Tracks profile details by `database` profile
 
 Users exist as their own entity:
 
 - Users have an `Authentication` entity within Supabase
 - Users have a `User` entity within our `Users` table
 - The two entities are linked by `uuid`
-- Membership, role, and permissions are organization scoped
-- Users can belong to multiple organizations at one time
 
 The main API paths are:
 
 - `/profile` for editing basic information and security details
 - `/auth/login` for signing into a `Supabase client` session
+- `/auth/signup` for creating an `auth.user` and `iam.user`
 - `/unauthorized` if the user is not authenticated by Supabase
-
-Upon accepting an invitation for the first time, users will not have any permissions. They must be granted via `/users` by someone else in that organization.
 
 ## Authentication
 

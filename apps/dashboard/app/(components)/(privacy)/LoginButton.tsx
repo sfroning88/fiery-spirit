@@ -1,0 +1,62 @@
+"use client";
+
+import { useState } from "react";
+import { createPortal } from "react-dom";
+import { X } from "lucide-react";
+import { Button } from "@fiery/ui";
+import { LoginForm } from "@fiery/auth";
+import { TEST_IDS } from "@lib/test-ids";
+
+type LoginButtonProps = {
+  defaultEmail?: string;
+};
+
+export function LoginButton({ defaultEmail }: LoginButtonProps) {
+  const [open, setOpen] = useState(false);
+  const modal =
+    open && typeof document !== "undefined" ? (
+      <>
+        <div
+          className="fixed inset-0 z-100 bg-black/50"
+          onClick={() => setOpen(false)}
+          aria-hidden
+        />
+        <div
+          className="fixed left-1/2 top-1/2 z-110 w-[min(90vw,400px)] max-h-[90vh] overflow-y-auto -translate-x-1/2 -translate-y-1/2 rounded-sm border border-white bg-surface-dark p-5 shadow-lg"
+          role="dialog"
+          aria-modal
+          aria-labelledby="login-title"
+          data-testid={TEST_IDS.loginDialog}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <h2 id="login-title" className="text-base font-semibold text-white">
+              Sign in
+            </h2>
+            <button
+              type="button"
+              data-testid={TEST_IDS.loginCloseButton}
+              onClick={() => setOpen(false)}
+              className="p-1 -mr-1 text-white/70 hover:text-white transition-colors"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="mt-4">
+            <LoginForm defaultEmail={defaultEmail} />
+          </div>
+        </div>
+      </>
+    ) : null;
+
+  return (
+    <>
+      <Button data-testid={TEST_IDS.signInButton} onClick={() => setOpen(true)}>
+        Sign in
+      </Button>
+      {typeof window !== "undefined" && modal
+        ? createPortal(modal, document.body)
+        : null}
+    </>
+  );
+}
