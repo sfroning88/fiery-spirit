@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import { routes } from "@lib/routes";
@@ -8,6 +9,12 @@ import { fetchModelsCached } from "@/lib/api/cache/models-cache";
 import { AdminSkeleton } from "@/app/(components)/(admin)/AdminSkeleton";
 import { AdminAsync } from "@/app/(components)/(admin)/AdminAsync";
 
+export const metadata: Metadata = {
+  title: "Admin",
+  description: "Machine learning pipeline for Fiery Spirit models.",
+  robots: { index: false, follow: false },
+};
+
 export default async function AdminPage() {
   const { supabaseUser } = await requirePlatformAdmin();
   const modelsPromise = fetchModelsCached(supabaseUser.id).catch(
@@ -16,6 +23,12 @@ export default async function AdminPage() {
 
   return (
     <div className="flex flex-col gap-6" data-testid={TEST_IDS.adminScreen}>
+      <h1
+        data-testid={TEST_IDS.modelsHeading}
+        className="text-lg font-semibold text-fiery-crimson-400 sm:text-2xl"
+      >
+        Machine Learning Pipeline
+      </h1>
       <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
         <Link
           href={routes.base.root}

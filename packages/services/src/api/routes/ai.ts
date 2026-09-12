@@ -15,7 +15,7 @@ export class ApiAiService extends ApiService {
     const baseUrl = env.AI_API_URL ?? "";
     const authToken = env.AUTH_TOKEN ?? "";
     if (!baseUrl || !authToken) {
-      console.warn("ApiAiService: AI_API_URL or AUTH_TOKEN is missing");
+      throw new Error("Missing environment config");
     }
     return new ApiAiService({ baseUrl, authToken, timeout: 300000 });
   }
