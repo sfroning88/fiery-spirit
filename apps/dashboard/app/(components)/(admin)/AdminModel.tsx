@@ -57,7 +57,7 @@ export function AdminModel({ model, isMobile }: AdminModelProps) {
         >
           <SectionLabel>scores</SectionLabel>
           {metrics.map((metric) => (
-            <Badge key={`${metric.split}-${metric.name}`}>
+            <Badge colorScheme="dark" key={`${metric.split}-${metric.name}`}>
               {metricLabel[metric.name]} {formatMetricValue(metric.value)}
             </Badge>
           ))}

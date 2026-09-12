@@ -17,16 +17,30 @@ import {
 
 export function Dot({ className }: { className?: string }) {
   return (
-    <span className={`select-none ${className ?? "text-white/25"}`}>·</span>
+    <span className={`select-none ${className ?? "text-crimson/25"}`}>·</span>
   );
 }
 
-export function Badge({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-sm border border-white/15 px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs text-white/50 font-data-mono whitespace-nowrap">
-      {children}
-    </span>
-  );
+export function Badge({
+  children,
+  colorScheme = "dark",
+}: {
+  children: ReactNode;
+  colorScheme: "dark" | "light";
+}) {
+  if (colorScheme === "light") {
+    return (
+      <span className="inline-flex items-center rounded-sm border border-black/15 px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs text-crimson/50 font-data-mono whitespace-nowrap">
+        {children}
+      </span>
+    );
+  } else {
+    return (
+      <span className="inline-flex items-center rounded-sm border border-white/15 px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs text-white/50 font-data-mono whitespace-nowrap">
+        {children}
+      </span>
+    );
+  }
 }
 
 export function Button({

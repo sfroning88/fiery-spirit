@@ -220,6 +220,7 @@ _SELECT_LATEST_ARTIFACT = sql.SQL("""
 _SELECT_RANDOM_INTERFEROGRAM = sql.SQL("""
     SELECT id::text
     FROM {table}
+    WHERE volcano_id IS NOT NULL
     ORDER BY RANDOM()
     LIMIT 1
 """).format(table=sql.Identifier(*TRAINING_INTERFEROGRAM_TABLE))
@@ -227,6 +228,7 @@ _SELECT_RANDOM_INTERFEROGRAM = sql.SQL("""
 _SELECT_RANDOM_SEISMIC_EVENT = sql.SQL("""
     SELECT id::text
     FROM {table}
+    WHERE volcano_id IS NOT NULL
     ORDER BY RANDOM()
     LIMIT 1
 """).format(table=sql.Identifier(*TRAINING_SEISMIC_EVENT_TABLE))

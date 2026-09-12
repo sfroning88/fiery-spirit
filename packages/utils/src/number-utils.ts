@@ -16,6 +16,12 @@ export function formatDecimal(value: unknown): string {
   return String(value);
 }
 
+export function formatNumber(value: unknown): string {
+  if (value == null) return "-";
+  if (typeof value === "number") return value.toLocaleString().replace(",", "");
+  return String(value);
+}
+
 export function formatNullableInt(raw: string): number | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
