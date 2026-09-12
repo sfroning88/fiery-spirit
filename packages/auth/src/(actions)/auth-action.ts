@@ -79,7 +79,6 @@ export const signupAction = createPublicAction(
       invalidateSessionCache();
       return result;
     } catch (error) {
-      console.error("Signup error:", error);
       return {
         success: false,
         error:

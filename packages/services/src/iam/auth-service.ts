@@ -22,7 +22,6 @@ export const AuthService = {
       password: params.password,
     });
     if (error) {
-      console.error("Error signing in:", error);
       return { ok: false, error: "Invalid email or password" };
     }
     return { ok: true };
@@ -88,8 +87,8 @@ export const AuthService = {
       if (!dbUser || !dbUser.id) {
         throw new Error("Failed to create user in database");
       }
-    } catch (error) {
-      console.error("Error creating iam.user:", error);
+    } catch {
+      // nothing
     }
     return {
       success: true,

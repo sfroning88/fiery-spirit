@@ -36,9 +36,26 @@ const dmMono = DM_Mono({
   weight: ["400", "500"],
 });
 
+const SITE_DESCRIPTION =
+  "Two-tiered detection of volcanic unrest from satellite deformation and seismic waveforms.";
+
 export const metadata: Metadata = {
-  title: "Fiery Spirit",
-  description: "Focus Healthcare Partners dashboard",
+  metadataBase: new URL("https://fiery-spirit.vercel.app"),
+  title: { default: "Fiery Spirit", template: "%s | Fiery Spirit" },
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    title: "Fiery Spirit",
+    description: SITE_DESCRIPTION,
+    url: "/",
+    siteName: "Fiery Spirit",
+    images: [{ url: "/og.png" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Fiery Spirit",
+    description: SITE_DESCRIPTION,
+    images: ["/og.png"],
+  },
 };
 
 export default function RootLayout({

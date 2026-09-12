@@ -15,9 +15,7 @@ export class ApiBackendService extends ApiService {
     const baseUrl = env.BACKEND_API_URL ?? "";
     const authToken = env.AUTH_TOKEN ?? "";
     if (!baseUrl || !authToken) {
-      console.warn(
-        "ApiBackendService: BACKEND_API_URL or AUTH_TOKEN is missing",
-      );
+      throw new Error("Missing environment config");
     }
     return new ApiBackendService({ baseUrl, authToken, timeout: 300000 });
   }

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import { SignupButton } from "@/app/(components)/(privacy)/SignupButton";
@@ -11,6 +12,12 @@ import { VolcanoDashboard } from "@fiery/types";
 import { fetchVolcanoesCached } from "@/lib/api/cache/volcano-cache";
 import { HomeSkeleton } from "@/app/(components)/(home)/HomeSkeleton";
 import { HomeAsync } from "@/app/(components)/(home)/HomeAsync";
+
+export const metadata: Metadata = {
+  title: "Home",
+  description:
+    "Two-tiered detection of volcanic unrest from satellite deformation and seismic waveforms.",
+};
 
 export default async function HomePage() {
   const { supabaseUser } = await getSession();
@@ -32,6 +39,16 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col gap-6" data-testid={TEST_IDS.homeScreen}>
+      <h1
+        data-testid={TEST_IDS.volcanoesHeading}
+        className="text-lg font-semibold text-fiery-crimson-400 sm:text-2xl"
+      >
+        Fiery Spirit
+      </h1>
+      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        Two-tiered detection of volcanic unrest from satellite deformation and
+        seismic waveforms.
+      </p>
       <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
         <div>
           {supabaseUser && appUser ? (

@@ -75,7 +75,7 @@ export function HomeMap({
             >
               <Image
                 src={VOLCANO_SPRITE}
-                alt=""
+                alt={volcano.name}
                 width={28}
                 height={28}
                 className="h-7 w-7 max-w-none"

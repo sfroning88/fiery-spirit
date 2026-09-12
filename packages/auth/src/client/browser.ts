@@ -35,8 +35,7 @@ export async function hardResetSupabaseConnection() {
       }
     });
     window.location.href = authRoutes.auth.login;
-  } catch (error) {
-    console.error("[Supabase] Hard reset error:", error);
+  } catch {
     window.location.href = authRoutes.auth.login;
   }
 }
@@ -58,8 +57,8 @@ export async function clearAllSupabaseSessions() {
         sessionStorage.removeItem(key);
       }
     });
-  } catch (error) {
-    console.error("Error clearing sessions:", error);
+  } catch {
+    // nothing
   }
 }
 
@@ -69,8 +68,7 @@ export async function checkSupabaseHealth() {
     const { error } = await browserClient.auth.getSession();
     if (error) throw error;
     return true;
-  } catch (error) {
-    console.error("[Supabase] Error checking client health:", error);
+  } catch {
     return false;
   }
 }

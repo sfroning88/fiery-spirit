@@ -91,12 +91,6 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
   return (
     <div className="space-y-4 font-data">
       <div className="space-y-3">
-        <h2
-          data-testid={TEST_IDS.modelsHeading}
-          className={`font-semibold text-fiery-crimson-400 ${isMobile ? "text-lg" : "text-2xl"}`}
-        >
-          Machine Learning Pipeline
-        </h2>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <SectionLabel>inputs</SectionLabel>
           <Input

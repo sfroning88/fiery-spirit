@@ -50,41 +50,33 @@ export function HomePanel({ initialData }: HomePanelProps) {
 
   return (
     <div className="space-y-4 font-data">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2
-          data-testid={TEST_IDS.volcanoesHeading}
-          className={`font-semibold text-fiery-crimson-400 ${isMobile ? "text-lg" : "text-2xl"}`}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button
+          data-testid={TEST_IDS.inferenceDeformationButton}
+          disabled={inferenceMutation.isPending || !canInferDeformation}
+          onClick={() => {
+            if (!deformationRequest) return;
+            inferenceMutation.mutate(deformationRequest);
+          }}
         >
-          Fiery Spirit
-        </h2>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button
-            data-testid={TEST_IDS.inferenceDeformationButton}
-            disabled={inferenceMutation.isPending || !canInferDeformation}
-            onClick={() => {
-              if (!deformationRequest) return;
-              inferenceMutation.mutate(deformationRequest);
-            }}
-          >
-            {inferenceMutation.isPending &&
-            inferenceMutation.variables?.interferogramId
-              ? "Inferencing…"
-              : signalLabel.deformation}
-          </Button>
-          <Button
-            data-testid={TEST_IDS.inferenceSeismicButton}
-            disabled={inferenceMutation.isPending || !canInferSeismic}
-            onClick={() => {
-              if (!seismicRequest) return;
-              inferenceMutation.mutate(seismicRequest);
-            }}
-          >
-            {inferenceMutation.isPending &&
-            inferenceMutation.variables?.seismicEventId
-              ? "Inferencing…"
-              : signalLabel.seismic}
-          </Button>
-        </div>
+          {inferenceMutation.isPending &&
+          inferenceMutation.variables?.interferogramId
+            ? "Inferencing…"
+            : signalLabel.deformation}
+        </Button>
+        <Button
+          data-testid={TEST_IDS.inferenceSeismicButton}
+          disabled={inferenceMutation.isPending || !canInferSeismic}
+          onClick={() => {
+            if (!seismicRequest) return;
+            inferenceMutation.mutate(seismicRequest);
+          }}
+        >
+          {inferenceMutation.isPending &&
+          inferenceMutation.variables?.seismicEventId
+            ? "Inferencing…"
+            : signalLabel.seismic}
+        </Button>
       </div>
 
       {inferenceMutation.isError && (
