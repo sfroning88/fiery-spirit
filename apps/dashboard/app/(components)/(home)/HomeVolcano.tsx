@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Badge, Dot } from "@fiery/ui";
-import { formatDecimal } from "@fiery/utils";
+import { formatDecimal, formatNumber } from "@fiery/utils";
 import type { VolcanoDashboard } from "@fiery/types";
 import { httpSafeImageUrl } from "@/lib/utils";
 import { TEST_IDS } from "@lib/test-ids";
@@ -48,41 +48,61 @@ export function HomeVolcano({ volcano, isMobile }: HomeVolcanoProps) {
       )}
       <div className="flex items-center gap-2 flex-wrap">
         <p
-          className={`font-semibold text-zinc-900 truncate ${isMobile ? "text-sm" : "text-base"}`}
+          className={`font-bold text-zinc-900 truncate ${isMobile ? "text-sm" : "text-base"}`}
         >
           {volcano.name}
         </p>
-        <span className={`${chipClass} border-zinc-300 text-zinc-700`}>
-          {volcano.zone.toUpperCase()}
-        </span>
-        <span className={`${chipClass} border-zinc-200 text-zinc-600`}>
-          {formatDecimal(volcano.latitude)}
-        </span>
-        <span className={`${chipClass} border-zinc-200 text-zinc-600`}>
-          {formatDecimal(volcano.longitude)}
-        </span>
-        <span className={`${chipClass} border-zinc-200 text-zinc-600`}>
-          {volcano.elevationM} m
-        </span>
       </div>
       <div
         className={`mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-zinc-600 ${metaText}`}
       >
-        <span>{volcano.country}</span>
+        <span className={`${chipClass} border-zinc-300 text-zinc-600`}>
+          {volcano.country.toUpperCase()}
+        </span>
+        <span className={`${chipClass} border-zinc-300 text-zinc-600`}>
+          {volcano.zone.toUpperCase()}
+        </span>
+        {volcano.gvpNumber ? (
+          <>
+            <span className={`${chipClass} border-zinc-300 text-zinc-600`}>
+              #{formatNumber(volcano.gvpNumber)}
+            </span>
+          </>
+        ) : null}
+        {volcano.volcanicClass ? (
+          <>
+            <span className={`${chipClass} border-zinc-300 text-zinc-600`}>
+              {volcano.volcanicClass.toUpperCase()}
+            </span>
+          </>
+        ) : null}
+        <span className={`${chipClass} border-zinc-200 text-zinc-600`}>
+          Latitude: {formatDecimal(volcano.latitude)}
+        </span>
+        <span className={`${chipClass} border-zinc-200 text-zinc-600`}>
+          Longitude: {formatDecimal(volcano.longitude)}
+        </span>
+        <span className={`${chipClass} border-zinc-200 text-zinc-600`}>
+          Elevation: {volcano.elevationM} m
+        </span>
         <Dot />
-        <Badge>{volcano._count.interferograms} interferograms</Badge>
+        <Badge colorScheme="light">
+          {volcano._count.interferograms} interferograms
+        </Badge>
         <Dot />
-        <Badge>{volcano._count.seismicEvents} seismic</Badge>
+        <Badge colorScheme="light">
+          {volcano._count.seismicEvents} seismic events
+        </Badge>
         {volcano.deformation.sample ? (
           <>
             <Dot />
-            <Badge>deformation sample</Badge>
+            <Badge colorScheme="light">Tracking Ground Deformations</Badge>
           </>
         ) : null}
         {volcano.seismic.sample ? (
           <>
             <Dot />
-            <Badge>seismic sample</Badge>
+            <Badge colorScheme="light">Tracking Seismic Activity</Badge>
           </>
         ) : null}
       </div>
