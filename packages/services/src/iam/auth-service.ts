@@ -88,7 +88,7 @@ export const AuthService = {
         throw new Error("Failed to create user in database");
       }
     } catch {
-      // nothing
+      throw new Error("Failed to create user in database");
     }
     return {
       success: true,
