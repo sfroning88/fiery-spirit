@@ -17,6 +17,7 @@ const SVZ_BOUNDS: [[number, number], [number, number]] = [
 ];
 
 type HomeMapProps = {
+  userId: string;
   volcanoes: readonly VolcanoDashboard[];
   selectedId: string | null;
   onSelect: (volcanoId: string | null) => void;
@@ -24,6 +25,7 @@ type HomeMapProps = {
 };
 
 export function HomeMap({
+  userId,
   volcanoes,
   selectedId,
   onSelect,
@@ -93,7 +95,7 @@ export function HomeMap({
           maxWidth="320px"
           onClose={() => onSelect(null)}
         >
-          <HomeVolcano volcano={selected} isMobile={isMobile} />
+          <HomeVolcano userId={userId} volcano={selected} isMobile={isMobile} />
         </Popup>
       ) : null}
     </Map>

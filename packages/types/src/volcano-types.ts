@@ -54,6 +54,13 @@ export const volcanoDashboardInclude = {
     take: 1,
   },
   interferograms: {
+    where: {
+      inferences: {
+        some: {
+          artifact: { tier: "cloud", role: "screener", promoted: true },
+        },
+      },
+    },
     orderBy: { createdAt: "desc" },
     take: 1,
     include: {
@@ -73,6 +80,13 @@ export const volcanoDashboardInclude = {
     },
   },
   seismicEvents: {
+    where: {
+      inferences: {
+        some: {
+          artifact: { tier: "edge", role: "student", promoted: true },
+        },
+      },
+    },
     orderBy: { recordedAt: "desc" },
     take: 1,
     include: {

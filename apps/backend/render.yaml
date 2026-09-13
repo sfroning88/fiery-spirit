@@ -24,6 +24,33 @@ services:
     - key: JOB_DOMAIN
       value: inference
 
+
+- type: worker
+  runtime: docker
+  name: fiery-backend-worker
+  plan: free
+  numInstances: 1
+  dockerfilePath: apps/backend/Dockerfile
+  buildFilter:
+    paths:
+      - apps/backend/**
+      - packages/python/**
+  envVars:
+    - fromGroup: Fiery-Environment
+    - key: SERVICE_TYPE
+      value: worker
+    - key: BACKEND_API_URL
+      value: https://fiery-backend-api.onrender.com
+      previewValue: https://fiery-backend-api-staging.onrender.com
+    - key: AI_API_URL
+      value: https://fiery-ai-api.onrender.com
+      previewValue: https://fiery-ai-api-staging.onrender.com
+    - key: TRAINER_API_URL
+      value: https://fiery-trainer-api.modal.run
+      previewValue: https://fiery-trainer-api-staging.modal.run
+    - key: JOB_DOMAIN
+      value: inference
+
 - type: cron
   runtime: docker
   name: fiery-backend-model-promote
