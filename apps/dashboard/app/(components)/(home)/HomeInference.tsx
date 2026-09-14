@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useEffect, useReducer } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { X } from "lucide-react";
@@ -18,7 +18,12 @@ import { useInference } from "@/app/(hooks)/use-inference";
 import { useFeedback } from "@/app/(hooks)/use-feedback";
 import { usePreview } from "@/app/(hooks)/use-preview";
 import { useModalFocus } from "@/app/(hooks)/use-modal-focus";
-import { inferenceRequest, latestSignalInference } from "@/lib/utils";
+import {
+  inferenceModalView,
+  inferenceRequest,
+  latestSignalInference,
+} from "@/lib/utils";
+import { inferenceReducer, inferenceFormInitialState } from "@/lib/reducers";
 import {
   TrainingDeformationLabel,
   TrainingSeismicLabel,
@@ -64,78 +69,43 @@ export function HomeInference({
     ? `${volcano.name} interferogram`
     : `${volcano.name} spectrogram`;
 
-  const existingLabel =
-    latest?.kind === "deformation"
-      ? latest.inference.label
-      : (latest?.inference.label ?? null);
-  const existingScore =
-    latest?.kind === "deformation" ? latest.inference.score : null;
-  const existingAbstained = latest?.inference.abstained ?? false;
-  const existingReason = latest?.inference.abstainedReason ?? null;
-  const existingArtifactId = latest?.inference.artifactId ?? null;
-  const existingFeedback = latest?.feedback ?? null;
-
-  const [inputAgreed, setInputAgreed] = useState<boolean | null>(null);
-  const [inputCorrectedDeformation, setInputCorrectedDeformation] =
-    useState<TrainingDeformationLabel | null>(null);
-  const [inputCorrectedSeismic, setInputCorrectedSeismic] =
-    useState<TrainingSeismicLabel | null>(null);
-  const [inputNotes, setInputNotes] = useState<string | null>(null);
-
   const inferenceMutation = useInference(userId);
   const feedbackMutation = useFeedback(userId);
 
   const served = inferenceMutation.data?.result ?? null;
   const servedArtifactId = served?.artifact_id ?? null;
   const servedAt = inferenceMutation.submittedAt;
-  const artifactId = servedArtifactId ?? existingArtifactId;
-  const usingServed = served != null;
+
+  const [form, dispatch] = useReducer(
+    inferenceReducer,
+    inferenceFormInitialState,
+  );
 
   useEffect(() => {
     if (!servedArtifactId) return;
     feedbackMutation.reset();
-    setInputAgreed(null);
-    setInputCorrectedDeformation(null);
-    setInputCorrectedSeismic(null);
-    setInputNotes(null);
+    dispatch({ type: "RESET" });
   }, [servedArtifactId, servedAt]);
 
-  const servedDeformation =
-    usingServed && isDeformation
-      ? (served.label as TrainingDeformationLabel | null)
-      : null;
-  const servedSeismic =
-    usingServed && isSeismic
-      ? (served.label as TrainingSeismicLabel | null)
-      : null;
-
-  const submittedAgreed = usingServed
-    ? inputAgreed
-    : (inputAgreed ?? existingFeedback?.agreed ?? null);
-  const submittedCorrectedDeformation =
-    inputCorrectedDeformation ??
-    (usingServed
-      ? servedDeformation
-      : (existingFeedback?.correctedDeformation ??
-        (latest?.kind === "deformation" ? latest.inference.label : null)));
-  const submittedCorrectedSeismic =
-    inputCorrectedSeismic ??
-    (usingServed
-      ? servedSeismic
-      : (existingFeedback?.correctedSeismic ??
-        (latest?.kind === "seismic" ? latest.inference.label : null)));
-  const submittedNotes = usingServed
-    ? inputNotes
-    : (inputNotes ?? existingFeedback?.note ?? null);
-  const hasSubmitted = usingServed
-    ? feedbackMutation.isSuccess
-    : existingFeedback?.agreed != null || feedbackMutation.isSuccess;
-
-  const label = served?.label ?? existingLabel;
-  const score = served?.score ?? existingScore;
-  const abstained = served?.abstained ?? existingAbstained;
-  const abstainedReason = served?.abstained_reason ?? existingReason;
-  const hasResult = served != null || latest != null;
+  const {
+    label,
+    score,
+    abstained,
+    abstainedReason,
+    artifactId,
+    hasResult,
+    submittedAgreed,
+    submittedCorrectedDeformation,
+    submittedCorrectedSeismic,
+    submittedNotes,
+    hasSubmitted,
+  } = inferenceModalView({
+    signal,
+    latest,
+    served,
+    form,
+    feedbackSucceeded: feedbackMutation.isSuccess,
+  });
   const fieldsDisabled = hasSubmitted || feedbackMutation.isPending;
 
   const send = (nextAgreed: boolean) => {
@@ -146,7 +116,7 @@ export function HomeInference({
     )
       return;
     if (feedbackMutation.isError) feedbackMutation.reset();
-    setInputAgreed(nextAgreed);
+    dispatch({ type: "SET_AGREED", agreed: nextAgreed });
     feedbackMutation.mutate({
       agreed: nextAgreed,
       correctedDeformation: isDeformation
@@ -266,12 +236,13 @@ export function HomeInference({
               aria-label="Corrected deformation label"
               disabled={fieldsDisabled || !artifactId}
               value={submittedCorrectedDeformation ?? ""}
-              onChange={(event) =>
-                setInputCorrectedDeformation(
-                  (event.target.value ||
+              onChange={(event) => {
+                dispatch({
+                  type: "SET_CORRECTED_DEFORMATION",
+                  label: (event.target.value ||
                     null) as TrainingDeformationLabel | null,
-                )
-              }
+                });
+              }}
               className="w-full rounded-md border border-white/10 bg-surface-dark px-3 py-1.5 text-xs text-white"
             >
               <option value="">Select label</option>
@@ -287,11 +258,13 @@ export function HomeInference({
               aria-label="Corrected seismic label"
               disabled={fieldsDisabled || !artifactId}
               value={submittedCorrectedSeismic ?? ""}
-              onChange={(event) =>
-                setInputCorrectedSeismic(
-                  (event.target.value || null) as TrainingSeismicLabel | null,
-                )
-              }
+              onChange={(event) => {
+                dispatch({
+                  type: "SET_CORRECTED_SEISMIC",
+                  label: (event.target.value ||
+                    null) as TrainingSeismicLabel | null,
+                });
+              }}
               className="w-full rounded-md border border-white/10 bg-surface-dark px-3 py-1.5 text-xs text-white"
             >
               <option value="">Select label</option>
@@ -308,7 +281,12 @@ export function HomeInference({
             placeholder="Notes"
             disabled={fieldsDisabled || !artifactId}
             value={submittedNotes ?? ""}
-            onChange={(event) => setInputNotes(event.target.value || null)}
+            onChange={(event) => {
+              dispatch({
+                type: "SET_NOTES",
+                notes: event.target.value || null,
+              });
+            }}
           />
           {hasSubmitted ? (
             <FeedbackThanksIcon variant={submittedAgreed ? "up" : "down"} />

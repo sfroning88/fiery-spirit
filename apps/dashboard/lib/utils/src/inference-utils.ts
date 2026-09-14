@@ -2,10 +2,15 @@ import { dateLikeToMs } from "@fiery/utils";
 import {
   VolcanoDashboard,
   TrainingSignal,
+  TrainingDeformationLabel,
+  TrainingSeismicLabel,
   ModelTier,
   ModelRole,
   ApiInferenceRequest,
   InferenceLatest,
+  InferenceOutcome,
+  InferenceFeedbackDraft,
+  InferenceModalView,
 } from "@fiery/types";
 
 export function inferenceRequest(
@@ -71,4 +76,60 @@ export function latestSignalInference(
       ? next
       : best;
   }, null);
+}
+
+export function inferenceModalView(args: {
+  signal: TrainingSignal;
+  latest: InferenceLatest | null;
+  served: InferenceOutcome | null;
+  form: InferenceFeedbackDraft;
+  feedbackSucceeded: boolean;
+}): InferenceModalView {
+  const { signal, latest, served, form, feedbackSucceeded } = args;
+  const isDeformation = signal === TrainingSignal.deformation;
+  const isSeismic = signal === TrainingSignal.seismic;
+  const usingServed = served != null;
+  const existingFeedback = latest?.feedback ?? null;
+  const existingLabel = latest?.inference.label ?? null;
+  const existingScore =
+    latest?.kind === "deformation" ? latest.inference.score : null;
+  const servedDeformation =
+    usingServed && isDeformation
+      ? (served.label as TrainingDeformationLabel | null)
+      : null;
+  const servedSeismic =
+    usingServed && isSeismic
+      ? (served.label as TrainingSeismicLabel | null)
+      : null;
+
+  return {
+    label: served?.label ?? existingLabel,
+    score: served?.score ?? existingScore,
+    abstained: served?.abstained ?? latest?.inference.abstained ?? false,
+    abstainedReason:
+      served?.abstained_reason ?? latest?.inference.abstainedReason ?? null,
+    artifactId: served?.artifact_id ?? latest?.inference.artifactId ?? null,
+    hasResult: served != null || latest != null,
+    submittedAgreed: usingServed
+      ? form.agreed
+      : (form.agreed ?? existingFeedback?.agreed ?? null),
+    submittedCorrectedDeformation:
+      form.correctedDeformation ??
+      (usingServed
+        ? servedDeformation
+        : (existingFeedback?.correctedDeformation ??
+          (latest?.kind === "deformation" ? latest.inference.label : null))),
+    submittedCorrectedSeismic:
+      form.correctedSeismic ??
+      (usingServed
+        ? servedSeismic
+        : (existingFeedback?.correctedSeismic ??
+          (latest?.kind === "seismic" ? latest.inference.label : null))),
+    submittedNotes: usingServed
+      ? form.notes
+      : (form.notes ?? existingFeedback?.note ?? null),
+    hasSubmitted: usingServed
+      ? feedbackSucceeded
+      : existingFeedback?.agreed != null || feedbackSucceeded,
+  };
 }
