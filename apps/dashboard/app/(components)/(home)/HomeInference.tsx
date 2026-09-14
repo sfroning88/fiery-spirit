@@ -43,8 +43,7 @@ export function HomeInference({
   const feedbackMutation = useFeedback(userId);
   const isDeformation = interferogramId != null && seismicEventId == null;
   const isSeismic = seismicEventId != null && interferogramId == null;
-  const hasSubmitted =
-    inputAgreed != null || agreed != null || feedbackMutation.isSuccess;
+  const hasSubmitted = agreed != null || feedbackMutation.isSuccess;
   const fieldsDisabled = hasSubmitted || feedbackMutation.isPending;
 
   const send = (nextAgreed: boolean) => {

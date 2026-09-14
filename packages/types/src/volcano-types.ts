@@ -83,7 +83,14 @@ export const volcanoDashboardInclude = {
     where: {
       inferences: {
         some: {
-          artifact: { tier: "edge", role: "student", promoted: true },
+          OR: [
+            {
+              artifact: { tier: "cloud", role: "teacher", promoted: true },
+            },
+            {
+              artifact: { tier: "edge", role: "student", promoted: true },
+            },
+          ],
         },
       },
     },
@@ -91,6 +98,16 @@ export const volcanoDashboardInclude = {
     take: 1,
     include: {
       inferences: {
+        where: {
+          OR: [
+            {
+              artifact: { tier: "cloud", role: "teacher", promoted: true },
+            },
+            {
+              artifact: { tier: "edge", role: "student", promoted: true },
+            },
+          ],
+        },
         orderBy: { inferredAt: "desc" },
         include: {
           artifact: {

@@ -132,6 +132,11 @@ export function HomeVolcano({ userId, volcano, isMobile }: HomeVolcanoProps) {
       {latestInference ? (
         <div className="mt-2 min-w-0">
           <HomeInference
+            key={`${latestInference.inference.artifactId}:${
+              latestInference.kind === "deformation"
+                ? latestInference.inference.interferogramId
+                : latestInference.inference.seismicEventId
+            }`}
             userId={userId}
             interferogramId={
               latestInference.kind === "deformation"
