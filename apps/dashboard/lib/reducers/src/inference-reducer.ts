@@ -3,7 +3,7 @@ import type {
   TrainingSeismicLabel,
 } from "@fiery/types";
 
-export type InferenceFormState = {
+type InferenceFormState = {
   agreed: boolean | null;
   correctedDeformation: TrainingDeformationLabel | null;
   correctedSeismic: TrainingSeismicLabel | null;
