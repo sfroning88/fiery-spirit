@@ -17,7 +17,7 @@ export const inferenceFormInitialState: InferenceFormState = {
   notes: null,
 };
 
-export type InferenceFormAction =
+type InferenceFormAction =
   | { type: "SET_AGREED"; agreed: boolean }
   | {
       type: "SET_CORRECTED_DEFORMATION";
