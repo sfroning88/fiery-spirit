@@ -32,3 +32,15 @@ export type InferenceOutcome = {
   seismicEventId: string | null;
   volcanoId: string | null;
 };
+
+export type InferenceLatest =
+  | {
+      kind: "deformation";
+      inference: InferenceDeformation;
+      feedback: InferenceFeedback | null;
+    }
+  | {
+      kind: "seismic";
+      inference: InferenceSeismic;
+      feedback: InferenceFeedback | null;
+    };

@@ -5,6 +5,7 @@ export const TEST_IDS = {
   inferenceSeismicButton: "inference-seismic-button",
   homeMap: "home-map",
   volcanoPopup: "volcano-popup",
+  inferenceBox: "inference-box",
   openAdminLink: "open-admin-link",
   createProfileLink: "create-profile-link",
   signupDialog: "signup-dialog",

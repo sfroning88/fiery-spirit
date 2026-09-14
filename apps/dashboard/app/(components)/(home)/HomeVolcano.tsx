@@ -3,24 +3,59 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Badge, Dot } from "@fiery/ui";
-import { formatDecimal, formatNumber } from "@fiery/utils";
-import type { VolcanoDashboard } from "@fiery/types";
+import { dateLikeToMs, formatDecimal, formatNumber } from "@fiery/utils";
+import type { InferenceLatest, VolcanoDashboard } from "@fiery/types";
 import { httpSafeImageUrl } from "@/lib/utils";
 import { TEST_IDS } from "@lib/test-ids";
 import { IMAGE_LOADING } from "@/lib/constants";
+import { HomeInference } from "./HomeInference";
 
 type HomeVolcanoProps = {
+  userId: string;
   volcano: VolcanoDashboard;
   isMobile: boolean;
 };
 
-export function HomeVolcano({ volcano, isMobile }: HomeVolcanoProps) {
+export function HomeVolcano({ userId, volcano, isMobile }: HomeVolcanoProps) {
   const chipText = isMobile ? "text-[10px]" : "text-xs";
   const chipClass = `inline-flex items-center rounded-sm border px-2 py-0.5 font-data font-medium ${chipText}`;
   const metaText = isMobile ? "text-[11px]" : "text-xs";
   const imageSrc = httpSafeImageUrl(volcano.imagePath);
   const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null);
   const imageFailed = imageSrc != null && imageSrc === failedImageSrc;
+
+  const inferenceCandidates: InferenceLatest[] = [];
+  if (volcano.deformation.inference) {
+    inferenceCandidates.push({
+      kind: "deformation",
+      inference: volcano.deformation.inference,
+      feedback: volcano.deformation.feedback,
+    });
+  }
+  if (volcano.seismic.cloud.inference) {
+    inferenceCandidates.push({
+      kind: "seismic",
+      inference: volcano.seismic.cloud.inference,
+      feedback: volcano.seismic.cloud.feedback,
+    });
+  }
+  if (volcano.seismic.edge.inference) {
+    inferenceCandidates.push({
+      kind: "seismic",
+      inference: volcano.seismic.edge.inference,
+      feedback: volcano.seismic.edge.feedback,
+    });
+  }
+  const latestInference = inferenceCandidates.reduce<InferenceLatest | null>(
+    (best, next) => {
+      if (!best) return next;
+      return dateLikeToMs(next.inference.inferredAt) >
+        dateLikeToMs(best.inference.inferredAt)
+        ? next
+        : best;
+    },
+    null,
+  );
 
   return (
     <div data-testid={TEST_IDS.volcanoPopup} className="min-w-0">
@@ -93,19 +128,44 @@ export function HomeVolcano({ volcano, isMobile }: HomeVolcanoProps) {
         <Badge colorScheme="light">
           {volcano._count.seismicEvents} seismic events
         </Badge>
-        {volcano.deformation.sample ? (
-          <>
-            <Dot />
-            <Badge colorScheme="light">Tracking Ground Deformations</Badge>
-          </>
-        ) : null}
-        {volcano.seismic.sample ? (
-          <>
-            <Dot />
-            <Badge colorScheme="light">Tracking Seismic Activity</Badge>
-          </>
-        ) : null}
       </div>
+      {latestInference ? (
+        <div className="mt-2 min-w-0">
+          <HomeInference
+            key={`${latestInference.inference.artifactId}:${
+              latestInference.kind === "deformation"
+                ? latestInference.inference.interferogramId
+                : latestInference.inference.seismicEventId
+            }`}
+            userId={userId}
+            interferogramId={
+              latestInference.kind === "deformation"
+                ? latestInference.inference.interferogramId
+                : null
+            }
+            seismicEventId={
+              latestInference.kind === "seismic"
+                ? latestInference.inference.seismicEventId
+                : null
+            }
+            artifactId={latestInference.inference.artifactId}
+            agreed={latestInference.feedback?.agreed ?? null}
+            correctedDeformation={
+              latestInference.kind === "deformation"
+                ? (latestInference.feedback?.correctedDeformation ??
+                  latestInference.inference.label)
+                : null
+            }
+            correctedSeismic={
+              latestInference.kind === "seismic"
+                ? (latestInference.feedback?.correctedSeismic ??
+                  latestInference.inference.label)
+                : null
+            }
+            notes={latestInference.feedback?.note ?? null}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

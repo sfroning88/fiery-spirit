@@ -56,6 +56,8 @@ ML_RELOAD_URL = f"{BACKEND_URL}{ML_RELOAD_PATH}"
 # -- Inference (served by apps/backend) --
 INFERENCE_SINGLE_PATH = "/api/inference/single"
 INFERENCE_SINGLE_URL = f"{BACKEND_URL}{INFERENCE_SINGLE_PATH}"
+INFERENCE_BATCH_PATH = "/api/inference/batch"
+INFERENCE_BATCH_URL = f"{BACKEND_URL}{INFERENCE_BATCH_PATH}"
 
 
 def endpoint_test(

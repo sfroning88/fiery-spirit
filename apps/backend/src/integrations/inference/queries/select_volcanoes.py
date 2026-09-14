@@ -1,5 +1,7 @@
 from psycopg2 import sql
 from fiery_python import (
+    TRAINING_INTERFEROGRAM_TABLE,
+    TRAINING_SEISMIC_EVENT_TABLE,
     VOLCANO_TABLE,
     VOLCANO_ZONE_ENUM,
 )
@@ -19,9 +21,21 @@ QUERY = sql.SQL("""
         is_held_out,
         image_path
     FROM {table}
+    WHERE EXISTS (
+        SELECT 1
+        FROM {interferograms}
+        WHERE volcano_id = {table}.id
+    )
+    OR EXISTS (
+        SELECT 1
+        FROM {seismic_events}
+        WHERE volcano_id = {table}.id
+    )
     ORDER BY id
     LIMIT %s
 """).format(
     table=sql.Identifier(*VOLCANO_TABLE),
+    interferograms=sql.Identifier(*TRAINING_INTERFEROGRAM_TABLE),
+    seismic_events=sql.Identifier(*TRAINING_SEISMIC_EVENT_TABLE),
     zone_enum=sql.Identifier(*VOLCANO_ZONE_ENUM),
 )

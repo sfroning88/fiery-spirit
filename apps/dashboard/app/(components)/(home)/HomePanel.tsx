@@ -106,6 +106,7 @@ export function HomePanel({ initialData }: HomePanelProps) {
           className="h-[70vh] overflow-hidden border border-white/10 rounded-md bg-surface-dark"
         >
           <HomeMap
+            userId={userId}
             volcanoes={listed}
             selectedId={selectedId}
             onSelect={setSelectedId}

@@ -7,12 +7,16 @@ export function toVolcanoDashboard(row: VolcanoDashboardRow): VolcanoDashboard {
   const cloudInference =
     seismicEvent?.inferences.find(
       (infer) =>
-        infer.artifact.tier === "cloud" && infer.artifact.role === "teacher",
+        infer.artifact.promoted &&
+        infer.artifact.tier === "cloud" &&
+        infer.artifact.role === "teacher",
     ) ?? null;
   const edgeInference =
     seismicEvent?.inferences.find(
       (infer) =>
-        infer.artifact.tier === "edge" && infer.artifact.role === "student",
+        infer.artifact.promoted &&
+        infer.artifact.tier === "edge" &&
+        infer.artifact.role === "student",
     ) ?? null;
   return {
     ...row,
