@@ -44,3 +44,24 @@ export type InferenceLatest =
       inference: InferenceSeismic;
       feedback: InferenceFeedback | null;
     };
+
+export type InferenceFeedbackDraft = {
+  agreed: boolean | null;
+  correctedDeformation: TrainingDeformationLabel | null;
+  correctedSeismic: TrainingSeismicLabel | null;
+  notes: string | null;
+};
+
+export type InferenceModalView = {
+  label: TrainingDeformationLabel | TrainingSeismicLabel | null;
+  score: number | InferenceDeformation["score"] | null;
+  abstained: boolean;
+  abstainedReason: string | null;
+  artifactId: string | null;
+  hasResult: boolean;
+  submittedAgreed: boolean | null;
+  submittedCorrectedDeformation: TrainingDeformationLabel | null;
+  submittedCorrectedSeismic: TrainingSeismicLabel | null;
+  submittedNotes: string | null;
+  hasSubmitted: boolean;
+};

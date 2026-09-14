@@ -60,6 +60,16 @@ export type ApiInferenceResponse = {
   transformHash: string;
 };
 
+export type ApiPreviewRequest = {
+  interferogramId: string | null;
+  seismicEventId: string | null;
+};
+
+export type ApiPreviewResponse = {
+  contentType: string;
+  base64: string;
+};
+
 export type ApiPromoteResponse = {
   evaluatedModels: EvaluatedModel[];
 };
@@ -80,6 +90,9 @@ export const API_ROUTES = {
 
   // apps/ai: enqueue pretrain, lora, distill, prune, or quantize job
   train: createRoute("/api/train"),
+
+  // apps/backend: png preview for interferogram or seismic sample
+  preview: createRoute("/api/preview"),
 
   // apps/backend: inference for given interferogram, seismic event, or volcano
   inference: createRoute("/api/inference/single"),

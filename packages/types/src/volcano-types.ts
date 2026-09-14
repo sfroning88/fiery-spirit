@@ -54,15 +54,9 @@ export const volcanoDashboardInclude = {
     take: 1,
   },
   interferograms: {
-    where: {
-      inferences: {
-        some: {
-          artifact: { tier: "cloud", role: "screener", promoted: true },
-        },
-      },
-    },
+    where: { storagePath: { not: "" } },
     orderBy: { createdAt: "desc" },
-    take: 1,
+    take: 4,
     include: {
       inferences: {
         where: {
@@ -81,21 +75,10 @@ export const volcanoDashboardInclude = {
   },
   seismicEvents: {
     where: {
-      inferences: {
-        some: {
-          OR: [
-            {
-              artifact: { tier: "cloud", role: "teacher", promoted: true },
-            },
-            {
-              artifact: { tier: "edge", role: "student", promoted: true },
-            },
-          ],
-        },
-      },
+      OR: [{ waveformPath: { not: "" } }, { spectrogramPath: { not: null } }],
     },
     orderBy: { recordedAt: "desc" },
-    take: 1,
+    take: 4,
     include: {
       inferences: {
         where: {

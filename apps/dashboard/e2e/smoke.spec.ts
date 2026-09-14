@@ -16,16 +16,8 @@ test("home page renders completely", async ({ page }) => {
   await gotoHome(page);
   await Promise.all([
     expect(page.getByTestId(TEST_IDS.volcanoesHeading)).toBeVisible(),
-    expect(page.getByTestId(TEST_IDS.inferenceDeformationButton)).toBeVisible(),
-    expect(page.getByTestId(TEST_IDS.inferenceSeismicButton)).toBeVisible(),
     expect(page.getByTestId(TEST_IDS.myProfileButton)).toBeVisible(),
   ]);
-  await expect(
-    page.getByTestId(TEST_IDS.inferenceDeformationButton),
-  ).toBeDisabled();
-  await expect(
-    page.getByTestId(TEST_IDS.inferenceSeismicButton),
-  ).toBeDisabled();
   const map = page.getByTestId(TEST_IDS.homeMap);
   await expect(map).toBeVisible();
   await expect(map.locator("canvas")).toBeVisible();
@@ -33,11 +25,22 @@ test("home page renders completely", async ({ page }) => {
   if ((await map.locator(".maplibregl-marker").count()) === 0) {
     return;
   }
-  await expect(marker).toBeVisible();
-  await marker.click();
+  const sprite = marker.locator("img");
+  await expect(sprite).toBeVisible();
+  await sprite.click();
   const popup = page.getByTestId(TEST_IDS.volcanoPopup);
   await expect(popup).toBeVisible();
-  await expect(popup.getByText(/interferograms/i)).toBeVisible();
+  const deformation = popup.getByTestId(TEST_IDS.inferenceDeformationButton);
+  const seismic = popup.getByTestId(TEST_IDS.inferenceSeismicButton);
+  if ((await deformation.count()) > 0) {
+    await deformation.click();
+    await expect(page.getByTestId(TEST_IDS.inferenceDialog)).toBeVisible();
+    await page.getByTestId(TEST_IDS.inferenceCloseButton).click();
+  } else if ((await seismic.count()) > 0) {
+    await seismic.click();
+    await expect(page.getByTestId(TEST_IDS.inferenceDialog)).toBeVisible();
+    await page.getByTestId(TEST_IDS.inferenceCloseButton).click();
+  }
 });
 
 test("admin page renders completely", async ({ page }) => {

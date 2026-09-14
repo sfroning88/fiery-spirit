@@ -5,6 +5,7 @@ import {
   type ApiJobsResponse,
   type ApiInferenceRequest,
   type ApiInferenceResponse,
+  type ApiPreviewRequest,
   type ApiPromoteResponse,
   type ApiRefreshResponse,
 } from "@fiery/types";
@@ -18,6 +19,18 @@ export class ApiBackendService extends ApiService {
       throw new Error("Missing environment config");
     }
     return new ApiBackendService({ baseUrl, authToken, timeout: 300000 });
+  }
+
+  async preview(request: ApiPreviewRequest): Promise<ArrayBuffer> {
+    const endpoint = `${this.config.baseUrl}${API_ROUTES.preview()}`;
+    return this.makeBinaryRequest(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        interferogram_id: request.interferogramId,
+        seismic_event_id: request.seismicEventId,
+      }),
+    });
   }
 
   async inference(request: ApiInferenceRequest): Promise<ApiInferenceResponse> {

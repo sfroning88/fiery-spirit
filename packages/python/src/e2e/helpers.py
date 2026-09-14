@@ -4,11 +4,14 @@ Created Date: 8.21.2026
 Shared utility helpers for tests
 """
 
+import io
 import os
+import numpy as np
 import shutil
 import subprocess
 import time as Time
 from typing import Any, Dict, List, Optional, Tuple
+from PIL import Image
 
 import requests
 from psycopg2 import sql
@@ -37,6 +40,9 @@ from ..fiery_python import (
 TESTS_DIR = os.path.dirname(__file__)
 
 INGEST_PRESET_PATH = os.path.join(TESTS_DIR, "presets", "ingest.txt")
+
+PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+ASCII_RAMP = " .:-=+*#%@"
 
 
 def wait_for_job_completion(job_id: str, timeout: Optional[int] = 600) -> bool:
@@ -278,3 +284,15 @@ def random_seismic_event_id() -> str:
         "fetch_training_seismic_event_failed",
         "No training_seismic_event row for seismic inference",
     )
+
+
+def print_ascii(png: bytes, columns: int = 64) -> None:
+    gray = np.asarray(Image.open(io.BytesIO(png)).convert("L"))
+    height, width = gray.shape
+    scale = max(1, width // columns)
+    shrink = gray[:: scale * 2, ::scale]
+    ramp = np.array(list(ASCII_RAMP))
+    idx = (shrink.astype(np.float32) / 255 * (len(ASCII_RAMP) - 1)).astype(int)
+    print(f"preview {width}x{height} png bytes={len(png)}")
+    for row in idx:
+        print("".join(ramp[row]))

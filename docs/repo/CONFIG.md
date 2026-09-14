@@ -42,3 +42,12 @@ Patterns:
 - **`queue.get_connection()`** — Redis
 - **`queue.enqueue_jobs(jobs)`** — batch enqueue
 - **`SharedUtils`** — schema helpers from **`fiery_python`**
+
+## Libraries
+
+This application uses lightweight and free `libraries`:
+
+- `Tailwind colors` -- see official documentation at [tailwindcss.com/docs/colors](https://tailwindcss.com/docs/colors)
+- `Lucide React` -- see the official documentation at [lucide.dev/icons/](https://lucide.dev/icons/)
+- `React Icons` -- see the official documentation at [react-icons.github.io/react-icons/](https://react-icons.github.io/react-icons/)
+- `Sonner Toast` -- see the official documentation at [ui.shadcn.com/docs/components/radix/sonner](https://ui.shadcn.com/docs/components/radix/sonner)

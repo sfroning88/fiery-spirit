@@ -8,6 +8,12 @@ export const QUERY_KEYS = {
     ["interferogram", interferogramId] as const,
   seismicEvent: (seismicEventId: string) =>
     ["seismicEvent", seismicEventId] as const,
+  preview: (interferogramId: string | null, seismicEventId: string | null) =>
+    [
+      "preview",
+      interferogramId ?? "(none)",
+      seismicEventId ?? "(none)",
+    ] as const,
   source: (source: TrainingSampleSource) => ["source", source] as const,
   version: (versionId: string) => ["version", versionId] as const,
   contract: (contractId: string) => ["contract", contractId] as const,

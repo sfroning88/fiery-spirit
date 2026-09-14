@@ -45,6 +45,42 @@ export class ApiService {
     }
   }
 
+  protected async makeBinaryRequest(
+    endpoint: string,
+    options: RequestInit,
+  ): Promise<ArrayBuffer> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+    try {
+      const response = await fetch(endpoint, {
+        ...options,
+        headers: {
+          "auth-token": this.config.authToken,
+          ...options.headers,
+        },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (!response.ok) {
+        const errorData = (await response.json().catch(() => ({}))) as Record<
+          string,
+          unknown
+        >;
+        throw new ApiServiceError(
+          `Request failed with status ${response.status}`,
+          response.status,
+          errorData,
+        );
+      }
+      return await response.arrayBuffer();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
   protected handleError(error: unknown, message: string): ApiServiceError {
     if (error instanceof ApiServiceError) {
       return error;

@@ -58,6 +58,8 @@ INFERENCE_SINGLE_PATH = "/api/inference/single"
 INFERENCE_SINGLE_URL = f"{BACKEND_URL}{INFERENCE_SINGLE_PATH}"
 INFERENCE_BATCH_PATH = "/api/inference/batch"
 INFERENCE_BATCH_URL = f"{BACKEND_URL}{INFERENCE_BATCH_PATH}"
+PREVIEW_PATH = "/api/preview"
+PREVIEW_URL = f"{BACKEND_URL}{PREVIEW_PATH}"
 
 
 def endpoint_test(
@@ -95,3 +97,24 @@ def endpoint_test(
             print(f"{name} -> {extract}={value}")
         return value
     return data
+
+
+def endpoint_bytes(
+    url: str,
+    name: str,
+    *,
+    method: str = "POST",
+    payload: Optional[dict] = None,
+) -> bytes:
+    """Fire an API endpoint, check success, return raw response body"""
+    print(f"\n**{name}** {method} {url}")
+    response = requests.request(
+        method,
+        url,
+        headers=HEADERS,
+        json=payload or {},
+        timeout=REQUEST_TIMEOUT,
+    )
+    Time.sleep(1)
+    response.raise_for_status()
+    return response.content

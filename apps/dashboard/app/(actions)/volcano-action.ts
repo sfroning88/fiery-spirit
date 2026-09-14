@@ -10,9 +10,30 @@ import {
   TrainingSeismicLabel,
   VolcanoDashboard,
   type ApiInferenceResponse,
+  type ApiPreviewResponse,
 } from "@fiery/types";
 
 const volcanoService = new VolcanoService();
+
+const previewSchema = z.object({
+  interferogramId: z.string().uuid().nullable(),
+  seismicEventId: z.string().uuid().nullable(),
+});
+
+export const previewAction = selfUserAction(
+  previewSchema,
+  async (ctx): Promise<ApiPreviewResponse | null> => {
+    if (
+      (!ctx.interferogramId && !ctx.seismicEventId) ||
+      (ctx.interferogramId && ctx.seismicEventId)
+    )
+      return null;
+    return await volcanoService.preview({
+      interferogramId: ctx.interferogramId,
+      seismicEventId: ctx.seismicEventId,
+    });
+  },
+);
 
 const inferenceSchema = z.object({
   tier: z.nativeEnum(ModelTier),
