@@ -24,8 +24,8 @@ export function HomeVolcano({ userId, volcano, isMobile }: HomeVolcanoProps) {
   const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null);
   const [openSignal, setOpenSignal] = useState<TrainingSignal | null>(null);
   const imageFailed = imageSrc != null && imageSrc === failedImageSrc;
-  const canOpenDeformation = volcano._count.interferograms > 0;
-  const canOpenSeismic = volcano._count.seismicEvents > 0;
+  const canOpenDeformation = volcano.deformation.sample != null;
+  const canOpenSeismic = volcano.seismic.sample != null;
 
   return (
     <div data-testid={TEST_IDS.volcanoPopup} className="min-w-0">

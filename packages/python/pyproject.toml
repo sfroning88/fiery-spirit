@@ -40,6 +40,7 @@ dev = [
   "peft>=0.20.0",
   "webdataset>=1.0.2",
   "h5py>=3.14.0",
+  "pillow>=12.0.0",
 ]
 
 [tool.setuptools.packages.find]

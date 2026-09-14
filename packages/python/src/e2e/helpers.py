@@ -4,14 +4,14 @@ Created Date: 8.21.2026
 Shared utility helpers for tests
 """
 
+import io
 import os
 import numpy as np
 import shutil
 import subprocess
-import struct
-import zlib
 import time as Time
 from typing import Any, Dict, List, Optional, Tuple
+from PIL import Image
 
 import requests
 from psycopg2 import sql
@@ -286,69 +286,8 @@ def random_seismic_event_id() -> str:
     )
 
 
-def _png_chunks(png: bytes) -> List[tuple[str, bytes]]:
-    if not png.startswith(PNG_MAGIC):
-        raise ValueError("preview response is not a PNG")
-    offset = 8
-    chunks: List[tuple[str, bytes]] = []
-    while offset + 8 <= len(png):
-        length = struct.unpack(">I", png[offset : offset + 4])[0]
-        name = png[offset + 4 : offset + 8].decode("ascii")
-        start = offset + 8
-        end = start + length
-        chunks.append((name, png[start:end]))
-        offset = end + 4
-        if name == "IEND":
-            break
-    return chunks
-
-
-def _png_to_gray(png: bytes) -> np.ndarray:
-    chunks = _png_chunks(png)
-    header = dict(chunks).get("IHDR")
-    if header is None or len(header) < 13:
-        raise ValueError("PNG missing IHDR")
-    width, height, bit_depth, color_type = struct.unpack(">IIBB", header[:10])
-    if bit_depth != 8 or color_type not in (0, 2, 4, 6):
-        raise ValueError("unsupported PNG format")
-    channels = {0: 1, 2: 3, 4: 2, 6: 4}[color_type]
-    raw = zlib.decompress(b"".join(data for name, data in chunks if name == "IDAT"))
-    stride = width * channels
-    rows: List[np.ndarray] = []
-    cursor = 0
-    prior = np.zeros(stride, dtype=np.uint8)
-    for _ in range(height):
-        filter_type = raw[cursor]
-        scan = np.frombuffer(
-            raw, dtype=np.uint8, count=stride, offset=cursor + 1
-        ).copy()
-        cursor += stride + 1
-        if filter_type == 1:
-            for index in range(stride):
-                left = scan[index - channels] if index >= channels else 0
-                scan[index] = (scan[index] + left) & 255
-        elif filter_type == 2:
-            scan = (scan + prior) & 255
-        elif filter_type == 3:
-            for index in range(stride):
-                left = scan[index - channels] if index >= channels else 0
-                scan[index] = (
-                    scan[index] + ((int(left) + int(prior[index])) // 2)
-                ) & 255
-        elif filter_type == 4:
-            raise ValueError("paeth PNG filter unsupported")
-        elif filter_type != 0:
-            raise ValueError(f"unknown PNG filter {filter_type}")
-        rows.append(scan)
-        prior = scan
-    pixels = np.stack(rows).reshape(height, width, channels)
-    if channels == 1:
-        return pixels[:, :, 0]
-    return pixels[:, :, :3].mean(axis=2).astype(np.uint8)
-
-
 def print_ascii(png: bytes, columns: int = 64) -> None:
-    gray = _png_to_gray(png)
+    gray = np.asarray(Image.open(io.BytesIO(png)).convert("L"))
     height, width = gray.shape
     scale = max(1, width // columns)
     shrink = gray[:: scale * 2, ::scale]

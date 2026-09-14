@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { X } from "lucide-react";
@@ -82,29 +82,60 @@ export function HomeInference({
     useState<TrainingSeismicLabel | null>(null);
   const [inputNotes, setInputNotes] = useState<string | null>(null);
 
-  const submittedAgreed = inputAgreed ?? existingFeedback?.agreed ?? null;
-  const submittedCorrectedDeformation =
-    inputCorrectedDeformation ??
-    existingFeedback?.correctedDeformation ??
-    (latest?.kind === "deformation" ? latest.inference.label : null);
-  const submittedCorrectedSeismic =
-    inputCorrectedSeismic ??
-    existingFeedback?.correctedSeismic ??
-    (latest?.kind === "seismic" ? latest.inference.label : null);
-  const submittedNotes = inputNotes ?? existingFeedback?.note ?? null;
-
   const inferenceMutation = useInference(userId);
   const feedbackMutation = useFeedback(userId);
 
   const served = inferenceMutation.data?.result ?? null;
-  const artifactId = served?.artifact_id ?? existingArtifactId;
+  const servedArtifactId = served?.artifact_id ?? null;
+  const servedAt = inferenceMutation.submittedAt;
+  const artifactId = servedArtifactId ?? existingArtifactId;
+  const usingServed = served != null;
+
+  useEffect(() => {
+    if (!servedArtifactId) return;
+    feedbackMutation.reset();
+    setInputAgreed(null);
+    setInputCorrectedDeformation(null);
+    setInputCorrectedSeismic(null);
+    setInputNotes(null);
+  }, [servedArtifactId, servedAt]);
+
+  const servedDeformation =
+    usingServed && isDeformation
+      ? (served.label as TrainingDeformationLabel | null)
+      : null;
+  const servedSeismic =
+    usingServed && isSeismic
+      ? (served.label as TrainingSeismicLabel | null)
+      : null;
+
+  const submittedAgreed = usingServed
+    ? inputAgreed
+    : (inputAgreed ?? existingFeedback?.agreed ?? null);
+  const submittedCorrectedDeformation =
+    inputCorrectedDeformation ??
+    (usingServed
+      ? servedDeformation
+      : (existingFeedback?.correctedDeformation ??
+        (latest?.kind === "deformation" ? latest.inference.label : null)));
+  const submittedCorrectedSeismic =
+    inputCorrectedSeismic ??
+    (usingServed
+      ? servedSeismic
+      : (existingFeedback?.correctedSeismic ??
+        (latest?.kind === "seismic" ? latest.inference.label : null)));
+  const submittedNotes = usingServed
+    ? inputNotes
+    : (inputNotes ?? existingFeedback?.note ?? null);
+  const hasSubmitted = usingServed
+    ? feedbackMutation.isSuccess
+    : existingFeedback?.agreed != null || feedbackMutation.isSuccess;
+
   const label = served?.label ?? existingLabel;
   const score = served?.score ?? existingScore;
   const abstained = served?.abstained ?? existingAbstained;
   const abstainedReason = served?.abstained_reason ?? existingReason;
   const hasResult = served != null || latest != null;
-  const hasSubmitted =
-    existingFeedback?.agreed != null || feedbackMutation.isSuccess;
   const fieldsDisabled = hasSubmitted || feedbackMutation.isPending;
 
   const send = (nextAgreed: boolean) => {
@@ -169,6 +200,8 @@ export function HomeInference({
             <Image
               src={imageSrc}
               alt={imageAlt}
+              width={448}
+              height={256}
               className="h-40 w-full object-cover rounded-sm border border-white/10"
             />
           ) : (
@@ -209,6 +242,7 @@ export function HomeInference({
             disabled={inferenceMutation.isPending || request == null}
             onClick={() => {
               if (!request) return;
+              feedbackMutation.reset();
               inferenceMutation.mutate(request);
             }}
           >

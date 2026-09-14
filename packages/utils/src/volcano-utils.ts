@@ -5,16 +5,12 @@ export function toVolcanoDashboard(row: VolcanoDashboardRow): VolcanoDashboard {
   const interferogram =
     row.interferograms.find((sample) =>
       isBlobStorageArtifact(sample.storagePath),
-    ) ??
-    row.interferograms[0] ??
-    null;
+    ) ?? null;
   const deformationInference = interferogram?.inferences[0] ?? null;
   const seismicEvent =
     row.seismicEvents.find((sample) =>
       isBlobStorageArtifact(sample.waveformPath),
-    ) ??
-    row.seismicEvents[0] ??
-    null;
+    ) ?? null;
   const cloudInference =
     seismicEvent?.inferences.find(
       (infer) =>

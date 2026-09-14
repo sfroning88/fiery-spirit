@@ -25,8 +25,9 @@ test("home page renders completely", async ({ page }) => {
   if ((await map.locator(".maplibregl-marker").count()) === 0) {
     return;
   }
-  await expect(marker).toBeVisible();
-  await marker.click();
+  const sprite = marker.locator("img");
+  await expect(sprite).toBeVisible();
+  await sprite.click();
   const popup = page.getByTestId(TEST_IDS.volcanoPopup);
   await expect(popup).toBeVisible();
   const deformation = popup.getByTestId(TEST_IDS.inferenceDeformationButton);
