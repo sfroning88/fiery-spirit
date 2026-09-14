@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Badge, Dot } from "@fiery/ui";
-import { dateLikeToMs, formatDecimal, formatNumber } from "@fiery/utils";
-import type { InferenceLatest, VolcanoDashboard } from "@fiery/types";
+import { Dot, signalLabel } from "@fiery/ui";
+import { formatDecimal, formatNumber } from "@fiery/utils";
+import { TrainingSignal, type VolcanoDashboard } from "@fiery/types";
 import { httpSafeImageUrl } from "@/lib/utils";
 import { TEST_IDS } from "@lib/test-ids";
 import { IMAGE_LOADING } from "@/lib/constants";
@@ -22,40 +22,10 @@ export function HomeVolcano({ userId, volcano, isMobile }: HomeVolcanoProps) {
   const metaText = isMobile ? "text-[11px]" : "text-xs";
   const imageSrc = httpSafeImageUrl(volcano.imagePath);
   const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null);
+  const [openSignal, setOpenSignal] = useState<TrainingSignal | null>(null);
   const imageFailed = imageSrc != null && imageSrc === failedImageSrc;
-
-  const inferenceCandidates: InferenceLatest[] = [];
-  if (volcano.deformation.inference) {
-    inferenceCandidates.push({
-      kind: "deformation",
-      inference: volcano.deformation.inference,
-      feedback: volcano.deformation.feedback,
-    });
-  }
-  if (volcano.seismic.cloud.inference) {
-    inferenceCandidates.push({
-      kind: "seismic",
-      inference: volcano.seismic.cloud.inference,
-      feedback: volcano.seismic.cloud.feedback,
-    });
-  }
-  if (volcano.seismic.edge.inference) {
-    inferenceCandidates.push({
-      kind: "seismic",
-      inference: volcano.seismic.edge.inference,
-      feedback: volcano.seismic.edge.feedback,
-    });
-  }
-  const latestInference = inferenceCandidates.reduce<InferenceLatest | null>(
-    (best, next) => {
-      if (!best) return next;
-      return dateLikeToMs(next.inference.inferredAt) >
-        dateLikeToMs(best.inference.inferredAt)
-        ? next
-        : best;
-    },
-    null,
-  );
+  const canOpenDeformation = volcano._count.interferograms > 0;
+  const canOpenSeismic = volcano._count.seismicEvents > 0;
 
   return (
     <div data-testid={TEST_IDS.volcanoPopup} className="min-w-0">
@@ -98,18 +68,14 @@ export function HomeVolcano({ userId, volcano, isMobile }: HomeVolcanoProps) {
           {volcano.zone.toUpperCase()}
         </span>
         {volcano.gvpNumber ? (
-          <>
-            <span className={`${chipClass} border-zinc-300 text-zinc-600`}>
-              #{formatNumber(volcano.gvpNumber)}
-            </span>
-          </>
+          <span className={`${chipClass} border-zinc-300 text-zinc-600`}>
+            #{formatNumber(volcano.gvpNumber)}
+          </span>
         ) : null}
         {volcano.volcanicClass ? (
-          <>
-            <span className={`${chipClass} border-zinc-300 text-zinc-600`}>
-              {volcano.volcanicClass.toUpperCase()}
-            </span>
-          </>
+          <span className={`${chipClass} border-zinc-300 text-zinc-600`}>
+            {volcano.volcanicClass.toUpperCase()}
+          </span>
         ) : null}
         <span className={`${chipClass} border-zinc-200 text-zinc-600`}>
           Latitude: {formatDecimal(volcano.latitude)}
@@ -121,50 +87,42 @@ export function HomeVolcano({ userId, volcano, isMobile }: HomeVolcanoProps) {
           Elevation: {volcano.elevationM} m
         </span>
         <Dot />
-        <Badge colorScheme="light">
-          {volcano._count.interferograms} interferograms
-        </Badge>
+        {canOpenDeformation ? (
+          <button
+            type="button"
+            data-testid={TEST_IDS.inferenceDeformationButton}
+            onClick={(event) => {
+              event.stopPropagation();
+              setOpenSignal(TrainingSignal.deformation);
+            }}
+            className={`${chipClass} font-semibold border-zinc-300 text-zinc-800 hover:bg-zinc-100`}
+          >
+            Click to see {signalLabel.deformation}!
+          </button>
+        ) : null}
         <Dot />
-        <Badge colorScheme="light">
-          {volcano._count.seismicEvents} seismic events
-        </Badge>
+        {canOpenSeismic ? (
+          <button
+            type="button"
+            data-testid={TEST_IDS.inferenceSeismicButton}
+            onClick={(event) => {
+              event.stopPropagation();
+              setOpenSignal(TrainingSignal.seismic);
+            }}
+            className={`${chipClass} font-semibold border-zinc-300 text-zinc-800 hover:bg-zinc-100`}
+          >
+            Click to see {signalLabel.seismic}!
+          </button>
+        ) : null}
       </div>
-      {latestInference ? (
-        <div className="mt-2 min-w-0">
-          <HomeInference
-            key={`${latestInference.inference.artifactId}:${
-              latestInference.kind === "deformation"
-                ? latestInference.inference.interferogramId
-                : latestInference.inference.seismicEventId
-            }`}
-            userId={userId}
-            interferogramId={
-              latestInference.kind === "deformation"
-                ? latestInference.inference.interferogramId
-                : null
-            }
-            seismicEventId={
-              latestInference.kind === "seismic"
-                ? latestInference.inference.seismicEventId
-                : null
-            }
-            artifactId={latestInference.inference.artifactId}
-            agreed={latestInference.feedback?.agreed ?? null}
-            correctedDeformation={
-              latestInference.kind === "deformation"
-                ? (latestInference.feedback?.correctedDeformation ??
-                  latestInference.inference.label)
-                : null
-            }
-            correctedSeismic={
-              latestInference.kind === "seismic"
-                ? (latestInference.feedback?.correctedSeismic ??
-                  latestInference.inference.label)
-                : null
-            }
-            notes={latestInference.feedback?.note ?? null}
-          />
-        </div>
+      {openSignal != null ? (
+        <HomeInference
+          key={`${volcano.id}:${openSignal}`}
+          userId={userId}
+          volcano={volcano}
+          signal={openSignal}
+          onClose={() => setOpenSignal(null)}
+        />
       ) : null}
     </div>
   );

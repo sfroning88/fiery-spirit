@@ -1,9 +1,20 @@
 import { VolcanoDashboard, VolcanoDashboardRow } from "@fiery/types";
+import { isBlobStorageArtifact } from "./storage-utils";
 
 export function toVolcanoDashboard(row: VolcanoDashboardRow): VolcanoDashboard {
-  const interferogram = row.interferograms[0] ?? null;
+  const interferogram =
+    row.interferograms.find((sample) =>
+      isBlobStorageArtifact(sample.storagePath),
+    ) ??
+    row.interferograms[0] ??
+    null;
   const deformationInference = interferogram?.inferences[0] ?? null;
-  const seismicEvent = row.seismicEvents[0] ?? null;
+  const seismicEvent =
+    row.seismicEvents.find((sample) =>
+      isBlobStorageArtifact(sample.waveformPath),
+    ) ??
+    row.seismicEvents[0] ??
+    null;
   const cloudInference =
     seismicEvent?.inferences.find(
       (infer) =>

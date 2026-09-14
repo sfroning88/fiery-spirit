@@ -1,9 +1,11 @@
+import { dateLikeToMs } from "@fiery/utils";
 import {
   VolcanoDashboard,
   TrainingSignal,
   ModelTier,
   ModelRole,
   ApiInferenceRequest,
+  InferenceLatest,
 } from "@fiery/types";
 
 export function inferenceRequest(
@@ -33,4 +35,40 @@ export function inferenceRequest(
     seismicEventId: sample.id,
     volcanoId: volcano.id,
   };
+}
+
+export function latestSignalInference(
+  volcano: VolcanoDashboard,
+  signal: TrainingSignal,
+): InferenceLatest | null {
+  if (signal === TrainingSignal.deformation) {
+    if (!volcano.deformation.inference) return null;
+    return {
+      kind: "deformation",
+      inference: volcano.deformation.inference,
+      feedback: volcano.deformation.feedback,
+    };
+  }
+  const candidates: InferenceLatest[] = [];
+  if (volcano.seismic.cloud.inference) {
+    candidates.push({
+      kind: "seismic",
+      inference: volcano.seismic.cloud.inference,
+      feedback: volcano.seismic.cloud.feedback,
+    });
+  }
+  if (volcano.seismic.edge.inference) {
+    candidates.push({
+      kind: "seismic",
+      inference: volcano.seismic.edge.inference,
+      feedback: volcano.seismic.edge.feedback,
+    });
+  }
+  return candidates.reduce<InferenceLatest | null>((best, next) => {
+    if (!best) return next;
+    return dateLikeToMs(next.inference.inferredAt) >
+      dateLikeToMs(best.inference.inferredAt)
+      ? next
+      : best;
+  }, null);
 }

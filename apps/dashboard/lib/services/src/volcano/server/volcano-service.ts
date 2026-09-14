@@ -6,6 +6,8 @@ import {
   volcanoDashboardInclude,
   type ApiInferenceRequest,
   type ApiInferenceResponse,
+  type ApiPreviewRequest,
+  type ApiPreviewResponse,
 } from "@fiery/types";
 import { toVolcanoDashboard } from "@fiery/utils";
 import { ApiBackendService } from "@fiery/services";
@@ -14,6 +16,19 @@ export class VolcanoService {
   private backendService: ApiBackendService;
   constructor() {
     this.backendService = ApiBackendService.fromEnvironment();
+  }
+
+  async preview(args: ApiPreviewRequest): Promise<ApiPreviewResponse> {
+    if (
+      (!args.interferogramId && !args.seismicEventId) ||
+      (args.interferogramId && args.seismicEventId)
+    )
+      throw new Error("Malformed preview");
+    const buffer = await this.backendService.preview(args);
+    return {
+      contentType: "image/png",
+      base64: Buffer.from(buffer).toString("base64"),
+    };
   }
 
   async inference(args: ApiInferenceRequest): Promise<ApiInferenceResponse> {

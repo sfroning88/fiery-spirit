@@ -6,9 +6,11 @@ Core backend API orchestration
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.concurrency import run_in_threadpool
-from fiery_python import dependency, error, queue, logging
+from fastapi.responses import Response
+from fiery_python import dependency, error, queue, logging, limiter
 from fiery_python import VOLCANO_DB_FETCH_SIZE, ModelTier, ModelRole
 from .schemas import (
+    InferencePreviewRequest,
     InferenceSingleRequest,
     InferenceBatchRequest,
     InferenceSingleResponse,
@@ -25,6 +27,7 @@ router = APIRouter(
 
 inference_available: bool = False
 try:
+    from .services import InferenceImageLoader
     from .services import InferenceServingOrchestrator
     from .services import InferencePersistService
     from .background import InferenceBackgroundJobs
@@ -38,7 +41,35 @@ except Exception as err:
     logger.error("Failed to boot up Inferences", error=str(err))
 
 
+@router.post("/preview", dependencies=[Depends(dependency.get_token_header)])
+@limiter.limit("3/minute")
+async def image_preview(request: Request, payload: InferencePreviewRequest) -> Response:
+    """Stream interferogram, waveform, or spectogram (if available)"""
+    if not inference_available:
+        raise error("Inferences service unavailable", status_code=503)
+
+    if not payload.validate_payload():
+        raise error("Payload is malformed", status_code=400)
+
+    logging.bind_job_context(
+        volcano_id=(payload.interferogram_id or payload.seismic_event_id)
+    )
+    try:
+        return await run_in_threadpool(InferenceImageLoader.run, payload)
+    except error:
+        raise
+    except RuntimeError as err:
+        logger.error("image_preview_unavailable", error=str(err))
+        raise error(str(err), status_code=503)
+    except Exception as err:
+        logger.error("image_preview_failed", error=str(err))
+        raise error("Image preview failed", status_code=500)
+    finally:
+        logging.unbind_job_context()
+
+
 @router.post("/inference/single", dependencies=[Depends(dependency.get_token_header)])
+@limiter.limit("1/minute")
 async def single_inference(
     request: Request, payload: InferenceSingleRequest
 ) -> InferenceSingleResponse:
@@ -75,6 +106,7 @@ async def single_inference(
 
 
 @router.post("/inference/batch", dependencies=[Depends(dependency.get_token_header)])
+@limiter.limit("3/hour")
 async def batch_inference(
     request: Request, payload: InferenceBatchRequest
 ) -> InferenceBatchResponse:

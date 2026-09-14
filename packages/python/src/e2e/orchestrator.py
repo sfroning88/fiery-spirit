@@ -5,13 +5,13 @@ Created Date: 8.26.2026
 Unified test orchestrator for worker pipelines
 
 Usage: python3 -m src.e2e.orchestrator <workflow>
-Workflows: ingest|refine|train|promote|registry|inference|batch
+Workflows: ingest|refine|train|promote|registry|inference|preview|batch
 Additional Kwargs:
     [ingest] -source <hephaestus|okada|llaima>
     [refine] -shards <satellite|sensor
     [ingest|refine] -samples <max_samples>
     [train] -job <pretrain|lora|distill|prune|quantize>
-    [inference|batch] -signal <deformation|seismic>
+    [inference|preview|batch] -signal <deformation|seismic>
     [ingest|refine|train|batch] -timeout <seconds|none>
 
 For example:
@@ -19,6 +19,7 @@ python3 -m src.e2e.orchestrator ingest -source hephaestus -samples 10 -timeout n
 python3 -m src.e2e.orchestrator refine -shards sensor -samples 10 -timeout 300
 python3 -m src.e2e.orchestrator train -job lora -timeout none
 python3 -m src.e2e.orchestrator inference -signal deformation
+python3 -m src.e2e.orchestrator preview -signal deformation
 python3 -m src.e2e.orchestrator batch -signal deformation -timeout 600
 
 Notes:
@@ -100,6 +101,7 @@ WORKFLOW_WORKERS: Dict[str, Tuple[WorkerSpec, ...]] = {
     "promote": (WorkerSpec(domain="backend", needs_rq_worker=False),),
     "registry": (WorkerSpec(domain="backend", needs_rq_worker=False),),
     "inference": (WorkerSpec(domain="backend", needs_rq_worker=False),),
+    "preview": (WorkerSpec(domain="backend", needs_rq_worker=False),),
     "batch": (WorkerSpec(domain="backend", needs_rq_worker=True),),
 }
 
@@ -239,6 +241,12 @@ def _run_workflow(
         if not signal:
             raise ValueError("inference requires -signal deformation|seismic")
         run_inference_test(signal=signal)
+    elif workflow == "preview":
+        from .scripts.preview import run_preview_test
+
+        if not signal:
+            raise ValueError("preview requires -signal deformation|seismic")
+        run_preview_test(signal=signal)
     elif workflow == "batch":
         from .scripts.batch import run_batch_test
 
@@ -273,8 +281,8 @@ def _resolve_kwargs(
         parser.error("-shards is only valid for refine")
     if args.job is not None and workflow != "train":
         parser.error("-job is only valid for train")
-    if args.signal is not None and workflow not in ("inference", "batch"):
-        parser.error("-signal is only valid for inference, batch")
+    if args.signal is not None and workflow not in ("inference", "batch", "preview"):
+        parser.error("-signal is only valid for inference, batch, preview")
     if workflow == "ingest":
         if source is None:
             parser.error("ingest requires -source hephaestus|okada|llaima")
@@ -289,6 +297,8 @@ def _resolve_kwargs(
         parser.error("train requires -job pretrain|lora|distill|prune|quantize")
     if workflow == "inference" and args.signal is None:
         parser.error("inference requires -signal deformation|seismic")
+    if workflow == "preview" and args.signal is None:
+        parser.error("preview requires -signal deformation|seismic")
     if workflow == "batch" and args.signal is None:
         parser.error("batch requires -signal deformation|seismic")
     return source, shards, args.job, args.signal
@@ -353,7 +363,7 @@ def main() -> None:
     parser.add_argument(
         "-signal",
         choices=("deformation", "seismic"),
-        help="[inference|batch] interferogram or waveform sample",
+        help="[inference|preview|batch] interferogram or waveform sample",
     )
     parser.add_argument(
         "-timeout",
