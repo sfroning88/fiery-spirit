@@ -1,1 +1,1 @@
-export * from "./src/inference";
+export * from "./src/inference-reducer";
