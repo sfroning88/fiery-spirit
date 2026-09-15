@@ -4,12 +4,14 @@ Created Date: 9.14.2026
 Unit tests for InferenceImageLoader
 """
 
+import io
 from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import patch
 
 import numpy as np
 import pytest
+from PIL import Image
 from fiery_python import error
 from fiery_python import (
     TrainingDeformationLabel,
@@ -64,14 +66,79 @@ def _seismic_event() -> TrainingSeismicEvent:
 
 def test_png_bytes_writes_png_header():
     sample = np.linspace(0, 1, 16, dtype=np.float32).reshape(2, 2, 4)
-    png = InferenceImageLoader._interferogram_png_bytes(sample)
+    png = InferenceImageLoader._png_image(sample)
     assert png.startswith(PNG_MAGIC)
 
 
 def test_png_bytes_accepts_waveform():
     sample = np.linspace(-1, 1, 8, dtype=np.float32)
-    png = InferenceImageLoader._interferogram_png_bytes(sample)
+    png = InferenceImageLoader._png_image(sample)
     assert png.startswith(PNG_MAGIC)
+
+
+def test_png_image_decodes_as_rgb_with_distinct_channels():
+    sample = np.linspace(0, 1, 4, dtype=np.float32).reshape(1, 2, 2)
+    png = InferenceImageLoader._png_image(sample)
+    with Image.open(io.BytesIO(png)) as img:
+        assert img.mode == "RGB"
+    arr = np.asarray(Image.open(io.BytesIO(png)))
+    assert not np.allclose(arr[..., 0], arr[..., 1])
+
+
+def test_phase_plane_uses_first_channel():
+    sample = np.stack(
+        [
+            np.full((2, 2), 3.0, dtype=np.float32),
+            np.full((2, 2), 9.0, dtype=np.float32),
+        ]
+    )
+    phase = InferenceImageLoader._phase_plane(sample)
+    assert phase.shape == (2, 2)
+    assert phase.dtype == np.float32
+    assert np.all(phase == 3.0)
+
+
+def test_phase_plane_flattens_1d_waveform():
+    sample = np.array([1.0, 2.0, 3.0], dtype=np.float32)
+    phase = InferenceImageLoader._phase_plane(sample)
+    assert phase.shape == (1, 3)
+    np.testing.assert_allclose(phase, sample.reshape(1, -1))
+
+
+def test_phase_to_uint8_index_scales_min_max():
+    phase = np.array([[0.0, 0.5, 1.0]], dtype=np.float32)
+    index = InferenceImageLoader._phase_to_uint8_index(phase)
+    assert index.dtype == np.uint8
+    np.testing.assert_array_equal(index, [[0, 127, 255]])
+
+
+def test_phase_to_uint8_index_constant_phase_is_zero():
+    phase = np.full((2, 2), 5.0, dtype=np.float32)
+    index = InferenceImageLoader._phase_to_uint8_index(phase)
+    assert np.all(index == 0)
+
+
+def test_hsv_to_rgb_uint8_varies_by_hue():
+    h = np.array([[0.0, 0.5]], dtype=np.float32)
+    rgb = InferenceImageLoader._hsv_to_rgb_uint8(h)
+    assert rgb.shape == (1, 2, 3)
+    assert rgb.dtype == np.uint8
+    assert not np.array_equal(rgb[0, 0], rgb[0, 1])
+
+
+def test_png_bytes_from_rgb_writes_decodable_rgb():
+    rgb = np.zeros((2, 2, 3), dtype=np.uint8)
+    rgb[0, 0] = (255, 0, 0)
+    png = InferenceImageLoader._png_bytes_from_rgb(rgb)
+    assert png.startswith(PNG_MAGIC)
+    with Image.open(io.BytesIO(png)) as img:
+        assert img.mode == "RGB"
+        assert img.size == (2, 2)
+
+
+def test_png_bytes_from_rgb_rejects_invalid_shape():
+    with pytest.raises(ValueError, match="expected RGB"):
+        InferenceImageLoader._png_bytes_from_rgb(np.zeros((2, 2), dtype=np.uint8))
 
 
 def test_run_raises_when_sample_unselected():
