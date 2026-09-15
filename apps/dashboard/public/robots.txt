@@ -4,4 +4,4 @@ Disallow: /admin
 Disallow: /auth
 Disallow: /no-access
 
-Sitemap: https://fiery-spirit.vercel.app/sitemap.xml
+Sitemap: https://fiery-spirit.earth/sitemap.xml

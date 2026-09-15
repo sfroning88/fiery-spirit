@@ -40,7 +40,7 @@ const SITE_DESCRIPTION =
   "Two-tiered detection of volcanic unrest from satellite deformation and seismic waveforms.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://fiery-spirit.vercel.app"),
+  metadataBase: new URL("https://fiery-spirit.earth"),
   title: { default: "Fiery Spirit", template: "%s | Fiery Spirit" },
   description: SITE_DESCRIPTION,
   openGraph: {

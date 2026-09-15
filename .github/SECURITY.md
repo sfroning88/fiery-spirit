@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Only the current live deployment at [fiery-spirit.vercel.app](https://fiery-spirit.vercel.app) is supported.
+Only the current live deployment at [fiery-spirit.earth](https://fiery-spirit.earth) is supported.
 
 ## Reporting a Vulnerability
 

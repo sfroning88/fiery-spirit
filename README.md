@@ -1,6 +1,6 @@
 # Fiery Spirit
 
-Portal + AI system for **detecting volcanic unrest** deployed to [fiery-spirit.vercel.app](https://fiery-spirit.vercel.app).
+Portal + AI system for **detecting volcanic unrest** deployed to [fiery-spirit.earth](https://fiery-spirit.earth).
 
 **Like what you see? Reach out!**
 Check out the full nitty gritty on [**LinkedIn**](https://www.linkedin.com/in/sean-froning/).
