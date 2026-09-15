@@ -13,6 +13,10 @@ from fiery_python import BlobStorageServices
 from ..schemas import InferencePreviewRequest
 from .persist_service import InferencePersistService
 
+_WAVEFORM_HEIGHT = 128
+_WAVEFORM_MAX_WIDTH = 1024
+_WAVEFORM_MARGIN = 4
+
 
 class InferenceImageLoader:
     """Load and return the image"""
@@ -53,7 +57,10 @@ class InferenceImageLoader:
             raise error("No image asset was found")
         body = BlobStorageServices.get_unrefined(storage_path)
         sample = InferencePersistService.load_npz(body)
-        png = cls._png_image(sample)
+        if interferogram_id:
+            png = cls._interferogram_png_image(sample)
+        else:
+            png = cls._waveform_png_image(sample)
         return Response(
             content=png,
             status_code=200,
@@ -61,25 +68,88 @@ class InferenceImageLoader:
         )
 
     @classmethod
-    def _png_image(cls, sample: np.ndarray) -> bytes:
-        phase = cls._phase_plane(sample)
-        index = cls._phase_to_uint8_index(phase)
+    def _interferogram_png_image(cls, sample: np.ndarray) -> bytes:
+        plane = cls._phase_plane(sample)
+        index = cls._values_to_uint8_index(plane)
         rgb = cls._hsv_to_rgb_uint8(index.astype(np.float32) / 255.0)
         return cls._png_bytes_from_rgb(rgb)
 
-    @staticmethod
-    def _phase_plane(sample: np.ndarray) -> np.ndarray:
-        if sample.ndim >= 2:
-            return np.asarray(sample[0], dtype=np.float32)
-        return sample.reshape(1, -1).astype(np.float32)
+    @classmethod
+    def _waveform_png_image(cls, sample: np.ndarray) -> bytes:
+        trace = cls._waveform_trace(sample)
+        width = min(int(trace.size), _WAVEFORM_MAX_WIDTH)
+        if trace.size == 0:
+            rgb = np.full((_WAVEFORM_HEIGHT, 1, 3), 255, dtype=np.uint8)
+            return cls._png_bytes_from_rgb(rgb)
+        trace = cls._resample_1d(trace, width)
+        lo, hi = cls._value_range(trace)
+        norm = cls._normalize_01(trace, lo, hi)
+        if norm is None:
+            ys = np.full(width, _WAVEFORM_HEIGHT // 2, dtype=np.int32)
+        else:
+            ys = cls._waveform_rows_from_norm(norm)
+        rgb = cls._rasterize_trace_rows(ys, _WAVEFORM_HEIGHT)
+        return cls._png_bytes_from_rgb(rgb)
 
     @staticmethod
-    def _phase_to_uint8_index(phase: np.ndarray) -> np.ndarray:
-        lo, hi = float(np.nanmin(phase)), float(np.nanmax(phase))
+    def _sample_as_float32(sample: np.ndarray) -> np.ndarray:
+        return np.asarray(sample, dtype=np.float32)
+
+    @staticmethod
+    def _phase_plane(sample: np.ndarray) -> np.ndarray:
+        array = InferenceImageLoader._sample_as_float32(sample)
+        if array.ndim >= 2:
+            return array[0]
+        return array.reshape(1, -1)
+
+    @staticmethod
+    def _waveform_trace(sample: np.ndarray) -> np.ndarray:
+        trace = np.squeeze(InferenceImageLoader._sample_as_float32(sample))
+        if trace.ndim != 1:
+            return trace.reshape(-1)
+        return trace
+
+    @staticmethod
+    def _value_range(values: np.ndarray) -> tuple[float, float]:
+        return float(np.nanmin(values)), float(np.nanmax(values))
+
+    @staticmethod
+    def _normalize_01(values: np.ndarray, lo: float, hi: float) -> np.ndarray | None:
         if hi <= lo:
-            return np.zeros(phase.shape, dtype=np.uint8)
-        scaled = (phase - lo) / (hi - lo) * 255.0
-        return scaled.clip(0, 255).astype(np.uint8)
+            return None
+        return (values - lo) / (hi - lo)
+
+    @staticmethod
+    def _values_to_uint8_index(values: np.ndarray) -> np.ndarray:
+        lo, hi = InferenceImageLoader._value_range(values)
+        norm = InferenceImageLoader._normalize_01(values, lo, hi)
+        if norm is None:
+            return np.zeros(values.shape, dtype=np.uint8)
+        return (norm * 255.0).clip(0, 255).astype(np.uint8)
+
+    @staticmethod
+    def _resample_1d(trace: np.ndarray, width: int) -> np.ndarray:
+        if trace.size == width:
+            return trace
+        x_src = np.linspace(0, trace.size - 1, width)
+        return np.interp(x_src, np.arange(trace.size), trace).astype(np.float32)
+
+    @staticmethod
+    def _waveform_rows_from_norm(norm: np.ndarray) -> np.ndarray:
+        span = _WAVEFORM_HEIGHT - 2 * _WAVEFORM_MARGIN
+        ys = (_WAVEFORM_MARGIN + (1.0 - norm) * max(span - 1, 0)).round()
+        ys = ys.astype(np.int32)
+        return np.clip(ys, _WAVEFORM_MARGIN, _WAVEFORM_HEIGHT - _WAVEFORM_MARGIN - 1)
+
+    @staticmethod
+    def _rasterize_trace_rows(ys: np.ndarray, height: int) -> np.ndarray:
+        width = ys.size
+        xs = np.arange(width, dtype=np.int32)
+        rgb = np.full((height, width, 3), 255, dtype=np.uint8)
+        rgb[ys, xs] = (0, 0, 0)
+        rgb[np.clip(ys - 1, 0, height - 1), xs] = (0, 0, 0)
+        rgb[np.clip(ys + 1, 0, height - 1), xs] = (0, 0, 0)
+        return rgb
 
     @staticmethod
     def _png_bytes_from_rgb(rgb: np.ndarray) -> bytes:

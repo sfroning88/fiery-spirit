@@ -64,21 +64,21 @@ def _seismic_event() -> TrainingSeismicEvent:
     )
 
 
-def test_png_bytes_writes_png_header():
+def test_interferogram_png_writes_png_header():
     sample = np.linspace(0, 1, 16, dtype=np.float32).reshape(2, 2, 4)
-    png = InferenceImageLoader._png_image(sample)
+    png = InferenceImageLoader._interferogram_png_image(sample)
     assert png.startswith(PNG_MAGIC)
 
 
-def test_png_bytes_accepts_waveform():
+def test_waveform_png_writes_png_header():
     sample = np.linspace(-1, 1, 8, dtype=np.float32)
-    png = InferenceImageLoader._png_image(sample)
+    png = InferenceImageLoader._waveform_png_image(sample)
     assert png.startswith(PNG_MAGIC)
 
 
-def test_png_image_decodes_as_rgb_with_distinct_channels():
+def test_interferogram_png_decodes_as_rgb_with_distinct_channels():
     sample = np.linspace(0, 1, 4, dtype=np.float32).reshape(1, 2, 2)
-    png = InferenceImageLoader._png_image(sample)
+    png = InferenceImageLoader._interferogram_png_image(sample)
     with Image.open(io.BytesIO(png)) as img:
         assert img.mode == "RGB"
     arr = np.asarray(Image.open(io.BytesIO(png)))
@@ -105,17 +105,38 @@ def test_phase_plane_flattens_1d_waveform():
     np.testing.assert_allclose(phase, sample.reshape(1, -1))
 
 
-def test_phase_to_uint8_index_scales_min_max():
+def test_waveform_trace_squeezes_to_1d():
+    sample = np.array([1.0, 2.0, 3.0], dtype=np.float32)
+    trace = InferenceImageLoader._waveform_trace(sample)
+    assert trace.shape == (3,)
+    np.testing.assert_allclose(trace, sample)
+
+
+def test_waveform_png_renders_taller_than_strip():
+    sample = np.array([0.0, 1.0, 0.0, -1.0], dtype=np.float32)
+    png = InferenceImageLoader._waveform_png_image(sample)
+    with Image.open(io.BytesIO(png)) as img:
+        assert img.mode == "RGB"
+        assert img.size[1] > 1
+
+
+def test_values_to_uint8_index_scales_min_max():
     phase = np.array([[0.0, 0.5, 1.0]], dtype=np.float32)
-    index = InferenceImageLoader._phase_to_uint8_index(phase)
+    index = InferenceImageLoader._values_to_uint8_index(phase)
     assert index.dtype == np.uint8
     np.testing.assert_array_equal(index, [[0, 127, 255]])
 
 
-def test_phase_to_uint8_index_constant_phase_is_zero():
+def test_values_to_uint8_index_constant_values_is_zero():
     phase = np.full((2, 2), 5.0, dtype=np.float32)
-    index = InferenceImageLoader._phase_to_uint8_index(phase)
+    index = InferenceImageLoader._values_to_uint8_index(phase)
     assert np.all(index == 0)
+
+
+def test_normalize_01_returns_none_when_range_degenerate():
+    values = np.array([2.0, 2.0], dtype=np.float32)
+    lo, hi = InferenceImageLoader._value_range(values)
+    assert InferenceImageLoader._normalize_01(values, lo, hi) is None
 
 
 def test_hsv_to_rgb_uint8_varies_by_hue():
@@ -213,3 +234,5 @@ def test_run_returns_png_for_seismic_event():
     get_unrefined.assert_called_once_with("llaima/abc.npz")
     assert response.media_type == "image/png"
     assert response.body.startswith(PNG_MAGIC)
+    with Image.open(io.BytesIO(response.body)) as img:
+        assert img.size[1] > 1
