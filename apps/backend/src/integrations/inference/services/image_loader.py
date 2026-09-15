@@ -53,22 +53,52 @@ class InferenceImageLoader:
             raise error("No image asset was found")
         body = BlobStorageServices.get_unrefined(storage_path)
         sample = InferencePersistService.load_npz(body)
-        png = cls._interferogram_png_bytes(sample)
+        png = cls._png_image(sample)
         return Response(
             content=png,
             status_code=200,
             media_type="image/png",
         )
 
+    @classmethod
+    def _png_image(cls, sample: np.ndarray) -> bytes:
+        phase = cls._phase_plane(sample)
+        index = cls._phase_to_uint8_index(phase)
+        rgb = cls._hsv_to_rgb_uint8(index.astype(np.float32) / 255.0)
+        return cls._png_bytes_from_rgb(rgb)
+
     @staticmethod
-    def _interferogram_png_bytes(sample: np.ndarray) -> bytes:
-        phase = sample[0] if sample.ndim >= 2 else sample.reshape(1, -1)
+    def _phase_plane(sample: np.ndarray) -> np.ndarray:
+        if sample.ndim >= 2:
+            return np.asarray(sample[0], dtype=np.float32)
+        return sample.reshape(1, -1).astype(np.float32)
+
+    @staticmethod
+    def _phase_to_uint8_index(phase: np.ndarray) -> np.ndarray:
         lo, hi = float(np.nanmin(phase)), float(np.nanmax(phase))
-        scaled = (
-            np.zeros(phase.shape, dtype=np.uint8)
-            if hi <= lo
-            else ((phase - lo) / (hi - lo) * 255).clip(0, 255).astype(np.uint8)
-        )
+        if hi <= lo:
+            return np.zeros(phase.shape, dtype=np.uint8)
+        scaled = (phase - lo) / (hi - lo) * 255.0
+        return scaled.clip(0, 255).astype(np.uint8)
+
+    @staticmethod
+    def _png_bytes_from_rgb(rgb: np.ndarray) -> bytes:
+        if rgb.ndim != 3 or rgb.shape[-1] != 3:
+            raise ValueError("expected RGB array with shape (H, W, 3)")
         buf = io.BytesIO()
-        Image.fromarray(scaled, mode="L").save(buf, format="PNG")
+        Image.fromarray(np.ascontiguousarray(rgb), mode="RGB").save(buf, format="PNG")
         return buf.getvalue()
+
+    @staticmethod
+    def _hsv_to_rgb_uint8(h01: np.ndarray) -> np.ndarray:
+        h = (h01 % 1.0) * 6.0
+        i = np.floor(h).astype(np.int32)
+        f = h - i
+        p = np.zeros_like(h01)
+        q = 1.0 - f
+        t = f
+        r = np.choose(i % 6, [1, q, p, p, t, 1])
+        g = np.choose(i % 6, [t, 1, 1, q, p, p])
+        b = np.choose(i % 6, [p, p, t, 1, 1, q])
+        rgb = np.stack([r, g, b], axis=-1)
+        return (rgb * 255.0).clip(0, 255).astype(np.uint8)
