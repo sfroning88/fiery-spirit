@@ -464,6 +464,7 @@ def test_materialize_screener_wraps_pinned_backbone():
             return_value="/tmp/vit/model.safetensors",
         ) as download,
         patch("ml.registry.timm.create_model", return_value=backbone) as create_model,
+        patch("ml.registry.load_checkpoint") as load_checkpoint,
         patch("ml.registry.get_peft_model", return_value=wrapped) as get_peft_model,
     ):
         result = _ModelRegistry._materialize_screener(sidecar)
@@ -472,11 +473,17 @@ def test_materialize_screener_wraps_pinned_backbone():
         repo_id=_VIT_BASE_MODEL_ID,
         filename=_VIT_WEIGHTS,
         revision=_VIT_REVISION,
+        local_files_only=True,
     )
     create_model.assert_called_once_with(
         _VIT_SNAPSHOT,
-        pretrained=True,
+        pretrained=False,
         num_classes=2,
+    )
+    load_checkpoint.assert_called_once_with(
+        backbone,
+        "/tmp/vit/model.safetensors",
+        strict=False,
     )
     config = get_peft_model.call_args[0][1]
     assert config.modules_to_save == ["head"]

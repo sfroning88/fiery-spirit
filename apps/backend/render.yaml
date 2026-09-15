@@ -23,6 +23,10 @@ services:
       previewValue: https://fiery-ai-api-staging.onrender.com
     - key: JOB_DOMAIN
       value: inference
+    - key: HF_HUB_DISABLE_XET
+      value: "1"
+    - key: HF_HUB_OFFLINE
+      value: "1"
 
 
 - type: worker

@@ -13,6 +13,7 @@ from decimal import Decimal
 from huggingface_hub import hf_hub_download
 from peft import LoraConfig, get_peft_model, set_peft_model_state_dict
 from safetensors.torch import load
+from timm.models import load_checkpoint
 from typing import Any, Dict, Optional, Tuple
 from fiery_python import db_pool, logging, SyncLazyResource
 from fiery_python import (
@@ -229,16 +230,18 @@ class _ModelRegistry:
             or not isinstance(revision, str)
         ):
             raise RuntimeError("Empty base_model_id and/or revision")
-        hf_hub_download(
+        weights_path = hf_hub_download(
             repo_id=base_model_id,
             filename=_VIT_WEIGHTS,
             revision=revision,
+            local_files_only=True,
         )
         backbone = timm.create_model(
             _VIT_SNAPSHOT,
-            pretrained=True,
+            pretrained=False,
             num_classes=2,
         )
+        load_checkpoint(backbone, weights_path, strict=False)
         config = LoraConfig(
             r=lora["rank"],
             lora_alpha=lora["alpha"],
