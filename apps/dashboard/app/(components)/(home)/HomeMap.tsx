@@ -6,6 +6,7 @@ import { setWorkerUrl } from "maplibre-gl";
 import { toNum } from "@fiery/utils";
 import { VolcanoDashboard, TrainingSignal } from "@fiery/types";
 import { VOLCANO_SPRITE } from "@/lib/constants";
+import { TEST_IDS } from "@/lib/test-ids";
 import { inferenceRequest } from "@/lib/utils";
 import { HomeVolcano } from "./HomeVolcano";
 
@@ -69,6 +70,7 @@ export function HomeMap({
             }}
           >
             <span
+              data-testid={TEST_IDS.homeMapMarker}
               className={
                 canInfer
                   ? "volcano-sprite volcano-sprite--live"

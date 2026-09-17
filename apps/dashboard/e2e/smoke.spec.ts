@@ -21,13 +21,13 @@ test("home page renders completely", async ({ page }) => {
   const map = page.getByTestId(TEST_IDS.homeMap);
   await expect(map).toBeVisible();
   await expect(map.locator("canvas")).toBeVisible();
-  const marker = map.locator(".maplibregl-marker").first();
-  if ((await map.locator(".maplibregl-marker").count()) === 0) {
+  const markers = map.getByTestId(TEST_IDS.homeMapMarker);
+  if ((await markers.count()) === 0) {
     return;
   }
-  const sprite = marker.locator("img");
-  await expect(sprite).toBeVisible();
-  await sprite.click();
+  const marker = markers.last();
+  await expect(marker).toBeVisible();
+  await marker.click();
   const popup = page.getByTestId(TEST_IDS.volcanoPopup);
   await expect(popup).toBeVisible();
   const deformation = popup.getByTestId(TEST_IDS.inferenceDeformationButton);
