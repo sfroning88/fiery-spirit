@@ -22,7 +22,8 @@ export function formatNumber(value: unknown): string {
   return String(value);
 }
 
-export function formatNullableInt(raw: string): number | null {
+export function formatNullableInt(raw: string | null): number | null {
+  if (!raw) return null;
   const trimmed = raw.trim();
   if (!trimmed) return null;
   if (!/^\d+$/.test(trimmed)) return null;

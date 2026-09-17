@@ -2,6 +2,7 @@ import {
   type ModelTier,
   type ModelRole,
   type ModelMetricName,
+  type ModelBudgetMetricName,
   type TrainingSignal,
   type TrainingStatus,
   TrainingStage,
@@ -9,8 +10,8 @@ import {
 } from "@fiery/types";
 
 export const tierColors: Record<ModelTier, string> = {
-  cloud: "border-white-600/50 bg-white-950/50 text-white-100/90",
-  edge: "border-amber-600/50 bg-amber-950/50 text-amber-100/90",
+  cloud: "border-fiery-white-600 bg-fiery-ash-800/40 text-fiery-white-100",
+  edge: "border-amber-400 bg-amber-950/40 text-amber-200",
 };
 
 export const tierLabel: Record<ModelTier, string> = {
@@ -19,9 +20,9 @@ export const tierLabel: Record<ModelTier, string> = {
 };
 
 export const roleColors: Record<ModelRole, string> = {
-  screener: "border-green-600/50 bg-green-950/50 text-green-100/90",
-  teacher: "border-blue-600/50 bg-blue-950/50 text-blue-100/90",
-  student: "border-red-600/50 bg-red-950/50 text-red-100/90",
+  screener: "border-green-400 bg-green-950/40 text-green-200",
+  teacher: "border-blue-400 bg-blue-950/40 text-blue-200",
+  student: "border-red-400 bg-red-950/40 text-red-200",
 };
 
 export const roleLabel: Record<ModelRole, string> = {
@@ -31,8 +32,10 @@ export const roleLabel: Record<ModelRole, string> = {
 };
 
 export const signalColors: Record<TrainingSignal, string> = {
-  deformation: "border-cyan-600/50 bg-cyan-950/50 text-cyan-100/90",
-  seismic: "border-violet-600/50 bg-violet-950/50 text-violet-100/90",
+  deformation:
+    "border-fiery-crimson-400 bg-fiery-crimson-800/40 text-fiery-crimson-200",
+  seismic:
+    "border-fiery-crimson-400 bg-fiery-crimson-800/40 text-fiery-crimson-300",
 };
 
 export const signalLabel: Record<TrainingSignal, string> = {
@@ -48,6 +51,15 @@ export const metricLabel: Record<ModelMetricName, string> = {
   abstentionRate: "Abs",
   f1Score: "F1",
   macrof1Score: "Macro-F1",
+};
+
+export const budgetLabel: Record<ModelBudgetMetricName, string> = {
+  flash: "Flash",
+  peakRam: "RAM",
+  macs: "MACs",
+  latency: "Lat",
+  energy: "Enrg",
+  autonomy: "Auto",
 };
 
 export const statusColors: Record<TrainingStatus, string> = {
@@ -70,12 +82,16 @@ export const sourceValues = [
   TrainingSampleSource.hephaestus,
   TrainingSampleSource.okada,
   TrainingSampleSource.llaima,
+  TrainingSampleSource.licsar,
+  TrainingSampleSource.villarrica,
 ] as const;
 
 export const sourceLabel: Record<(typeof sourceValues)[number], string> = {
   hephaestus: "Hephaestus",
   okada: "Okada",
   llaima: "Llaima",
+  licsar: "Licsar",
+  villarrica: "Villarrica",
 };
 
 export const stageValues = [

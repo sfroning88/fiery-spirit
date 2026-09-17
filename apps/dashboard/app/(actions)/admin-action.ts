@@ -114,3 +114,10 @@ export const fetchModelsAction = platformAdminAction(
     return await adminService.fetchModels();
   },
 );
+
+export const fetchWinnersAction = platformAdminAction(
+  fetchModelsSchema,
+  async (): Promise<ModelDashboard[]> => {
+    return await adminService.fetchWinners();
+  },
+);

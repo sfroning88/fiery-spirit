@@ -4,17 +4,17 @@ import { useQuery } from "@tanstack/react-query";
 import { QUERY_STALE_TIME } from "@/lib/constants";
 import { QUERY_KEYS } from "@/lib/query-keys";
 import { ModelDashboard } from "@fiery/types";
-import { fetchModelsAction } from "../(actions)/admin-action";
+import { fetchWinnersAction } from "../(actions)/admin-action";
 
-export function useFetchModels(
+export function useFetchWinners(
   userId: string,
-  initialModels?: ModelDashboard[],
+  initialWinners?: ModelDashboard[],
 ) {
   return useQuery<ModelDashboard[]>({
-    queryKey: QUERY_KEYS.artifacts(userId),
-    queryFn: () => fetchModelsAction(),
+    queryKey: QUERY_KEYS.winners(userId),
+    queryFn: () => fetchWinnersAction(),
     staleTime: QUERY_STALE_TIME,
     enabled: !!userId,
-    initialData: initialModels,
+    initialData: initialWinners,
   });
 }

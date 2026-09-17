@@ -3,10 +3,18 @@ import type { ModelDashboard } from "@fiery/types";
 import { AdminPanel } from "./AdminPanel";
 
 type AdminAsyncProps = {
-  initialDataPromise: Promise<ModelDashboard[]>;
+  initialWinnersPromise: Promise<ModelDashboard[]>;
+  initialModelsPromise: Promise<ModelDashboard[]>;
 };
 
-export function AdminAsync({ initialDataPromise }: AdminAsyncProps) {
-  const initialData = use(initialDataPromise);
-  return <AdminPanel initialData={initialData} />;
+export function AdminAsync({
+  initialWinnersPromise,
+  initialModelsPromise,
+}: AdminAsyncProps) {
+  const [initialWinners, initialModels] = use(
+    Promise.all([initialWinnersPromise, initialModelsPromise]),
+  );
+  return (
+    <AdminPanel initialWinners={initialWinners} initialModels={initialModels} />
+  );
 }

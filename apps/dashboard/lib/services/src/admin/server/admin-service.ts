@@ -1,6 +1,6 @@
 import "server-only";
 
-import { db } from "@fiery/db";
+import { db, ModelTier } from "@fiery/db";
 import {
   type ModelDashboard,
   modelDashboardInclude,
@@ -52,7 +52,34 @@ export class AdminService {
   async fetchModels(): Promise<ModelDashboard[]> {
     const rows = await db.modelArtifact.findMany({
       include: modelDashboardInclude,
+      orderBy: { createdAt: "desc" },
     });
     return rows.map(toModelDashboard);
+  }
+
+  async fetchWinners(): Promise<ModelDashboard[]> {
+    const [cloud, edge] = await Promise.all([
+      db.modelArtifact.findFirst({
+        where: {
+          tier: ModelTier.cloud,
+          promoted: true,
+          promotedAt: { not: null },
+        },
+        orderBy: { promotedAt: "desc" },
+        include: modelDashboardInclude,
+      }),
+      db.modelArtifact.findFirst({
+        where: {
+          tier: ModelTier.edge,
+          promoted: true,
+          promotedAt: { not: null },
+        },
+        orderBy: { promotedAt: "desc" },
+        include: modelDashboardInclude,
+      }),
+    ]);
+    return [cloud, edge]
+      .filter((row): row is NonNullable<typeof row> => row != null)
+      .map(toModelDashboard);
   }
 }

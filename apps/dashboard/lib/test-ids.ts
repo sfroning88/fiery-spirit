@@ -8,6 +8,7 @@ export const TEST_IDS = {
   inferenceDialog: "inference-dialog",
   inferenceCloseButton: "inference-close-button",
   homeMap: "home-map",
+  homeMapMarker: "home-map-marker",
   volcanoPopup: "volcano-popup",
   openAdminLink: "open-admin-link",
   createProfileLink: "create-profile-link",
@@ -34,4 +35,5 @@ export const TEST_IDS = {
   sourceField: "source-field",
   stageField: "stage-field",
   signalField: "signal-field",
+  loadAllModelsButton: "load-all-models-button",
 } as const;
