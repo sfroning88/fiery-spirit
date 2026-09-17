@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../../../packages/ui/src";
 @import "@fiery/ui/theme.css";
 @import "maplibre-gl/dist/maplibre-gl.css";
 

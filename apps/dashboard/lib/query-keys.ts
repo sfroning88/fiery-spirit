@@ -19,6 +19,7 @@ export const QUERY_KEYS = {
   contract: (contractId: string) => ["contract", contractId] as const,
   session: (sessionId: string) => ["session", sessionId] as const,
   artifacts: (userId: string) => ["artifacts", userId] as const,
+  winners: (userId: string) => ["winners", userId] as const,
   artifact: (tier: ModelTier, role: ModelRole) =>
     ["artifact", tier, role] as const,
 };

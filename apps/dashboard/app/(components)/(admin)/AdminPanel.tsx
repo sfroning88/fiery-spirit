@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMediaQuery } from "@/app/(hooks)/use-media-query";
 import { useFetchModels } from "@/app/(hooks)/use-fetch-models";
+import { useFetchWinners } from "@/app/(hooks)/use-fetch-winners";
 import { useIngest } from "@/app/(hooks)/use-ingest";
 import { useRefine } from "@/app/(hooks)/use-refine";
 import { useTrain } from "@/app/(hooks)/use-train";
@@ -21,7 +22,7 @@ import {
   SourceDropdown,
   StageDropdown,
 } from "@fiery/ui";
-import { dateLikeToMs, formatNullableInt } from "@fiery/utils";
+import { dateLikeToMs, formatNullableInt, pickWinners } from "@fiery/utils";
 import {
   ModelDashboard,
   TrainingSampleSource,
@@ -30,19 +31,27 @@ import {
 } from "@fiery/types";
 
 type AdminPanelProps = {
-  initialData?: ModelDashboard[];
+  initialWinners?: ModelDashboard[];
 };
 
-export function AdminPanel({ initialData }: AdminPanelProps) {
+export function AdminPanel({ initialWinners }: AdminPanelProps) {
   const userId = useUserId();
   const isMobile = !useMediaQuery(`(min-width: ${MOBILE_BREAKPOINT}px)`, true);
+  const [loadAll, setLoadAll] = useState(false);
 
   const {
-    data: models,
-    isLoading,
-    isError,
-    error,
-  } = useFetchModels(userId, initialData);
+    data: winnersData,
+    isLoading: winnersLoading,
+    isError: winnersError,
+    error: winnersErrorDetail,
+  } = useFetchWinners(userId, initialWinners);
+
+  const {
+    data: allModels,
+    isLoading: allModelsLoading,
+    isError: allModelsError,
+    error: allModelsErrorDetail,
+  } = useFetchModels(userId, { enabled: loadAll });
 
   const ingestMutation = useIngest(userId);
   const refineMutation = useRefine(userId);
@@ -61,11 +70,20 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
     TrainingSignal.deformation,
   );
 
-  const listed = models ?? EMPTY_MODELS;
-  const ranked = [...listed].sort((modelA, modelB) => {
+  const winners =
+    loadAll && allModels
+      ? pickWinners(allModels)
+      : (winnersData ?? EMPTY_MODELS);
+  const winnerIds = new Set(winners.map((model) => model.id));
+
+  const catalog = loadAll ? (allModels ?? EMPTY_MODELS) : winners;
+  const ranked = [...catalog].sort((modelA, modelB) => {
     if (modelA.promoted !== modelB.promoted) return modelA.promoted ? -1 : 1;
     return dateLikeToMs(modelB.promotedAt) - dateLikeToMs(modelA.promotedAt);
   });
+  const remainingModels = loadAll
+    ? ranked.filter((model) => !winnerIds.has(model.id))
+    : [];
 
   let lastDeformationModel: ModelDashboard | null = null;
   let lastSeismicModel: ModelDashboard | null = null;
@@ -285,22 +303,63 @@ export function AdminPanel({ initialData }: AdminPanelProps) {
         </p>
       )}
 
-      {isLoading ? (
-        <p className="text-white/50 text-sm">Loading models…</p>
-      ) : isError ? (
+      {winnersLoading ? (
+        <p className="text-white/50 text-sm">Loading current winners…</p>
+      ) : winnersError ? (
         <p className="text-red-400 text-sm">
-          {error instanceof Error ? error.message : "Could not load models."}
+          {winnersErrorDetail instanceof Error
+            ? winnersErrorDetail.message
+            : "Could not load current winners."}
         </p>
-      ) : !ranked?.length ? (
-        <p className="text-white/40 text-sm">No models yet...</p>
       ) : (
-        <>
-          <ul className="border border-white/10 rounded-md overflow-hidden bg-surface-dark">
-            {ranked.map((model) => (
-              <AdminModel key={model.id} model={model} isMobile={isMobile} />
-            ))}
-          </ul>
-        </>
+        <div className="space-y-2">
+          <SectionLabel>current winners</SectionLabel>
+          {!winners.length ? (
+            <p className="text-white/40 text-sm">No promoted models yet…</p>
+          ) : (
+            <ul className="border border-white/10 rounded-md overflow-hidden bg-surface-dark">
+              {winners.map((model) => (
+                <AdminModel
+                  key={model.id}
+                  model={model}
+                  isMobile={isMobile}
+                  showTrophy
+                />
+              ))}
+            </ul>
+          )}
+          {!loadAll ? (
+            <Button
+              data-testid={TEST_IDS.loadAllModelsButton}
+              onClick={() => setLoadAll(true)}
+            >
+              Load All
+            </Button>
+          ) : allModelsLoading ? (
+            <p className="text-white/50 text-sm">Loading all models…</p>
+          ) : allModelsError ? (
+            <p className="text-red-400 text-sm">
+              {allModelsErrorDetail instanceof Error
+                ? allModelsErrorDetail.message
+                : "Could not load all models."}
+            </p>
+          ) : remainingModels.length > 0 ? (
+            <div className="space-y-2">
+              <SectionLabel>all models</SectionLabel>
+              <ul className="border border-white/10 rounded-md overflow-hidden bg-surface-dark">
+                {remainingModels.map((model) => (
+                  <AdminModel
+                    key={model.id}
+                    model={model}
+                    isMobile={isMobile}
+                  />
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="text-white/40 text-sm">No other models to show.</p>
+          )}
+        </div>
       )}
     </div>
   );

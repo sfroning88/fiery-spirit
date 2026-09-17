@@ -19,6 +19,15 @@ export type ModelArtifact = PrismaModelArtifact;
 export type ModelMetric = PrismaModelMetric;
 export type ModelBudget = PrismaModelBudget;
 
+export type ModelBudgetMetricName =
+  "flash" | "peakRam" | "macs" | "latency" | "energy" | "autonomy";
+
+export type ModelBudgetMetric = {
+  name: ModelBudgetMetricName;
+  value: number;
+  budget: number | null;
+};
+
 export type EvaluatedModel = {
   artifact_id: string;
   tier: ModelTier;

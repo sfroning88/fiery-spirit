@@ -6,12 +6,18 @@ import { QUERY_KEYS } from "@/lib/query-keys";
 import { ModelDashboard } from "@fiery/types";
 import { fetchModelsAction } from "../(actions)/admin-action";
 
-export function useFetchModels(userId: string, initialData?: ModelDashboard[]) {
+type UseFetchModelsOptions = {
+  enabled?: boolean;
+};
+
+export function useFetchModels(
+  userId: string,
+  options?: UseFetchModelsOptions,
+) {
   return useQuery<ModelDashboard[]>({
     queryKey: QUERY_KEYS.artifacts(userId),
     queryFn: () => fetchModelsAction(),
     staleTime: QUERY_STALE_TIME,
-    enabled: !!userId,
-    initialData,
+    enabled: !!userId && (options?.enabled ?? true),
   });
 }

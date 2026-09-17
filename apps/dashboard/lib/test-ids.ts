@@ -34,4 +34,5 @@ export const TEST_IDS = {
   sourceField: "source-field",
   stageField: "stage-field",
   signalField: "signal-field",
+  loadAllModelsButton: "load-all-models-button",
 } as const;

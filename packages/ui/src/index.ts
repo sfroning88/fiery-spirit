@@ -20,6 +20,7 @@ export {
   signalColors,
   signalLabel,
   metricLabel,
+  budgetLabel,
   statusColors,
   statusLabel,
   sourceValues,

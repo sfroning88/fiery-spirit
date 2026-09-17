@@ -57,6 +57,7 @@ test("admin page renders completely", async ({ page }) => {
     expect(page.getByTestId(TEST_IDS.signalField)).toBeVisible(),
     expect(page.getByTestId(TEST_IDS.sourceField)).toBeVisible(),
     expect(page.getByTestId(TEST_IDS.stageField)).toBeVisible(),
+    expect(page.getByTestId(TEST_IDS.loadAllModelsButton)).toBeVisible(),
   ]);
   const maxSamples = page.getByTestId(TEST_IDS.maxSamplesField);
   await maxSamples.fill("10");
