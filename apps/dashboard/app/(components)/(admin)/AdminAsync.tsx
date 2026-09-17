@@ -4,9 +4,17 @@ import { AdminPanel } from "./AdminPanel";
 
 type AdminAsyncProps = {
   initialWinnersPromise: Promise<ModelDashboard[]>;
+  initialModelsPromise: Promise<ModelDashboard[]>;
 };
 
-export function AdminAsync({ initialWinnersPromise }: AdminAsyncProps) {
-  const initialWinners = use(initialWinnersPromise);
-  return <AdminPanel initialWinners={initialWinners} />;
+export function AdminAsync({
+  initialWinnersPromise,
+  initialModelsPromise,
+}: AdminAsyncProps) {
+  const [initialWinners, initialModels] = use(
+    Promise.all([initialWinnersPromise, initialModelsPromise]),
+  );
+  return (
+    <AdminPanel initialWinners={initialWinners} initialModels={initialModels} />
+  );
 }

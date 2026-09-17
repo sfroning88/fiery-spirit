@@ -91,7 +91,7 @@ export const sourceLabel: Record<(typeof sourceValues)[number], string> = {
   okada: "Okada",
   llaima: "Llaima",
   licsar: "Licsar",
-  villarrica: "Villarica",
+  villarrica: "Villarrica",
 };
 
 export const stageValues = [

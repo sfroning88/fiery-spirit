@@ -17,7 +17,7 @@ export function usePromote(userId: string) {
       });
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: QUERY_KEYS.winners("winners"),
+          queryKey: QUERY_KEYS.winners(userId),
         }),
         queryClient.invalidateQueries({
           queryKey: QUERY_KEYS.artifacts(userId),

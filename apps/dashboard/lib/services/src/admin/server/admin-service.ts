@@ -52,6 +52,7 @@ export class AdminService {
   async fetchModels(): Promise<ModelDashboard[]> {
     const rows = await db.modelArtifact.findMany({
       include: modelDashboardInclude,
+      orderBy: { createdAt: "desc" },
     });
     return rows.map(toModelDashboard);
   }

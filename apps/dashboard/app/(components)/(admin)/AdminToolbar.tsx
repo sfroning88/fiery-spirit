@@ -245,7 +245,7 @@ export function AdminToolbar({
         fallbackError="Promote request failed."
       >
         Promote started — {promoteMutation.data?.evaluatedModels.length}{" "}
-        model(s) evalutated.
+        model(s) evaluated.
       </AdminMutationMessage>
 
       <AdminMutationMessage

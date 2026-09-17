@@ -14,16 +14,17 @@ import { useUserId } from "@/app/(hooks)/use-user-id";
 import { MOBILE_BREAKPOINT, EMPTY_MODELS } from "@/lib/constants";
 import { coerceIngestSource } from "@/lib/utils";
 import { adminReducer, adminPanelInitialState } from "@/lib/reducers";
-import { dateLikeToMs, formatNullableInt, pickWinners } from "@fiery/utils";
+import { dateLikeToMs, formatNullableInt } from "@fiery/utils";
 import { ModelDashboard, TrainingSignal } from "@fiery/types";
 import { AdminToolbar } from "./AdminToolbar";
 import { AdminCatalog } from "./AdminCatalog";
 
 type AdminPanelProps = {
   initialWinners?: ModelDashboard[];
+  initialModels?: ModelDashboard[];
 };
 
-export function AdminPanel({ initialWinners }: AdminPanelProps) {
+export function AdminPanel({ initialWinners, initialModels }: AdminPanelProps) {
   const userId = useUserId();
   const isMobile = !useMediaQuery(`(min-width: ${MOBILE_BREAKPOINT}px)`, true);
 
@@ -41,7 +42,7 @@ export function AdminPanel({ initialWinners }: AdminPanelProps) {
     isLoading: allModelsLoading,
     isError: allModelsError,
     error: allModelsErrorDetail,
-  } = useFetchModels(userId, { enabled: panel.loadAll });
+  } = useFetchModels(userId, initialModels);
 
   const ingestMutation = useIngest(userId);
   const refineMutation = useRefine(userId);
@@ -62,31 +63,44 @@ export function AdminPanel({ initialWinners }: AdminPanelProps) {
   const maxSamples = formatNullableInt(panel.maxSamples);
   const ingestSource = coerceIngestSource(panel.source);
 
-  const winners =
-    panel.loadAll && allModels
-      ? pickWinners(allModels)
-      : (winnersData ?? EMPTY_MODELS);
+  const models = allModels ?? EMPTY_MODELS;
+  const winners = winnersData ?? EMPTY_MODELS;
   const winnerIds = new Set(winners.map((model) => model.id));
-
-  const catalog = panel.loadAll ? (allModels ?? EMPTY_MODELS) : winners;
-  const ranked = [...catalog].sort((modelA, modelB) => {
-    if (modelA.promoted !== modelB.promoted) return modelA.promoted ? -1 : 1;
-    return dateLikeToMs(modelB.promotedAt) - dateLikeToMs(modelA.promotedAt);
-  });
   const remainingModels = panel.loadAll
-    ? ranked.filter((model) => !winnerIds.has(model.id))
+    ? [...models]
+        .filter((model) => !winnerIds.has(model.id))
+        .sort((modelA, modelB) => {
+          if (modelA.promoted !== modelB.promoted) {
+            return modelA.promoted ? -1 : 1;
+          }
+          return (
+            dateLikeToMs(modelB.createdAt) - dateLikeToMs(modelA.createdAt)
+          );
+        })
     : [];
 
   let lastDeformationModel: ModelDashboard | null = null;
   let lastSeismicModel: ModelDashboard | null = null;
 
-  for (const model of ranked) {
+  for (const model of models) {
     switch (model.session.signal) {
       case TrainingSignal.deformation:
-        if (!lastDeformationModel) lastDeformationModel = model;
+        if (
+          !lastDeformationModel ||
+          dateLikeToMs(model.createdAt) >
+            dateLikeToMs(lastDeformationModel.createdAt)
+        ) {
+          lastDeformationModel = model;
+        }
         break;
       case TrainingSignal.seismic:
-        if (!lastSeismicModel) lastSeismicModel = model;
+        if (
+          !lastSeismicModel ||
+          dateLikeToMs(model.createdAt) >
+            dateLikeToMs(lastSeismicModel.createdAt)
+        ) {
+          lastSeismicModel = model;
+        }
         break;
     }
   }

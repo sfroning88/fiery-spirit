@@ -5,6 +5,7 @@ import { routes } from "@lib/routes";
 import { TEST_IDS } from "@lib/test-ids";
 import { requirePlatformAdmin } from "@fiery/auth/server";
 import { ModelDashboard } from "@fiery/types";
+import { fetchModelsCached } from "@/lib/api/cache/models-cache";
 import { fetchWinnersCached } from "@/lib/api/cache/winners-cache";
 import { AdminSkeleton } from "@/app/(components)/(admin)/AdminSkeleton";
 import { AdminAsync } from "@/app/(components)/(admin)/AdminAsync";
@@ -18,6 +19,9 @@ export const metadata: Metadata = {
 export default async function AdminPage() {
   const { supabaseUser } = await requirePlatformAdmin();
   const winnersPromise = fetchWinnersCached(supabaseUser.id).catch(
+    (): ModelDashboard[] => [],
+  );
+  const modelsPromise = fetchModelsCached(supabaseUser.id).catch(
     (): ModelDashboard[] => [],
   );
 
@@ -39,7 +43,10 @@ export default async function AdminPage() {
         </Link>
       </div>
       <Suspense fallback={<AdminSkeleton />}>
-        <AdminAsync initialWinnersPromise={winnersPromise} />
+        <AdminAsync
+          initialWinnersPromise={winnersPromise}
+          initialModelsPromise={modelsPromise}
+        />
       </Suspense>
     </div>
   );
