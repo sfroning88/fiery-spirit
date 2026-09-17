@@ -3,10 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "predev": "node ./scripts/copy-maplibre-worker.mjs",
-    "prebuild": "node ./scripts/copy-maplibre-worker.mjs",
-    "dev": "next dev --turbopack",
-    "build": "next build",
+    "dev": "node ./scripts/copy-maplibre-worker.mjs && next dev --turbopack",
+    "build": "node ./scripts/copy-maplibre-worker.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
