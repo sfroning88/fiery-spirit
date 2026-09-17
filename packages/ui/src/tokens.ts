@@ -82,12 +82,16 @@ export const sourceValues = [
   TrainingSampleSource.hephaestus,
   TrainingSampleSource.okada,
   TrainingSampleSource.llaima,
+  TrainingSampleSource.licsar,
+  TrainingSampleSource.villarrica,
 ] as const;
 
 export const sourceLabel: Record<(typeof sourceValues)[number], string> = {
   hephaestus: "Hephaestus",
   okada: "Okada",
   llaima: "Llaima",
+  licsar: "Licsar",
+  villarrica: "Villarica",
 };
 
 export const stageValues = [
