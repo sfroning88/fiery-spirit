@@ -51,6 +51,9 @@ class CallbackPersistService:
             signed_at=row.get("signed_at"),
             promoted=row.get("promoted"),
             promoted_at=row.get("promoted_at"),
+            mlflow_run_id=row.get("mlflow_run_id"),
+            hf_repo_id=row.get("hf_repo_id"),
+            hf_revision=row.get("hf_revision"),
             session_id=row.get("session_id"),
             parent_id=row.get("parent_id"),
         )

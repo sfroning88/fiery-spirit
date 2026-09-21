@@ -6,6 +6,7 @@ from .constants import (
     INFERENCE_DEFORMATION_TABLE,
     INFERENCE_SEISMIC_TABLE,
     INFERENCE_FEEDBACK_TABLE,
+    MLFLOW_REGISTERED_MODELS,
     MODEL_REGISTRY_SLOTS,
     MODEL_DB_FETCH_SIZE,
     MODEL_DB_PAGE_SIZE,
@@ -146,12 +147,15 @@ from .resources import (
 )
 from .services import (
     BlobStorageServices,
+    HubCheckpointServices,
+    MlflowTrackingServices,
     ModelStorageServices,
 )
 from .types import (
     TrainingHyperparameter,
 )
 from .utils import (
+    MlflowUtils,
     NumberUtils,
     SchemaUtils,
     UuidUtils,
@@ -165,6 +169,7 @@ __all__ = [
     "INFERENCE_DEFORMATION_TABLE",
     "INFERENCE_SEISMIC_TABLE",
     "INFERENCE_FEEDBACK_TABLE",
+    "MLFLOW_REGISTERED_MODELS",
     "MODEL_REGISTRY_SLOTS",
     "MODEL_DB_FETCH_SIZE",
     "MODEL_DB_PAGE_SIZE",
@@ -291,8 +296,11 @@ __all__ = [
     "AsyncLazyResource",
     "SyncLazyResource",
     "BlobStorageServices",
+    "HubCheckpointServices",
+    "MlflowTrackingServices",
     "ModelStorageServices",
     "TrainingHyperparameter",
+    "MlflowUtils",
     "NumberUtils",
     "SchemaUtils",
     "UuidUtils",

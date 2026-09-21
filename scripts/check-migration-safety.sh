@@ -78,6 +78,25 @@ check_banned_partial_index_names() {
   done
 }
 
+check_does_not_contain_mlflow_schema() {
+  content=$1
+  display=$2
+  line_no=0
+  while IFS= read -r line || [ -n "$line" ]; do
+    line_no=$((line_no + 1))
+    trimmed=$(printf '%s\n' "$line" | sed 's/^[[:space:]]*//')
+    [ -z "$trimmed" ] && continue
+    case "$trimmed" in
+      '--'*) continue ;;
+    esac
+    case "$line" in
+      *[Mm][Ll][Ff][Ll][Oo][Ww]*)
+        die "FAIL: $display:$line_no — Prisma migrations must not touch schema mlflow (Alembic-owned): ${line}"
+        ;;
+    esac
+  done <"$content"
+}
+
 for f in $migration_files; do
   tmp=$(mktemp)
   if ! git show ":$f" >"$tmp" 2>/dev/null; then
@@ -87,6 +106,7 @@ for f in $migration_files; do
   check_drop_add_needs_update "$tmp" "$f"
   check_create_has_if_not_exists "$tmp" "$f"
   check_banned_partial_index_names "$tmp" "$f"
+  check_does_not_contain_mlflow_schema "$tmp" "$f"
   rm -f "$tmp"
 done
 

@@ -92,9 +92,6 @@ class ModelStorageServices:
             assert_never(body_or_weights)
         sig = cls._artifact_hmac_hex(body or weights)
         sidecar = {**sidecar, "weights_hmac": sig}
-        sidecar_body = json.dumps(
-            sidecar, sort_keys=True, separators=(",", ":")
-        ).encode("utf-8")
         models_s3.put_bytes(
             MODEL_BUCKET_NAME,
             weights_key,
@@ -102,14 +99,23 @@ class ModelStorageServices:
             content_type="application/octet-stream",
             metadata={_ARTIFACT_HMAC_META_KEY: sig},
         )
+        cls.put_sidecar(weights_key, sidecar)
+        return weights_key
+
+    @classmethod
+    def put_sidecar(cls, weights_key: str, sidecar: dict) -> str:
+        sidecar_body = json.dumps(
+            sidecar, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+        sidecar_key = cls.sidecar_key(weights_key)
         models_s3.put_bytes(
             MODEL_BUCKET_NAME,
-            cls.sidecar_key(weights_key),
+            sidecar_key,
             sidecar_body,
             content_type="application/json",
             metadata={_ARTIFACT_HMAC_META_KEY: cls._artifact_hmac_hex(sidecar_body)},
         )
-        return weights_key
+        return sidecar_key
 
     @classmethod
     def load_artifact(

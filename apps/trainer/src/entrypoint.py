@@ -15,6 +15,7 @@ from fiery_python import ModelStorageServices
 from .build_loaders import build_loaders
 from .build_job import DistillPair, build_job
 from .train_model import train_model
+from .save_checkpoint import save_checkpoint
 from .score_model import score_model
 from .send_callback import send_callback
 
@@ -35,6 +36,8 @@ def entrypoint(spec: Dict, architecture: str) -> Dict:
     param_count = None
     metrics = None
     decision = None
+    sidecar = None
+    payload: bytes | dict | None = None
     for attempt in range(_MAX_TRAINING_ATTEMPTS):
         try:
             seed = spec["seed"]
@@ -70,7 +73,6 @@ def entrypoint(spec: Dict, architecture: str) -> Dict:
                 "spec": spec,
                 "decision": decision,
             }
-            payload: bytes | dict
             if spec.get("quantize"):
                 example_shape = spec.get("example_shape")
                 if (
@@ -112,7 +114,30 @@ def entrypoint(spec: Dict, architecture: str) -> Dict:
                 attempt=attempt,
                 error=str(err),
             )
-    if storage_path and signature and param_count and metrics and decision:
+    if (
+        storage_path
+        and signature
+        and sidecar
+        and payload is not None
+        and param_count
+        and metrics
+        and decision
+    ):
+        if isinstance(payload, bytes):
+            weights_bytes = payload
+        else:
+            from safetensors.torch import save as save_safetensors
+
+            weights_bytes = save_safetensors(payload)
+        sidecar = save_checkpoint(
+            spec,
+            storage_path=storage_path,
+            weights_bytes=weights_bytes,
+            sidecar=sidecar,
+        )
+        if sidecar.get("hf_revision"):
+            sidecar["weights_hmac"] = signature
+            ModelStorageServices.put_sidecar(storage_path, sidecar)
         send_callback(
             spec,
             storage_path=storage_path,
@@ -121,6 +146,8 @@ def entrypoint(spec: Dict, architecture: str) -> Dict:
             architecture=architecture,
             metrics=metrics,
             decision=decision,
+            hf_repo_id=sidecar.get("hf_repo_id"),
+            hf_revision=sidecar.get("hf_revision"),
         )
         return {
             "ok": True,

@@ -105,6 +105,9 @@ def test_entrypoint_saves_then_callbacks():
             "src.entrypoint.ModelStorageServices.head_hmac",
             return_value="b" * 64,
         ),
+        patch(
+            "src.entrypoint.save_checkpoint", side_effect=lambda *a, **k: k["sidecar"]
+        ),
         patch("src.entrypoint.send_callback") as callback,
     ):
         result = entrypoint(spec, _VIT_SNAPSHOT)
@@ -173,6 +176,9 @@ def test_entrypoint_saves_distilled_student_only():
             "src.entrypoint.ModelStorageServices.head_hmac",
             return_value="b" * 64,
         ),
+        patch(
+            "src.entrypoint.save_checkpoint", side_effect=lambda *a, **k: k["sidecar"]
+        ),
         patch("src.entrypoint.send_callback") as callback,
     ):
         entrypoint(spec, "cnn_tiny")
@@ -208,6 +214,9 @@ def test_entrypoint_persists_quantize_example_shape():
             "src.entrypoint.ModelStorageServices.head_hmac",
             return_value="b" * 64,
         ),
+        patch(
+            "src.entrypoint.save_checkpoint", side_effect=lambda *a, **k: k["sidecar"]
+        ),
         patch("src.entrypoint.send_callback"),
         patch("torch.export.export", return_value=MagicMock()) as export,
         patch("torch.export.save", side_effect=lambda _ep, buf: buf.write(b"pt2")),
@@ -242,6 +251,9 @@ def test_entrypoint_scores_and_saves_rebound_model():
         patch(
             "src.entrypoint.ModelStorageServices.head_hmac",
             return_value="b" * 64,
+        ),
+        patch(
+            "src.entrypoint.save_checkpoint", side_effect=lambda *a, **k: k["sidecar"]
         ),
         patch("src.entrypoint.send_callback"),
     ):

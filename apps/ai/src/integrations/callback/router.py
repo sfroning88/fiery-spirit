@@ -6,6 +6,7 @@ Core AI API orchestration
 
 from fastapi import APIRouter, Header, Request
 from datetime import datetime, timezone
+from typing import List
 from fiery_python import (
     error,
     logging,
@@ -14,6 +15,8 @@ from fiery_python import (
 from fiery_python import (
     TrainingStatus,
     ModelArtifact,
+    ModelMetric,
+    MlflowTrackingServices,
 )
 from .schemas import CallbackRequest, CallbackResponse
 
@@ -90,18 +93,33 @@ async def callback_train(
             signed_at=signed_at,
             promoted=False,
             promoted_at=None,
+            mlflow_run_id=None,
+            hf_repo_id=payload.hf_repo_id,
+            hf_revision=payload.hf_revision,
             session_id=session.id,
             parent_id=payload.parent_id,
         )
         artifact.id = artifact.deterministic_id()
 
-        metrics = []
+        metrics: List[ModelMetric] = []
         for metric in payload.metrics:
             metric.artifact_id = artifact.id
             metrics.append(metric)
 
+        try:
+            artifact.mlflow_run_id = MlflowTrackingServices.log_finished_run(
+                artifact, metrics
+            )
+        except Exception as err:
+            logger.warning(
+                "mlflow_log_finished_run_failed",
+                session_id=session.id,
+                artifact_id=artifact.id,
+                error=str(err),
+            )
+
         CallbackPersistService.upsert_artifact(artifact)
-        CallbackPersistService.upsert_metrics(payload.metrics)
+        CallbackPersistService.upsert_metrics(metrics)
 
         session.status = TrainingStatus.COMPLETED
         session.finished_at = signed_at

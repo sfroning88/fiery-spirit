@@ -21,6 +21,9 @@ QUERY = sql.SQL("""
         signed_at,
         promoted,
         promoted_at,
+        mlflow_run_id,
+        hf_repo_id,
+        hf_revision,
         session_id::text,
         parent_id::text
     FROM {table}

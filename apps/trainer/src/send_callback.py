@@ -24,6 +24,8 @@ def send_callback(
     architecture: str,
     metrics: List[ModelMetric],
     decision: dict,
+    hf_repo_id: str | None = None,
+    hf_revision: str | None = None,
 ) -> None:
     import hashlib
     import hmac
@@ -53,6 +55,8 @@ def send_callback(
         "base_model_id": spec.get("base_model_id") or "",
         "revision": spec.get("revision") or "",
         "parent_id": spec.get("parent_id"),
+        "hf_repo_id": hf_repo_id,
+        "hf_revision": hf_revision,
     }
     canonical = json.dumps(
         {
