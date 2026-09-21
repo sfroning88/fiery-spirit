@@ -43,7 +43,9 @@ Each job follows:
 4. Apply `<method>` to the model
 5. Score the model to collect `metrics`
 6. Persist the model to `s3` bucket `models`
-7. Send the `callback` to `apps/ai`
+7. Best-effort `save_checkpoint` to `HuggingFace`
+8. Send the `callback` to `apps/ai`
+9. Best-effort `log_finished_run` with `mlflow`
 
 Methods supported are `pretrain`, `lora`, `distill`, `prune`, `quantize`.
 
@@ -162,6 +164,10 @@ The trained `model` (`.safetensors`) is persisted with a JSON sidecar (`decision
 `ModelStorageServices.save_artifact` writes weights plus sidecar; `head_hmac` is taken on the weights key.
 The `model` is logged via `model ModelArtifact` and queried by the `model_registry`.
 
+After successful `s3` write `save_checkpoint` the same bytes to `HuggingFace`.
+Store `checkpoints` under repos `HF_MODEL_NAMESPACE/<registered_name>`.
+On `/callback/train` best-effort log the `mlflow_run` and update experiment.
+
 ### Artifact Verification
 
 First, artifacts received in `/callback/train` check for **Body MAC:**
@@ -262,3 +268,4 @@ return passed = False
 ```
 
 The logged `model ModelBudget` is persisted to record each individual evaluation.
+After successful promote the `mlflow_run` is `aliased` to the registered version.

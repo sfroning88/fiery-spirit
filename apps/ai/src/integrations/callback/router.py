@@ -106,9 +106,17 @@ async def callback_train(
             metric.artifact_id = artifact.id
             metrics.append(metric)
 
-        artifact.mlflow_run_id = MlflowTrackingServices.log_finished_run(
-            artifact, metrics
-        )
+        try:
+            artifact.mlflow_run_id = MlflowTrackingServices.log_finished_run(
+                artifact, metrics
+            )
+        except Exception as err:
+            logger.warning(
+                "mlflow_log_finished_run_failed",
+                session_id=session.id,
+                artifact_id=artifact.id,
+                error=str(err),
+            )
 
         CallbackPersistService.upsert_artifact(artifact)
         CallbackPersistService.upsert_metrics(metrics)

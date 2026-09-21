@@ -9,6 +9,7 @@ from decimal import Decimal
 from unittest.mock import patch
 
 from fiery_python import (
+    MlflowTrackingServices,
     ModelArtifact,
     ModelMetric,
     ModelMetricName,
@@ -34,6 +35,7 @@ def _artifact(
     param_count: int = 1_000,
     sparsity: Decimal = Decimal("0"),
     session_id: str = "22222222-2222-2222-2222-222222222222",
+    mlflow_run_id: str | None = None,
 ) -> ModelArtifact:
     return ModelArtifact(
         id=artifact_id,
@@ -49,6 +51,7 @@ def _artifact(
         signed_at=NOW,
         promoted=False,
         session_id=session_id,
+        mlflow_run_id=mlflow_run_id,
     )
 
 
@@ -284,7 +287,53 @@ def test_run_records_unknown_slot_instead_of_dropping_it():
     upsert.assert_not_called()
 
 
-def test_run_promotes_winning_screener():
+def test_run_promotes_winning_screener_aliases_mlflow_version_for_run():
+    challenger = _artifact(mlflow_run_id="run-challenger")
+    incumbent = _artifact(
+        artifact_id="66666666-6666-6666-6666-666666666666",
+        session_id="77777777-7777-7777-7777-777777777777",
+    )
+    incumbent.promoted = True
+    challenger_metrics = _screener_metrics(recall="0.90")
+    incumbent_metrics = _screener_metrics(recall="0.70")
+
+    def fake_incumbent(key):
+        if key == SCREENER_KEY:
+            return incumbent
+        return None
+
+    def fake_metrics(artifact_id, limit=10):
+        if artifact_id == incumbent.id:
+            return incumbent_metrics
+        return challenger_metrics
+
+    with (
+        patch.object(_ModelEvaluator, "_fetch_challengers", return_value=[challenger]),
+        patch.object(_ModelEvaluator, "_fetch_incumbent", side_effect=fake_incumbent),
+        patch.object(_ModelEvaluator, "_fetch_metrics", side_effect=fake_metrics),
+        patch.object(_ModelEvaluator, "_upsert_artifact") as upsert_artifact,
+        patch.object(_ModelEvaluator, "_upsert_budget") as upsert_budget,
+        patch.object(
+            MlflowTrackingServices,
+            "registered_version_for_run",
+            return_value="4",
+        ) as resolve_version,
+        patch.object(
+            MlflowTrackingServices,
+            "alias_production",
+        ) as alias_production,
+    ):
+        results = model_evaluator.run()
+
+    assert len(results) == 1
+    assert results[0].promoted is True
+    resolve_version.assert_called_once_with("Fiery-Screener", "run-challenger")
+    alias_production.assert_called_once_with("Fiery-Screener", version="4")
+    upsert_artifact.assert_called_once()
+    upsert_budget.assert_not_called()
+
+
+def test_run_promotes_winning_screener_skips_mlflow_when_run_id_missing():
     challenger = _artifact()
     incumbent = _artifact(
         artifact_id="66666666-6666-6666-6666-666666666666",
@@ -310,6 +359,14 @@ def test_run_promotes_winning_screener():
         patch.object(_ModelEvaluator, "_fetch_metrics", side_effect=fake_metrics),
         patch.object(_ModelEvaluator, "_upsert_artifact") as upsert_artifact,
         patch.object(_ModelEvaluator, "_upsert_budget") as upsert_budget,
+        patch.object(
+            MlflowTrackingServices,
+            "registered_version_for_run",
+        ) as resolve_version,
+        patch.object(
+            MlflowTrackingServices,
+            "alias_production",
+        ) as alias_production,
     ):
         results = model_evaluator.run()
 
@@ -323,6 +380,8 @@ def test_run_promotes_winning_screener():
     assert promoted.promoted is True
     assert incumbent.promoted is True
     upsert_budget.assert_not_called()
+    resolve_version.assert_not_called()
+    alias_production.assert_not_called()
 
 
 def test_run_can_promote_multiple_challengers_without_demoting_incumbent():

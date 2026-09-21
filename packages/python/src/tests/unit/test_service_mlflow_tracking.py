@@ -266,3 +266,67 @@ def test_alias_production_skips_search_when_version_provided():
     client.set_registered_model_alias.assert_called_once_with(
         "Fiery-Screener", "production", "4"
     )
+
+
+@pytest.mark.parametrize("bad_uri", [None, "", 123])
+def test_registered_version_for_run_raises_when_tracking_uri_missing_or_invalid(
+    bad_uri,
+):
+    with (
+        patch(_CONFIG, side_effect=_config_get(tracking_uri=bad_uri)),
+        pytest.raises(EnvironmentError, match="misconfigured MLFLOW_TRACKING_URI"),
+    ):
+        MlflowTrackingServices.registered_version_for_run("Fiery-Screener", _RUN_ID)
+
+
+def test_registered_version_for_run_raises_when_no_matching_version():
+    client = MagicMock()
+    client.search_model_versions.return_value = []
+
+    with patch(_MLFLOW) as mlflow_mock:
+        mlflow_mock.MlflowClient.return_value = client
+        with patch(_CONFIG, side_effect=_config_get()):
+            with pytest.raises(
+                RuntimeError,
+                match=f"no registered version for Fiery-Screener run_id={_RUN_ID}",
+            ):
+                MlflowTrackingServices.registered_version_for_run(
+                    "Fiery-Screener", _RUN_ID
+                )
+
+    client.search_model_versions.assert_called_once_with(
+        filter_string=f"name = 'Fiery-Screener' AND run_id = '{_RUN_ID}'"
+    )
+
+
+def test_registered_version_for_run_returns_single_version():
+    client = MagicMock()
+    client.search_model_versions.return_value = [MagicMock(version="12")]
+
+    with patch(_MLFLOW) as mlflow_mock:
+        mlflow_mock.MlflowClient.return_value = client
+        with patch(_CONFIG, side_effect=_config_get()):
+            version = MlflowTrackingServices.registered_version_for_run(
+                "Fiery-Screener", _RUN_ID
+            )
+
+    assert version == "12"
+    mlflow_mock.set_tracking_uri.assert_called_once_with(_TRACKING_URI)
+
+
+def test_registered_version_for_run_picks_max_when_multiple_versions_share_run():
+    client = MagicMock()
+    client.search_model_versions.return_value = [
+        MagicMock(version="3"),
+        MagicMock(version="9"),
+        MagicMock(version="5"),
+    ]
+
+    with patch(_MLFLOW) as mlflow_mock:
+        mlflow_mock.MlflowClient.return_value = client
+        with patch(_CONFIG, side_effect=_config_get()):
+            version = MlflowTrackingServices.registered_version_for_run(
+                "Fiery-Screener", _RUN_ID
+            )
+
+    assert version == "9"

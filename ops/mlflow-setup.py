@@ -30,7 +30,6 @@ _TEMP_ARTIFACTS = "file:///tmp/mlflow-artifacts"
 
 
 def _verify_sql_alchemy_parse() -> None:
-    print(repr(MLFLOW_TRACKING_URI))
     try:
         print(make_url(MLFLOW_TRACKING_URI))
     except Exception as err:

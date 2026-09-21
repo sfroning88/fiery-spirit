@@ -84,3 +84,19 @@ class MlflowTrackingServices:
                 raise RuntimeError(f"no registered versions for {name}")
             version = str(max(int(item.version) for item in versions))
         client.set_registered_model_alias(name, "production", version)
+
+    @staticmethod
+    def registered_version_for_run(name: str, run_id: str) -> str:
+        tracking_uri = config.get("MLFLOW_TRACKING_URI")
+        if not tracking_uri or not isinstance(tracking_uri, str):
+            raise EnvironmentError("misconfigured MLFLOW_TRACKING_URI")
+        mlflow.set_tracking_uri(tracking_uri)
+        client = mlflow.MlflowClient()
+        versions = client.search_model_versions(
+            filter_string=f"name = '{name}' AND run_id = '{run_id}'"
+        )
+        if not versions:
+            raise RuntimeError(f"no registered version for {name} run_id={run_id}")
+        if len(versions) > 1:
+            return str(max(int(ver.version) for ver in versions))
+        return str(versions[0].version)

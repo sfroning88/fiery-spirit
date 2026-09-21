@@ -37,7 +37,7 @@ def entrypoint(spec: Dict, architecture: str) -> Dict:
     metrics = None
     decision = None
     sidecar = None
-    payload = None
+    payload: bytes | dict | None = None
     for attempt in range(_MAX_TRAINING_ATTEMPTS):
         try:
             seed = spec["seed"]
@@ -73,7 +73,6 @@ def entrypoint(spec: Dict, architecture: str) -> Dict:
                 "spec": spec,
                 "decision": decision,
             }
-            payload: bytes | dict
             if spec.get("quantize"):
                 example_shape = spec.get("example_shape")
                 if (
@@ -137,6 +136,7 @@ def entrypoint(spec: Dict, architecture: str) -> Dict:
             sidecar=sidecar,
         )
         if sidecar.get("hf_revision"):
+            sidecar["weights_hmac"] = signature
             ModelStorageServices.put_sidecar(storage_path, sidecar)
         send_callback(
             spec,

@@ -92,7 +92,20 @@ class _ModelEvaluator:
                                 name = MLFLOW_REGISTERED_MODELS[
                                     (challenger.tier, challenger.role)
                                 ]
-                                MlflowTrackingServices.alias_production(name)
+                                run_id = challenger.mlflow_run_id
+                                if not run_id:
+                                    logger.warning(
+                                        "mlflow_alias_skipped",
+                                        artifact_id=challenger.id,
+                                        reason="missing_mlflow_run_id",
+                                    )
+                                else:
+                                    version = MlflowTrackingServices.registered_version_for_run(
+                                        name, run_id
+                                    )
+                                    MlflowTrackingServices.alias_production(
+                                        name, version=version
+                                    )
                             except Exception as err:
                                 logger.warning("mlflow_alias_failed", error=str(err))
                         else:
