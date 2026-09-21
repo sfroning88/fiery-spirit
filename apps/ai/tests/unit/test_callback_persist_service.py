@@ -37,6 +37,9 @@ def _artifact() -> ModelArtifact:
         signature="a" * 64,
         signed_at=datetime(2026, 8, 24, tzinfo=timezone.utc),
         promoted=False,
+        mlflow_run_id="run-1",
+        hf_repo_id="sfroning88/Fiery-Screener",
+        hf_revision="rev-abc",
         session_id="22222222-2222-2222-2222-222222222222",
     )
 
@@ -56,6 +59,9 @@ def test_select_artifact_maps_row():
         "signed_at": signed_at,
         "promoted": False,
         "promoted_at": None,
+        "mlflow_run_id": "run-1",
+        "hf_repo_id": "sfroning88/Fiery-Screener",
+        "hf_revision": "rev-abc",
         "session_id": "22222222-2222-2222-2222-222222222222",
         "parent_id": None,
     }
@@ -76,7 +82,41 @@ def test_select_artifact_maps_row():
     assert artifact.storage_path == "cloud/screener/art-1.pkl"
     assert artifact.session_id == "22222222-2222-2222-2222-222222222222"
     assert artifact.promoted is False
+    assert artifact.mlflow_run_id == "run-1"
+    assert artifact.hf_repo_id == "sfroning88/Fiery-Screener"
+    assert artifact.hf_revision == "rev-abc"
     assert artifact.parent_id is None
+
+
+def test_select_artifact_maps_null_hub_fields():
+    signed_at = datetime(2026, 8, 24, tzinfo=timezone.utc)
+    row = {
+        "tier": ModelTier.CLOUD.value,
+        "role": ModelRole.SCREENER.value,
+        "stage": TrainingStage.LORA.value,
+        "precision": TrainingPrecision.FP32.value,
+        "architecture": "vit-small",
+        "param_count": 22000000,
+        "sparsity": Decimal("0"),
+        "storage_path": "cloud/screener/art-1.pkl",
+        "signature": "a" * 64,
+        "signed_at": signed_at,
+        "promoted": False,
+        "promoted_at": None,
+        "mlflow_run_id": None,
+        "hf_repo_id": None,
+        "hf_revision": None,
+        "session_id": "22222222-2222-2222-2222-222222222222",
+        "parent_id": None,
+    }
+    with patch(
+        "integrations.callback.services.persist_service.db_pool.run",
+        return_value=row,
+    ):
+        artifact = CallbackPersistService.select_artifact("art-1")
+    assert artifact.mlflow_run_id is None
+    assert artifact.hf_repo_id is None
+    assert artifact.hf_revision is None
 
 
 def test_select_artifact_returns_none_when_empty():
@@ -99,6 +139,9 @@ def test_upsert_artifact_passes_storage_dict():
     assert params["storage_path"] == "cloud/screener/art-1.pkl"
     assert params["session_id"] == artifact.session_id
     assert params["promoted"] is False
+    assert params["mlflow_run_id"] == "run-1"
+    assert params["hf_repo_id"] == "sfroning88/Fiery-Screener"
+    assert params["hf_revision"] == "rev-abc"
 
 
 def test_upsert_metrics_execute_values():

@@ -46,6 +46,9 @@ class LoadedModel(BaseModel):
     signed_at: datetime
     promoted: bool
     promoted_at: datetime
+    mlflow_run_id: Optional[str] = None
+    hf_repo_id: Optional[str] = None
+    hf_revision: Optional[str] = None
     session_id: str
     parent_id: Optional[str] = None
     metrics: Dict[str, Decimal] = {}

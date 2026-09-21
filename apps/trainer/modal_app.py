@@ -37,6 +37,8 @@ image = (
     modal.Image.debian_slim(python_version="3.13")
     .uv_pip_install(
         "safetensors==0.8.0",
+        "mlflow[db]==3.16.1",
+        "huggingface_hub==1.16.1",
         "torch==2.13.0",
         "torchao==0.18.0",
         "timm==1.0.28",

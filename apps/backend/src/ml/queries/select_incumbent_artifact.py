@@ -23,6 +23,9 @@ QUERY = sql.SQL("""
         model_artifact.signed_at,
         model_artifact.promoted,
         model_artifact.promoted_at,
+        model_artifact.mlflow_run_id,
+        model_artifact.hf_repo_id,
+        model_artifact.hf_revision,
         model_artifact.session_id::text,
         model_artifact.parent_id::text
     FROM {artifact_table} model_artifact

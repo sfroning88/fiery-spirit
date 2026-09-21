@@ -1,6 +1,9 @@
 # Python package
 -e ../../packages/python
 
+# Hugging Face
+huggingface_hub>=1.16.1
+
 # Model training
 modal>=1.5.4
 torch>=2.13.0

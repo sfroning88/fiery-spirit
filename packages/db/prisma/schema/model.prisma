@@ -46,6 +46,9 @@ model ModelArtifact {
     signedAt                    DateTime @map("signed_at") @db.Timestamptz(6)
     promoted                    Boolean @default(false)
     promotedAt                  DateTime? @map("promoted_at") @db.Timestamptz(6)
+    mlflowRunId                 String? @map("mlflow_run_id")
+    hfRepoId                    String? @map("hf_repo_id")
+    hfRevision                  String? @map("hf_revision")
 
     sessionId                   String @unique @map("session_id") @db.Uuid
     session                     TrainingSession @relation(fields: [sessionId], references: [id], onDelete: Restrict, onUpdate: Cascade)

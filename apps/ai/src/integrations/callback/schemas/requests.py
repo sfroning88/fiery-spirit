@@ -37,3 +37,5 @@ class CallbackRequest(BaseModel):
     base_model_id: Optional[str] = None
     revision: Optional[str] = None
     parent_id: Optional[str] = None
+    hf_repo_id: Optional[str] = None
+    hf_revision: Optional[str] = None

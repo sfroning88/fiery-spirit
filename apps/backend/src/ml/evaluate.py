@@ -10,6 +10,7 @@ from typing import List, Optional, Tuple
 from fiery_python import db_pool, logging
 from fiery_python import (
     PoolFetch,
+    MLFLOW_REGISTERED_MODELS,
     MODEL_REGISTRY_SLOTS,
     MODEL_DB_FETCH_SIZE,
     ModelTier,
@@ -20,6 +21,7 @@ from fiery_python import (
     ModelArtifact,
     ModelMetric,
     ModelBudget,
+    MlflowTrackingServices,
 )
 from .models import EvaluatedModel
 from .queries.select_challenger_artifacts import QUERY as SELECT_CHALLENGER_ARTIFACTS
@@ -86,6 +88,13 @@ class _ModelEvaluator:
                             challenger.promoted = True
                             challenger.promoted_at = evaluated_at
                             cls._upsert_artifact(challenger)
+                            try:
+                                name = MLFLOW_REGISTERED_MODELS[
+                                    (challenger.tier, challenger.role)
+                                ]
+                                MlflowTrackingServices.alias_production(name)
+                            except Exception as err:
+                                logger.warning("mlflow_alias_failed", error=str(err))
                         else:
                             denied_reason = "Failed to pass edge device budget"
                     else:
@@ -291,6 +300,9 @@ class _ModelEvaluator:
                     signed_at=row.get("signed_at"),
                     promoted=row.get("promoted"),
                     promoted_at=row.get("promoted_at"),
+                    mlflow_run_id=row.get("mlflow_run_id"),
+                    hf_repo_id=row.get("hf_repo_id"),
+                    hf_revision=row.get("hf_revision"),
                     session_id=row.get("session_id"),
                     parent_id=row.get("parent_id"),
                 )
@@ -323,6 +335,9 @@ class _ModelEvaluator:
             signed_at=row.get("signed_at"),
             promoted=row.get("promoted"),
             promoted_at=row.get("promoted_at"),
+            mlflow_run_id=row.get("mlflow_run_id"),
+            hf_repo_id=row.get("hf_repo_id"),
+            hf_revision=row.get("hf_revision"),
             session_id=row.get("session_id"),
             parent_id=row.get("parent_id"),
         )
