@@ -106,7 +106,7 @@ for f in $migration_files; do
   check_drop_add_needs_update "$tmp" "$f"
   check_create_has_if_not_exists "$tmp" "$f"
   check_banned_partial_index_names "$tmp" "$f"
-  # check_does_not_contain_mlflow_schema "$tmp" "$f"
+  check_does_not_contain_mlflow_schema "$tmp" "$f"
   rm -f "$tmp"
 done
 
