@@ -6,6 +6,7 @@ App Exception handling for FastAPI App
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from sentry_sdk import capture_exception
 from ..core import logging
 from .error import error
 
@@ -19,7 +20,10 @@ class _Exception:
     def register_exception_handlers(app: FastAPI) -> None:
         @app.exception_handler(error)
         async def handle_app_error(request: Request, exc: error):
-            log_fn = logger.error if exc.status_code >= 500 else logger.warning
+            log_fn = logger.warning
+            if exc.status_code >= 500:
+                log_fn = logger.error
+                capture_exception(exc)
             log_fn(
                 "app_error",
                 error_type=exc.error_type,

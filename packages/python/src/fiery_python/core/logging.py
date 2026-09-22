@@ -8,6 +8,7 @@ import sys
 import structlog
 from structlog import DropEvent
 from typing import Optional, Dict
+from ..constants import SENTRY_HEALTH_PATHS, SENTRY_JOB_CONTEXT_TAG_KEYS
 from .config import config
 
 LOG_FORMAT = config.get_log_format()
@@ -16,18 +17,12 @@ LOG_FORMAT = config.get_log_format()
 class _Logging:
     """Centralized logging configuration with structlog"""
 
-    _JOB_CONTEXT_KEYS = (
-        "volcano_id",
-        "session_id",
-        "artifact_id",
-    )
-
     def __init__(self) -> None:
         self._configured = False
 
     def drop_health_logs(self, _logger, _method_name, event_dict):
         path = event_dict.get("path") or event_dict.get("request_path")
-        if path in ("/health", "/ready"):
+        if path in SENTRY_HEALTH_PATHS:
             raise DropEvent
         return event_dict
 
@@ -79,7 +74,7 @@ class _Logging:
     def bind_job_context(self, **fields: str) -> None:
         ctx: Dict[str, str] = {}
         for key, value in fields.items():
-            if key not in self._JOB_CONTEXT_KEYS or value is None:
+            if key not in SENTRY_JOB_CONTEXT_TAG_KEYS or value is None:
                 raise ValueError(
                     f"Unrecognized key/value pair for binding context: {key}"
                 )
@@ -91,7 +86,7 @@ class _Logging:
         structlog.contextvars.clear_contextvars()
 
     def unbind_job_context(self) -> None:
-        structlog.contextvars.unbind_contextvars(*self._JOB_CONTEXT_KEYS)
+        structlog.contextvars.unbind_contextvars(*SENTRY_JOB_CONTEXT_TAG_KEYS)
 
 
 logging = _Logging()

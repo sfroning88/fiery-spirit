@@ -49,6 +49,7 @@ certifi==2025.11.12
     #   httpcore
     #   httpx
     #   requests
+    #   sentry-sdk
 cffi==2.1.1
     # via cryptography
 charset-normalizer==3.4.4
@@ -352,6 +353,8 @@ scipy==1.18.1
     #   mlflow
     #   scikit-learn
     #   skops
+sentry-sdk==2.70.0
+    # via fiery-python
 shellingham==1.5.4
     # via typer
 six==1.17.0
@@ -436,6 +439,7 @@ urllib3==2.5.0
     #   databricks-sdk
     #   docker
     #   requests
+    #   sentry-sdk
 uvicorn==0.52.4
     # via
     #   -c constraints.txt
