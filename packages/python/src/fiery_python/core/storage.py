@@ -52,7 +52,12 @@ class _S3ClientStorage:
             region_name=region,
             aws_access_key_id=key_id,
             aws_secret_access_key=key_secret,
-            config=Config(signature_version="s3v4", retries={"max_attempts": 3}),
+            config=Config(
+                signature_version="s3v4",
+                retries={"max_attempts": 3},
+                request_checksum_calculation="when_required",
+                response_checksum_validation="when_required",
+            ),
         )
 
     def get_client(self) -> Any:
