@@ -13,7 +13,14 @@ from fastapi import FastAPI
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from fiery_python import config, exception, logging, middleware, limiter
+from fiery_python import (
+    config,
+    exception,
+    logging,
+    observability,
+    middleware,
+    limiter,
+)
 from core import health, lifespan
 from integrations import (
     CallbackRouter,
@@ -24,6 +31,7 @@ from integrations import (
 
 # Setup structured logging
 logging.setup_structured_logging()
+observability.configure_sentry()
 logger = logging.get_logger(__name__)
 
 # Initialize FastAPI app

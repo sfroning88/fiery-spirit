@@ -1,18 +1,19 @@
 # Python Config
 
-Last updated: **August 2026**
+Last updated: **September 2026**
 
 ## Shared Python package
 
-Cross-worker infrastructure lives in **`packages/python`** as the **`fiery_python`** installable package (`pyproject.toml` at `packages/python/`). The app pins it via **`-e ../../packages/python`** in `requirements.in` / `requirements.txt`.
-
+Cross-worker infrastructure lives in **`packages/python`** as **`fiery_python`**.
+The app pins it via **`-e ../../packages/python`** in `requirements.in` / `requirements.txt`.
 Use it for config, database pool, structured logging, Redis/RQ queue helpers, shared enums, shared utils, and FastAPI helpers.
-
 App-only wiring stays under **`src/core/`**, **`src/main.py`** composes FastAPI with `fiery_python` and those modules.
 
 ## Deployment
 
-The **`Dockerfile`** expects the **repository root** as build context. **`WORKDIR`** is **`/repo/apps/[fastapi-app]`** so **`../../packages/python`** matches **`/repo/packages/python`**. Render **`buildFilter`** paths include **`packages/python/**`\*\* so shared-package changes trigger rebuilds.
+The **`Dockerfile`** expects the **repository root** as build context.
+**`WORKDIR`** is **`/repo/apps/[fastapi-app]`**.
+Render **`buildFilter`** paths include **`packages/python/**`.
 
 ## Routes
 
@@ -21,9 +22,12 @@ Conventions:
 - **`APIRouter`** with **`prefix`**; auth via **`Depends(dependency.get_token_header)`** from **`fiery_python`**
 - Request and response models from **`integrations/*/schemas`**
 - **`response_model`** on route decorators where appropriate
-- **`structlog`** via **`fiery_python`**: **`bind_context`** (correlation_id, path) and **`bind_job_context`** (property_id) for multi-tenant traces
+- **`observability`** with both `third_party_sentry` and `first_party_logging`
+- - `bind_context` on (`correlation_id`, `path`) for request traces
+- - `bind_job_context` (`SENTRY_JOB_CONTEXT_TAG_KEYS`) for multi-tenant traces
 
-Raise HTTP errors with **`error(...)`** from **`fiery_python`** (application error type). Register handlers once in **`main.py`** with **`exception.register_exception_handlers(app)`**.
+Raise HTTP errors with **`error(...)`** on (`application_error_type`).
+Register handlers once in **`main.py`** with **`exception.register_exception_handlers(app)`**.
 
 Routes are globally **rate limited** using [`slowapi`](https://github.com/laurentS/slowapi).
 
@@ -36,7 +40,7 @@ Patterns:
 - **`queue.enqueue_jobs(jobs)`** for batch enqueue (each job: func, args, optional job_id, job_timeout, tags, metadata, …)
 - Optional dependencies: if something required for a route is missing, respond with **`error(..., status_code=503)`** (or appropriate code)
 
-## Queue and Utils
+## Access Patterns
 
 - Default queue name: **`predictions-default`**
 - **`queue.get_connection()`** — Redis
