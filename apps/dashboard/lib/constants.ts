@@ -16,7 +16,7 @@ export const QUERY_STALE_TIME = 60 * 60 * 5;
 
 export const CACHE_STALE_TIME = 60 * 60 * 60;
 
-export const PRIVACY_DOC_PATH = "lib/docs/PRIVACY.md";
+export const PRIVACY_DOC_PATH = "lib/docs/repo/PRIVACY.md";
 
 export const MOBILE_BREAKPOINT = 768;
 
