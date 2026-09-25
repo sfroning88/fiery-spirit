@@ -50,6 +50,15 @@ image = (
         "../../packages/python",
         remote_path="/opt/packages/python",
         copy=True,
+        ignore=[
+            ".venv",
+            ".venv/**",
+            "**/__pycache__",
+            "**/__pycache__/**",
+            "**/*.pyc",
+            "**/*.egg-info",
+            "**/*.egg-info/**",
+        ],
     )
     .run_commands("uv pip install --system -e /opt/packages/python")
     .add_local_python_source("src")

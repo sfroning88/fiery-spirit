@@ -239,9 +239,10 @@ class _ModelRegistry:
         backbone = timm.create_model(
             _VIT_SNAPSHOT,
             pretrained=False,
-            num_classes=2,
+            num_classes=1000,
         )
         load_checkpoint(backbone, weights_path, strict=False)
+        backbone.reset_classifier(num_classes=2)
         config = LoraConfig(
             r=lora["rank"],
             lora_alpha=lora["alpha"],

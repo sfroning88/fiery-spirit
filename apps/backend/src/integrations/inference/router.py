@@ -69,7 +69,7 @@ async def image_preview(request: Request, payload: InferencePreviewRequest) -> R
 
 
 @router.post("/inference/single", dependencies=[Depends(dependency.get_token_header)])
-@limiter.limit("1/minute")
+@limiter.limit("3/minute")
 async def single_inference(
     request: Request, payload: InferenceSingleRequest
 ) -> InferenceSingleResponse:

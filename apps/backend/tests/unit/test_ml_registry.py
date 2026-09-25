@@ -478,13 +478,14 @@ def test_materialize_screener_wraps_pinned_backbone():
     create_model.assert_called_once_with(
         _VIT_SNAPSHOT,
         pretrained=False,
-        num_classes=2,
+        num_classes=1000,
     )
     load_checkpoint.assert_called_once_with(
         backbone,
         "/tmp/vit/model.safetensors",
         strict=False,
     )
+    backbone.reset_classifier.assert_called_once_with(num_classes=2)
     config = get_peft_model.call_args[0][1]
     assert config.modules_to_save == ["head"]
     assert set(config.target_modules) == {"qkv", "proj"}
