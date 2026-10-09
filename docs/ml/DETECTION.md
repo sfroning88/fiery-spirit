@@ -57,14 +57,13 @@ The challenge boils down to unifying multiple noisy data streams to leverage mac
 | Dashboard                  | Live `spectrogram` feed; signal escalation                               |
 | Metrics                    | `accuracy_loss` per budget savings                                       |
 
-## Shared Interactivity
+## Information Streams
 
 The `unification` for `volcanologists` happens with dashboard:
 
-- (left) interactive map of `SVZ` volcanoes with satellite imagery available
-- (right) `spectogram` feed of chosen volcano with escalation recommendation
-
-The `model_registry`, `HMAC-SHA256 verification`, `model-storage`, `challenger_promotion`, and other core model storage and serving functionalies are borrowed from [**`deep-focus`**](https://github.com/sfroning88/deep-focus.git).
+- Interactive map of `SVZ` volcanoes with satellite imagery available
+- `spectogram` feed of chosen volcano with escalation recommendation
+- MLOps via `model_registry` with core model storage and serving
 
 ## Academic Literature
 

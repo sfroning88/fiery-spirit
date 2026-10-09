@@ -11,7 +11,7 @@ module.exports = async ({ github, context }) => {
   let filtered;
   try {
     filtered = execSync(
-      `sh scripts/filter-react-doctor-output.sh "${outputPath}"`,
+      `sh scripts/github/filter-react-doctor-output.sh "${outputPath}"`,
       { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 },
     ).trim();
   } catch (e) {

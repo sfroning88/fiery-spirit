@@ -100,7 +100,7 @@ export default defineConfig([
         rules: apiRouteRules,
     },
     {
-        files: ["scripts/*.js"],
+        files: ["scripts/**/*.js"],
         languageOptions: {
             globals: {
                 ...globals.node,

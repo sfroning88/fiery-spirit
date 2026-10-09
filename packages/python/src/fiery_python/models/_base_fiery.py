@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 
 class BaseFiery(BaseModel):
-    """Base Focus Schema Model"""
+    """Base Schema Model"""
 
     id: Optional[str] = None
     created_at: Optional[datetime] = None

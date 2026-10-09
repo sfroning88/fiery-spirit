@@ -1,14 +1,14 @@
 #!/bin/sh
 set -e
 
-ROOT="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+ROOT="$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
 install_pytest() {
   dir="$1"
   pip="$ROOT/$dir/.venv/bin/pip"
   if [ ! -x "$pip" ]; then
-    echo "Missing venv: $dir/.venv (run scripts/setup-python-venvs.sh first)" >&2
+    echo "Missing venv: $dir/.venv (run scripts/dev/setup-python-venvs.sh first)" >&2
     exit 1
   fi
   echo "Installing pytest in $dir/.venv"

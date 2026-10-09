@@ -4,6 +4,6 @@
   "scripts": {
     "format": "ruff format .",
     "lint": "ruff check .",
-    "build": "bash ./scripts/ci.sh"
+    "build": "bash ./scripts/dev/ci.sh"
   }
 }

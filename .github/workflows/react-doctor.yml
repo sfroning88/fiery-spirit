@@ -86,7 +86,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            await require('./scripts/post-react-doctor-comment.js')({ github, context });
+            await require('./scripts/github/post-react-doctor-comment.js')({ github, context });
 
       - name: Print score
         run: echo "Health score ${{ steps.doctor.outputs.score }}"

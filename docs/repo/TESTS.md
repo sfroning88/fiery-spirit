@@ -1,28 +1,69 @@
 # Test Orchestration
 
-Last updates: **August 2026**
+Last updates: **October 2026**
 
-## e2e
+## Playwright Testing
+
+**[`Playwright`](https://playwright.dev/docs/ci)** enables us to run individual _`smoke tests`_:
+
+- How interactive is the portal?
+- Do URLs lead where they should?
+- Are page elements reactive to input?
+
+```env
+VERCEL_AUTOMATION_BYPASS_SECRET=...
+PLAYWRIGHT_BASE_URL=...
+PLAYWRIGHT_EMAIL=...
+PLAYWRIGHT_PASSWORD=...
+```
+
+All four staging user variables are required and wired up to a real **test user** from **Supabase `auth.users`**.
+
+```md
+/.github/workflows/
+└── playwright.yml # github action
+
+/apps/dashboard/
+├── e2e/
+│ ├── global-setup.ts # playwright global instance
+│ └── smoke.spec.ts # individual tests to run
+└── playwright.config.ts # config class definition
+
+/scripts/github/
+├── post-playwright-comment.js # post summary
+└── summarize-playwright-results.sh # fitler action output
+```
+
+Keep in mind:
+
+- Do not **cross reference backend APIs** because that is an **integration risk**
+- Every test is checking for **URL validity, element values, or user interactivity**
+
+## Documentation
+
+See these official articles and integration examples:
+
+- [playwright.dev/docs/ci](https://playwright.dev/docs/ci)
+- [playwright.dev/docs/best-practices](https://playwright.dev/docs/best-practices)
+- [infinite-table.com/the-best-testing-setup-for-frontends-playwright-nextjs](https://infinite-table.com/blog/2024/04/18/the-best-testing-setup-for-frontends-playwright-nextjs)
+
+## e2e Testing
 
 ```md
 packages/python/src/tests/
 ├── orchestrator.py
 ├── endpoints.py
 ├── helpers.py
-├── redis_clear.py
+├── container.py
 ├── presets/
-│ ├── predict.txt
-│ └── train.txt
 └── scripts/
-├── predict.py
-└── train.py
 ```
 
 All integration tests run through a single orchestrator at `packages/python`. The orchestrator spawns local `uvicorn` + `rq` processes per worker domain, seeds the local database, runs the selected workflow, then tears everything down.
 
 ```bash
 cd packages/python
-python -m src.e2e.orchestrator [train|predict]
+python -m src.e2e.orchestrator [**kwarg]
 ```
 
 **Setup (local only):**
@@ -30,44 +71,30 @@ python -m src.e2e.orchestrator [train|predict]
 1. Start Docker Desktop
 2. `pnpm use:local`
 3. `pnpm redis:setup`
-4. `cd packages/python`
-5. Activate venv: `python3 -m venv .venv && source .venv/bin/activate && pip install -e .`
-6. `python -m src.e2e.orchestrator [train|predict]`
+4. `pnpm db:setup`
+5. `pnpm prisma db push --accept-data-loss`
+6. `cd packages/python`
+7. Activate venv: `python3 -m venv .venv && source .venv/bin/activate && pip install -e .`
+8. `python -m src.e2e.orchestrator [train|predict]`
 
-**Teardown:** `pnpm redis:nuke`
+**Teardown:** `pnpm redis:nuke && pnpm db:nuke`
 
-## Unit
+## Unit Testing
+
+**[`Pytest`](https://docs.pytest.org/en/stable/)** enables us to run individual _`unit_tests`_:
+
+- Do functions behave as expected?
+- Is syntax and object handling correct?
 
 ```md
-apps/\*\*/tests/
+apps/backend/tests/
 ├── conftest.py
 └── unit/
 └── test_domain.py
 ```
 
-```bash
-cd apps/extract
-.venv/bin/python -m pytest tests/ -q
-```
+Keep in mind:
 
-```md
-packages/python/src/tests/
-├── conftest.py
-└── unit/
-└── test_domain.py
-```
-
-```bash
-cd packages/python
-.venv/bin/python -m pytest src/tests/unit -q
-```
-
-Unit tests are pure and isolated. They never touch the database, Redis, S3, or any third-party API — every boundary is mocked. Each `conftest.py` puts the app's `src/` on `sys.path` so tests import modules exactly as the app does (`from integrations... import ...`), and exposes shared fixtures.
-
-Run all unit tests in sequence or individually:
-
-```sh
-./scripts/python-unit-tests.sh [ai|backend|packages|all]
-```
-
-Each suite runs against its own `.venv`. A missing venv counts as a failure (run `./scripts/setup-python-venvs.sh` first). The script exits non-zero if any requested suite fails.
+- Unit tests never touch the database, Redis, S3, or any third-party API (every boundary is mocked)
+- Each `conftest.py` import modules exactly as the app does (`from integrations... import ...`)
+- Each suite runs against its own `.venv`; a missing `.venv` counts as a failure (ie create one)

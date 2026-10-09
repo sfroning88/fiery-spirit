@@ -6,7 +6,7 @@ on:
     paths:
       - "apps/backend/**"
       - "apps/ai/**"
-      - "scripts/diff-python-check.sh"
+      - "scripts/dev/diff-python-check.sh"
 
 jobs:
   changes:

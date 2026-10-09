@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-ROOT="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+ROOT="$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
 usage() {
@@ -23,7 +23,7 @@ run_app() {
   echo ""
   echo "===== $name unit tests ====="
   if [ ! -x "$ROOT/apps/$name/.venv/bin/python" ]; then
-    echo "Missing venv: apps/$name/.venv (run scripts/setup-python-venvs.sh)" >&2
+    echo "Missing venv: apps/$name/.venv (run scripts/dev/setup-python-venvs.sh)" >&2
     STATUS=1
     return
   fi
@@ -34,7 +34,7 @@ run_python() {
   echo ""
   echo "===== python (fiery_python) unit tests ====="
   if [ ! -x "$ROOT/packages/python/.venv/bin/python" ]; then
-    echo "Missing venv: packages/python/.venv (run scripts/setup-python-venvs.sh)" >&2
+    echo "Missing venv: packages/python/.venv (run scripts/dev/setup-python-venvs.sh)" >&2
     STATUS=1
     return
   fi

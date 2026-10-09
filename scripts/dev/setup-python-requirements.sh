@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-ROOT="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+ROOT="$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
 if ! command -v docker >/dev/null 2>&1; then

@@ -44,7 +44,7 @@ jobs:
             with:
                 github-token: ${{ secrets.GITHUB_TOKEN }}
                 script: |
-                    await require('./scripts/wait-for-vercel-preview.js')({ github, context, core });
+                    await require('./scripts/github/wait-for-vercel-preview.js')({ github, context, core });
 
         -   name: Install Chromium
             run: pnpm --filter @fiery/dashboard exec playwright install chromium --with-deps
@@ -62,7 +62,7 @@ jobs:
 
         -   name: Summarize results
             if: always() && github.event_name == 'pull_request'
-            run: bash scripts/summarize-playwright-results.sh apps/dashboard/playwright-report/results.json /tmp/playwright-results.txt
+            run: bash scripts/github/summarize-playwright-results.sh apps/dashboard/playwright-report/results.json /tmp/playwright-results.txt
 
         -   name: Post PR comment
             if: always() && github.event_name == 'pull_request'
@@ -70,7 +70,7 @@ jobs:
             with:
                 github-token: ${{ secrets.GITHUB_TOKEN }}
                 script: |
-                    await require('./scripts/post-playwright-comment.js')({ github, context, core });
+                    await require('./scripts/github/post-playwright-comment.js')({ github, context, core });
 
         -   name: Fail if smoke tests failed
             if: steps.smoke.outcome == 'failure'

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-ROOT="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+ROOT="$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
 STAGED=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null || true)
@@ -40,7 +40,7 @@ echo "Running Python unit tests for: $TARGETS"
 
 STATUS=0
 for t in $TARGETS; do
-  ./scripts/python-unit-tests.sh "$t" || STATUS=1
+  ./scripts/dev/python-unit-tests.sh "$t" || STATUS=1
 done
 
 echo ""

@@ -36,9 +36,9 @@ logger = logging.get_logger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Focus AI/ML API",
+    title="AI API",
     lifespan=lifespan,
-    description="AI/ML API for Focus full stack app",
+    description="AI API for full stack app",
     version="0.0.1",
 )
 
