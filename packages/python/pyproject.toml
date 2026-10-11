@@ -48,3 +48,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["src/tests/unit"]
+python_files = ["test_*.py"]

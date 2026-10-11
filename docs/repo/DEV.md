@@ -32,7 +32,7 @@ pnpm dev
 To setup the venv:
 
 ```bash
-pnpm check:python-venvs
+pnpm python:setup
 ```
 
 After editing **`requirements.in`**:

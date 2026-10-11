@@ -30,16 +30,16 @@ class _DatabaseConnectionPool:
     def __init__(self) -> None:
         self._pool = SyncLazyResource(self._init_pool)
 
-    def _clean_pool_url(self, url: str) -> str:
-        """Clean pool url and pgbouncer params"""
+    def _local_clean_pool_url(self, url: str) -> str:
+        """local-clean pool url and pgbouncer params"""
         if "?" in url:
             parsed = urlparse(url)
             qs = parse_qs(parsed.query)
             qs.pop("pgbouncer", None)
             new_q = urlencode(qs, doseq=True)
-            cleaned_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
-            cleaned_params = f"?{new_q}" if new_q else ""
-            return cleaned_url + cleaned_params
+            local_cleaned_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+            local_cleaned_params = f"?{new_q}" if new_q else ""
+            return local_cleaned_url + local_cleaned_params
         return url
 
     def _init_pool(self) -> psycopg2.pool.ThreadedConnectionPool:
@@ -49,7 +49,7 @@ class _DatabaseConnectionPool:
         if pool_min > pool_max:
             raise ValueError("DB_POOL_MIN cannot exceed DB_POOL_MAX")
         url = config.get_required("database")
-        dsn = self._clean_pool_url(url)
+        dsn = self._local_clean_pool_url(url)
         domain = config.get_required("domain")
         app_name = "db-" + domain
         pool = psycopg2.pool.ThreadedConnectionPool(

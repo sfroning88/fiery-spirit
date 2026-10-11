@@ -4,7 +4,7 @@ set -e
 ROOT="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-echo "Cleaning build artifacts under $ROOT ..."
+echo "local-cleaning build artifacts under $ROOT ..."
 
 echo "  - node_modules, .next, .turbo, dist directories"
 find . -type d \

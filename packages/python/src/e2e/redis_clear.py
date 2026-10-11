@@ -1,7 +1,7 @@
 """
 Author: Sean Froning
 Created Date: 8.21.2026
-Shared redis cleanup for tests
+Shared redis local-cleanup for tests
 """
 
 from ..fiery_python import queue

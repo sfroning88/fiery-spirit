@@ -29,7 +29,7 @@ redis_conn = Redis.from_url(config.get_required("redis"))
 listen = [config.get_required("domain")]
 
 
-def cleanup_on_shutdown(signum: int, _frame) -> None:
+def local_cleanup_on_shutdown(signum: int, _frame) -> None:
     """Graceful shutdown handler"""
     logger.info("Received signal, shutting down gracefully...", signal=signum)
     sys.exit(0)
@@ -37,8 +37,8 @@ def cleanup_on_shutdown(signum: int, _frame) -> None:
 
 if __name__ == "__main__":
     try:
-        signal.signal(signal.SIGTERM, cleanup_on_shutdown)
-        signal.signal(signal.SIGINT, cleanup_on_shutdown)
+        signal.signal(signal.SIGTERM, local_cleanup_on_shutdown)
+        signal.signal(signal.SIGINT, local_cleanup_on_shutdown)
         queues = [Queue(name, connection=redis_conn) for name in listen]
         if not config.validate_required_services():
             logger.error("Required services are not available. Worker cannot start.")

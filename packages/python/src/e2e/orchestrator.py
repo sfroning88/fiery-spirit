@@ -418,14 +418,14 @@ def main() -> None:
         raise
 
     finally:
-        print("\nCleaning up...")
+        print("\nlocal-cleaning up...")
         try:
             clear_redis_queue()
-        except Exception as cleanup_err:
-            print(f"WARNING: Redis cleanup failed: {cleanup_err}")
+        except Exception as local_cleanup_err:
+            print(f"WARNING: Redis local-cleanup failed: {local_cleanup_err}")
         _kill_workers(procs)
         _pkill_workers()
-        print("Cleanup complete")
+        print("local-cleanup complete")
 
 
 if __name__ == "__main__":
