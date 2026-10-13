@@ -80,13 +80,13 @@ setup_app() {
 }
 
 if [ "$TARGET" = "all" ]; then
-  for d in apps/*; do
-    [ -f "$d/requirements.in" ] || continue
-    compile_requirements "$d"
+  for dir in apps/*; do
+    [ -f "$dir/requirements.in" ] || continue
+    compile_requirements "$dir"
   done
-  for d in apps/*; do
-    [ -f "$d/requirements.txt" ] || continue
-    setup_backend_venv "$d"
+  for dir in apps/*; do
+    [ -f "$dir/requirements.txt" ] || continue
+    setup_backend_venv "$dir"
   done
   [ -d packages/python ] && setup_package_venv
 else

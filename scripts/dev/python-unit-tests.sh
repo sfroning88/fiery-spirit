@@ -68,8 +68,8 @@ run_target() {
 }
 
 if [ "$TARGET" = "all" ]; then
-  for t in ai backend trainer packages; do
-    run_target "$t"
+  for target in ai backend trainer packages; do
+    run_target "$target"
   done
 else
   run_target "$TARGET"
