@@ -76,8 +76,8 @@ def build_job(spec: dict) -> Optional[nn.Module]:
     match stage:
         case TrainingStage.PRETRAIN.value:
             return _build_pretrain_job(spec)
-        case TrainingStage.LORA.value:
-            return _build_lora_job(spec)
+        case TrainingStage.LORA_VISUAL.value:
+            return _build_lora_visual_job(spec)
         case TrainingStage.DISTILL.value:
             return _build_distill_job(spec)
         case TrainingStage.PRUNE.value:
@@ -92,14 +92,14 @@ def _build_pretrain_job(spec: dict) -> Optional[nn.Module]:
     return _make_cnn(_TEACHER_ARCHITECTURE)
 
 
-def _build_lora_job(spec: dict) -> Optional[PeftModel]:
+def _build_lora_visual_job(spec: dict) -> Optional[PeftModel]:
     import timm
     from peft import LoraConfig, get_peft_model
 
-    lora = spec["lora"]
-    targets = _peft_targets(lora["target_modules"])
+    lora_visual = spec["lora_visual"]
+    targets = _peft_targets(lora_visual["target_modules"])
     if not targets:
-        raise RuntimeError("Empty LoRA target modules")
+        raise RuntimeError("Empty lora_visual target modules")
     base_model_id = spec.get("base_model_id")
     revision = spec.get("revision")
     if (
@@ -120,9 +120,9 @@ def _build_lora_job(spec: dict) -> Optional[PeftModel]:
         num_classes=2,
     )
     config = LoraConfig(
-        r=lora["rank"],
-        lora_alpha=lora["alpha"],
-        lora_dropout=lora["dropout"],
+        r=lora_visual["rank"],
+        lora_alpha=lora_visual["alpha"],
+        lora_dropout=lora_visual["dropout"],
         target_modules=targets,
         modules_to_save=["head"],
         bias="none",

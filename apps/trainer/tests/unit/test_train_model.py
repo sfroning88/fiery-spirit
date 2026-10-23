@@ -24,7 +24,7 @@ from src.train_model import (
     _class_weights,
     _sparsity_at,
     _train_distill_model,
-    _train_lora_model,
+    _train_lora_visual_model,
     _train_pretrain_model,
     _train_prune_model,
     train_model,
@@ -57,7 +57,7 @@ def test_train_model_raises_when_stage_invalid():
     "stage,builder",
     [
         (TrainingStage.PRETRAIN.value, "_train_pretrain_model"),
-        (TrainingStage.LORA.value, "_train_lora_model"),
+        (TrainingStage.LORA_VISUAL.value, "_train_lora_visual_model"),
         (TrainingStage.DISTILL.value, "_train_distill_model"),
         (TrainingStage.PRUNE.value, "_train_prune_model"),
         (TrainingStage.QUANTIZE.value, "_train_quantize_model"),
@@ -74,16 +74,16 @@ def test_train_model_dispatches_stage(stage: str, builder: str):
     assert result is model
 
 
-def test_train_lora_model_runs_one_step():
+def test_train_lora_visual_model_runs_one_step():
     model = nn.Linear(4, 4)
     loaders = {"train": _linear_loader()}
     before = model.weight.detach().clone()
-    trained = _train_lora_model(
+    trained = _train_lora_visual_model(
         model,
         loaders,
         {
-            "stage": TrainingStage.LORA.value,
-            "lora": {"epochs": 1, "learning_rate": 1e-2},
+            "stage": TrainingStage.LORA_VISUAL.value,
+            "lora_visual": {"epochs": 1, "learning_rate": 1e-2},
         },
     )
     assert trained is model

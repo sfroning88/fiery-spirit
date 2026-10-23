@@ -15,7 +15,7 @@ from fiery_python import (
     TrainingPrecision,
     TrainingTargetModules,
     TrainingHyperparameterPretrain,
-    TrainingHyperparameterLora,
+    TrainingHyperparameterLoraVisual,
     TrainingHyperparameterDistill,
     TrainingHyperparameterPrune,
     TrainingHyperparameterQuantize,
@@ -42,11 +42,11 @@ class TrainJobSpec:
         ai_api_url = config.get_required("ai_api_url")
         if not ai_api_url or not isinstance(ai_api_url, str):
             raise error("AI_API_URL not configured")
-        pretrain, screener, distill, prune, quantize = hyperparameter
-        lora = None
+        pretrain, screener, _analyst, distill, prune, quantize = hyperparameter
+        lora_visual = None
         modules = None
         if screener:
-            lora, modules = screener
+            lora_visual, modules = screener
         parent = None
         if parent_id:
             parent = TrainPersistService.select_artifact(parent_id)
@@ -70,10 +70,12 @@ class TrainJobSpec:
                 if not pretrain:
                     return None
                 return spec | TrainJobSpec.build_pretrain_job_spec(pretrain)
-            case TrainingStage.LORA:
-                if not lora or not modules:
+            case TrainingStage.LORA_VISUAL:
+                if not lora_visual or not modules:
                     return None
-                return spec | TrainJobSpec.build_lora_job_spec(modules, lora)
+                return spec | TrainJobSpec.build_lora_visual_job_spec(
+                    modules, lora_visual
+                )
             case TrainingStage.DISTILL:
                 if not distill or not parent:
                     return None
@@ -109,17 +111,17 @@ class TrainJobSpec:
         }
 
     @staticmethod
-    def build_lora_job_spec(
-        modules: TrainingTargetModules, lora: TrainingHyperparameterLora
+    def build_lora_visual_job_spec(
+        modules: TrainingTargetModules, lora_visual: TrainingHyperparameterLoraVisual
     ) -> Dict[str, Any]:
         return {
-            "lora": {
-                "id": lora.id,
-                "rank": lora.rank,
-                "alpha": lora.alpha,
-                "dropout": lora.dropout,
-                "epochs": lora.epochs,
-                "learning_rate": lora.learning_rate,
+            "lora_visual": {
+                "id": lora_visual.id,
+                "rank": lora_visual.rank,
+                "alpha": lora_visual.alpha,
+                "dropout": lora_visual.dropout,
+                "epochs": lora_visual.epochs,
+                "learning_rate": lora_visual.learning_rate,
                 "target_modules": {
                     "query": modules.query,
                     "key": modules.key,

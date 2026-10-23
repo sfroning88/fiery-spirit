@@ -61,12 +61,12 @@ def _decision() -> dict:
 def _spec(**overrides) -> dict:
     data = {
         "session_id": "sess-1",
-        "stage": TrainingStage.LORA.value,
+        "stage": TrainingStage.LORA_VISUAL.value,
         "tier": ModelTier.CLOUD.value,
         "role": ModelRole.SCREENER.value,
         "precision": TrainingPrecision.FP32.value,
         "seed": 42,
-        "lora": {"epochs": 1, "learning_rate": 1e-4},
+        "lora_visual": {"epochs": 1, "learning_rate": 1e-4},
         "base_model_id": _VIT_BASE_MODEL_ID,
         "revision": _VIT_REVISION,
         "callback_url": "https://ai.example/api/callback/train",
@@ -90,7 +90,7 @@ def test_entrypoint_saves_then_callbacks():
     model = _TinyModel()
     loaders = {"train": object()}
     spec = _spec()
-    adapter = {"lora_A": torch.ones(2)}
+    adapter = {"lora_visual_A": torch.ones(2)}
     with (
         patch("src.entrypoint.build_loaders", return_value=loaders),
         patch("src.entrypoint.build_job", return_value=model),
@@ -119,7 +119,7 @@ def test_entrypoint_saves_then_callbacks():
     assert weights_key == "cloud/screener/sess-1.safetensors"
     assert sidecar["architecture"] == _VIT_SNAPSHOT
     assert sidecar["decision"] is decision
-    assert sidecar["lora"] == spec["lora"]
+    assert sidecar["lora_visual"] == spec["lora_visual"]
     assert sidecar["base_model_id"] == _VIT_BASE_MODEL_ID
     assert sidecar["revision"] == _VIT_REVISION
     callback.assert_called_once()
@@ -165,7 +165,7 @@ def test_entrypoint_saves_distilled_student_only():
         role=ModelRole.STUDENT.value,
         distill={"student_architecture": "cnn_tiny"},
     )
-    spec.pop("lora")
+    spec.pop("lora_visual")
     with (
         patch("src.entrypoint.build_loaders", return_value={"train": object()}),
         patch("src.entrypoint.build_job", return_value=pair),
@@ -188,7 +188,7 @@ def test_entrypoint_saves_distilled_student_only():
     assert not any(key.startswith("student.") for key in state_dict)
     assert not any(key.startswith("teacher.") for key in state_dict)
     assert sidecar["architecture"] == "cnn_tiny"
-    assert "lora" not in sidecar
+    assert "lora_visual" not in sidecar
     assert callback.call_args.kwargs["architecture"] == "cnn_tiny"
     assert callback.call_args.kwargs["param_count"] == student.weight.numel()
 
@@ -203,7 +203,7 @@ def test_entrypoint_persists_quantize_example_shape():
         quantize={"method": "ptq"},
         example_shape=[1, 1, 16, 16],
     )
-    spec.pop("lora")
+    spec.pop("lora_visual")
     with (
         patch("src.entrypoint.build_loaders", return_value={"train": object()}),
         patch("src.entrypoint.build_job", return_value=model),

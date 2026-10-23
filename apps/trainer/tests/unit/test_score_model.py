@@ -51,7 +51,7 @@ def _loader(labels: list[int]) -> DataLoader:
 def _score_spec(**overrides) -> dict:
     data = {
         "session_id": "sess-1",
-        "stage": TrainingStage.LORA.value,
+        "stage": TrainingStage.LORA_VISUAL.value,
         "tier": ModelTier.CLOUD.value,
         "role": ModelRole.SCREENER.value,
         "shard_prefix": "contract-1/" + ("a" * 64) + "/",

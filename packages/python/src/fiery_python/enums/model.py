@@ -20,6 +20,7 @@ class ModelRole(str, Enum):
     SCREENER = "screener"
     TEACHER = "teacher"
     STUDENT = "student"
+    ANALYST = "analyst"
 
 
 class ModelMetricName(str, Enum):

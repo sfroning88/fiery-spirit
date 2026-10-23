@@ -46,7 +46,7 @@ def score_model(
         raise RuntimeError("Missing (stage, tier, role) from spec")
     match (stage, tier, role):
         case (
-            TrainingStage.LORA.value,
+            TrainingStage.LORA_VISUAL.value,
             ModelTier.CLOUD.value,
             ModelRole.SCREENER.value,
         ):

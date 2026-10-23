@@ -23,12 +23,14 @@ export const roleColors: Record<ModelRole, string> = {
   screener: "border-green-400 bg-green-950/40 text-green-200",
   teacher: "border-blue-400 bg-blue-950/40 text-blue-200",
   student: "border-red-400 bg-red-950/40 text-red-200",
+  analyst: "border-gray-400 bg-gray-950/40 text-gray-200",
 };
 
 export const roleLabel: Record<ModelRole, string> = {
   screener: "Screener",
   teacher: "Teacher",
   student: "Student",
+  analyst: "Analyst",
 };
 
 export const signalColors: Record<TrainingSignal, string> = {
@@ -36,11 +38,14 @@ export const signalColors: Record<TrainingSignal, string> = {
     "border-fiery-crimson-400 bg-fiery-crimson-800/40 text-fiery-crimson-200",
   seismic:
     "border-fiery-crimson-400 bg-fiery-crimson-800/40 text-fiery-crimson-300",
+  language:
+    "border-fiery-crimson-400 bg-fiery-crimson-800/40 text-fiery-crimson-400",
 };
 
 export const signalLabel: Record<TrainingSignal, string> = {
   deformation: "Ground Deformations",
   seismic: "Seismic Activity",
+  language: "Domain Knowledge",
 };
 
 export const metricLabel: Record<ModelMetricName, string> = {
@@ -84,6 +89,7 @@ export const sourceValues = [
   TrainingSampleSource.llaima,
   TrainingSampleSource.licsar,
   TrainingSampleSource.villarrica,
+  TrainingSampleSource.academic,
 ] as const;
 
 export const sourceLabel: Record<(typeof sourceValues)[number], string> = {
@@ -92,11 +98,13 @@ export const sourceLabel: Record<(typeof sourceValues)[number], string> = {
   llaima: "Llaima",
   licsar: "Licsar",
   villarrica: "Villarrica",
+  academic: "Academic",
 };
 
 export const stageValues = [
   TrainingStage.pretrain,
-  TrainingStage.lora,
+  TrainingStage.loraVisual,
+  TrainingStage.loraLanguage,
   TrainingStage.distill,
   TrainingStage.prune,
   TrainingStage.quantize,
@@ -104,7 +112,8 @@ export const stageValues = [
 
 export const stageLabel: Record<(typeof stageValues)[number], string> = {
   pretrain: "Pretrain",
-  lora: "LoRA",
+  loraVisual: "LoRA Visual",
+  loraLanguage: "LoRA Language",
   distill: "Distill",
   prune: "Prune",
   quantize: "Quantize",

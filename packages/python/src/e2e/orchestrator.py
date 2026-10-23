@@ -10,14 +10,14 @@ Additional Kwargs:
     [ingest] -source <hephaestus|okada|llaima>
     [refine] -shards <satellite|sensor
     [ingest|refine] -samples <max_samples>
-    [train] -job <pretrain|lora|distill|prune|quantize>
+    [train] -job <pretrain|lora_visual|distill|prune|quantize>
     [inference|preview|batch] -signal <deformation|seismic>
     [ingest|refine|train|batch] -timeout <seconds|none>
 
 For example:
 python3 -m src.e2e.orchestrator ingest -source hephaestus -samples 10 -timeout none
 python3 -m src.e2e.orchestrator refine -shards sensor -samples 10 -timeout 300
-python3 -m src.e2e.orchestrator train -job lora -timeout none
+python3 -m src.e2e.orchestrator train -job lora_visual -timeout none
 python3 -m src.e2e.orchestrator inference -signal deformation
 python3 -m src.e2e.orchestrator preview -signal deformation
 python3 -m src.e2e.orchestrator batch -signal deformation -timeout 600
@@ -225,7 +225,9 @@ def _run_workflow(
         from .scripts.train import run_train_test
 
         if not job:
-            raise ValueError("train requires -job pretrain|lora|distill|prune|quantize")
+            raise ValueError(
+                "train requires -job pretrain|lora_visual|distill|prune|quantize"
+            )
         run_train_test(job=job, **wait)
     elif workflow == "promote":
         from .scripts.promote import run_promote_test
@@ -294,7 +296,7 @@ def _resolve_kwargs(
         if shards not in ("satellite", "sensor"):
             parser.error("refine requires -shards satellite|sensor")
     if workflow == "train" and args.job is None:
-        parser.error("train requires -job pretrain|lora|distill|prune|quantize")
+        parser.error("train requires -job pretrain|lora_visual|distill|prune|quantize")
     if workflow == "inference" and args.signal is None:
         parser.error("inference requires -signal deformation|seismic")
     if workflow == "preview" and args.signal is None:
@@ -357,7 +359,7 @@ def main() -> None:
     )
     parser.add_argument(
         "-job",
-        choices=("pretrain", "lora", "distill", "prune", "quantize"),
+        choices=("pretrain", "lora_visual", "distill", "prune", "quantize"),
         help="[train] training stage to spawn",
     )
     parser.add_argument(

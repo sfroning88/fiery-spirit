@@ -43,8 +43,8 @@ def build_loaders(spec: dict) -> Dict[str, DataLoader]:
     match stage:
         case TrainingStage.PRETRAIN.value:
             return _build_pretrain_loaders(spec)
-        case TrainingStage.LORA.value:
-            return _build_lora_loaders(spec)
+        case TrainingStage.LORA_VISUAL.value:
+            return _build_lora_visual_loaders(spec)
         case TrainingStage.DISTILL.value:
             return _build_distill_loaders(spec)
         case TrainingStage.PRUNE.value:
@@ -61,7 +61,7 @@ def _build_pretrain_loaders(spec: dict) -> Dict[str, DataLoader]:
     )
 
 
-def _build_lora_loaders(spec: dict) -> Dict[str, DataLoader]:
+def _build_lora_visual_loaders(spec: dict) -> Dict[str, DataLoader]:
     return _build_split_loaders(spec, batch_size=_DEFORMATION_BATCH_SIZE)
 
 

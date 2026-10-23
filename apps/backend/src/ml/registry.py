@@ -203,24 +203,24 @@ class _ModelRegistry:
             stage = None
         if not stage:
             raise RuntimeError("Stage from sidecar missing or malformed")
-        if stage is TrainingStage.LORA:
+        if stage is TrainingStage.LORA_VISUAL:
             return _ModelRegistry._materialize_screener(sidecar)
         else:
             return _ModelRegistry._materialize_cnn(stage)
 
     @staticmethod
     def _materialize_screener(sidecar: dict) -> nn.Module:
-        lora = sidecar.get("lora")
-        if not lora:
-            raise RuntimeError("sidecar missing lora")
-        modules = lora.get("target_modules") or {}
+        lora_visual = sidecar.get("lora_visual")
+        if not lora_visual:
+            raise RuntimeError("sidecar missing lora_visual")
+        modules = lora_visual.get("target_modules") or {}
         targets = []
         if modules.get("query") or modules.get("key") or modules.get("value"):
             targets.append("qkv")
         if modules.get("output"):
             targets.append("proj")
         if not targets:
-            raise RuntimeError("Empty LoRA target modules")
+            raise RuntimeError("Empty lora_visual target modules")
         base_model_id = sidecar.get("base_model_id")
         revision = sidecar.get("revision")
         if (
@@ -244,9 +244,9 @@ class _ModelRegistry:
         load_checkpoint(backbone, weights_path, strict=False)
         backbone.reset_classifier(num_classes=2)
         config = LoraConfig(
-            r=lora["rank"],
-            lora_alpha=lora["alpha"],
-            lora_dropout=lora["dropout"],
+            r=lora_visual["rank"],
+            lora_alpha=lora_visual["alpha"],
+            lora_dropout=lora_visual["dropout"],
             target_modules=targets,
             modules_to_save=["head"],
             bias="none",
@@ -289,7 +289,7 @@ class _ModelRegistry:
             else:
                 state_dict = payload if isinstance(payload, dict) else load(payload)
                 model = self.materialize(sidecar)
-                if stage is TrainingStage.LORA:
+                if stage is TrainingStage.LORA_VISUAL:
                     set_peft_model_state_dict(model, state_dict)
                 else:
                     model.load_state_dict(state_dict, strict=True)

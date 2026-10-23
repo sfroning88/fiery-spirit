@@ -22,8 +22,8 @@ def train_model(
     match stage:
         case TrainingStage.PRETRAIN.value:
             return _train_pretrain_model(model, loaders, spec)
-        case TrainingStage.LORA.value:
-            return _train_lora_model(model, loaders, spec)
+        case TrainingStage.LORA_VISUAL.value:
+            return _train_lora_visual_model(model, loaders, spec)
         case TrainingStage.DISTILL.value:
             return _train_distill_model(model, loaders, spec)
         case TrainingStage.PRUNE.value:
@@ -56,21 +56,21 @@ def _train_pretrain_model(
     return model
 
 
-def _train_lora_model(
+def _train_lora_visual_model(
     model: nn.Module, loaders: Dict[str, DataLoader], spec: dict
 ) -> nn.Module:
     import torch
 
-    lora = spec["lora"]
+    lora_visual = spec["lora_visual"]
     loader = loaders["train"]
     device = next(model.parameters()).device
     model.train()
     optimizer = torch.optim.AdamW(
         (param for param in model.parameters() if param.requires_grad),
-        lr=lora["learning_rate"],
+        lr=lora_visual["learning_rate"],
     )
     loss_fn = nn.CrossEntropyLoss()
-    for _ in range(lora["epochs"]):
+    for _ in range(lora_visual["epochs"]):
         for images, targets in loader:
             images = images.to(device)
             targets = targets.to(device)

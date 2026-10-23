@@ -41,9 +41,9 @@ def run_train_test(job: str, timeout: Optional[int] = _JOB_TIMEOUT_SECONDS) -> N
         stage = TrainingStage(job)
     except ValueError as err:
         raise ValueError(
-            "train requires -job pretrain|lora|distill|prune|quantize"
+            "train requires -job pretrain|lora_visual|distill|prune|quantize"
         ) from err
-    if stage is TrainingStage.LORA:
+    if stage is TrainingStage.LORA_VISUAL:
         deformation = TrainingDeformation(
             patch_px=8,
             wrap_rad=Decimal("3.14159"),

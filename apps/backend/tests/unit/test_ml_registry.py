@@ -29,7 +29,7 @@ def _artifact_row(**overrides):
         "id": "art-1",
         "tier": ModelTier.CLOUD.value,
         "role": ModelRole.SCREENER.value,
-        "stage": TrainingStage.LORA.value,
+        "stage": TrainingStage.LORA_VISUAL.value,
         "precision": TrainingPrecision.FP32.value,
         "architecture": _VIT_SNAPSHOT,
         "param_count": 22_100_000,
@@ -51,7 +51,7 @@ def _loaded(artifact_id: str = "art-1") -> LoadedModel:
         artifact_id=artifact_id,
         tier=ModelTier.CLOUD,
         role=ModelRole.SCREENER,
-        stage=TrainingStage.LORA,
+        stage=TrainingStage.LORA_VISUAL,
         precision=TrainingPrecision.FP32,
         architecture=_VIT_SNAPSHOT,
         param_count=22_100_000,
@@ -260,7 +260,9 @@ def test_load_model_entry_returns_none_when_storage_load_fails():
 def test_load_model_entry_returns_none_when_materialize_fails():
     registry = _ModelRegistry()
     state_dict = {"weight": object()}
-    sidecar = {"lora": {"rank": 8, "alpha": 16, "dropout": 0.1, "target_modules": {}}}
+    sidecar = {
+        "lora_visual": {"rank": 8, "alpha": 16, "dropout": 0.1, "target_modules": {}}
+    }
 
     with (
         patch(
@@ -270,7 +272,7 @@ def test_load_model_entry_returns_none_when_materialize_fails():
         patch.object(
             registry,
             "materialize",
-            side_effect=RuntimeError("sidecar missing lora"),
+            side_effect=RuntimeError("sidecar missing lora_visual"),
         ),
     ):
         entry, artifact = registry._load_model_entry(_artifact_row(), "art-1")
@@ -283,13 +285,13 @@ def test_load_model_entry_builds_loaded_model():
     registry = _ModelRegistry()
     artifact = MagicMock(name="weights")
     row = _artifact_row(parent_id="parent-9")
-    state_dict = {"lora_A": object()}
+    state_dict = {"lora_visual_A": object()}
     sidecar = {
         "architecture": _VIT_SNAPSHOT,
-        "stage": TrainingStage.LORA.value,
+        "stage": TrainingStage.LORA_VISUAL.value,
         "base_model_id": _VIT_BASE_MODEL_ID,
         "revision": _VIT_REVISION,
-        "lora": {
+        "lora_visual": {
             "rank": 8,
             "alpha": 16,
             "dropout": 0.1,
@@ -332,9 +334,9 @@ def test_load_model_entry_builds_loaded_model():
 
 def test_materialize_vit_delegates_to_screener():
     sidecar = {
-        "stage": TrainingStage.LORA.value,
+        "stage": TrainingStage.LORA_VISUAL.value,
         "architecture": _VIT_SNAPSHOT,
-        "lora": {
+        "lora_visual": {
             "rank": 8,
             "alpha": 16,
             "dropout": 0.1,
@@ -409,17 +411,17 @@ def test_materialize_requires_stage():
         _ModelRegistry.materialize({"architecture": "resnet18"})
 
 
-def test_materialize_screener_requires_lora():
-    with pytest.raises(RuntimeError, match="sidecar missing lora"):
+def test_materialize_screener_requires_lora_visual():
+    with pytest.raises(RuntimeError, match="sidecar missing lora_visual"):
         _ModelRegistry._materialize_screener({"architecture": _VIT_SNAPSHOT})
 
 
 def test_materialize_screener_requires_target_modules():
-    with pytest.raises(RuntimeError, match="Empty LoRA"):
+    with pytest.raises(RuntimeError, match="Empty lora_visual"):
         _ModelRegistry._materialize_screener(
             {
                 "architecture": _VIT_SNAPSHOT,
-                "lora": {
+                "lora_visual": {
                     "rank": 8,
                     "alpha": 16,
                     "dropout": 0.1,
@@ -434,7 +436,7 @@ def test_materialize_screener_requires_base_pin():
         _ModelRegistry._materialize_screener(
             {
                 "architecture": _VIT_SNAPSHOT,
-                "lora": {
+                "lora_visual": {
                     "rank": 8,
                     "alpha": 16,
                     "dropout": 0.1,
@@ -451,7 +453,7 @@ def test_materialize_screener_wraps_pinned_backbone():
         "architecture": _VIT_SNAPSHOT,
         "base_model_id": _VIT_BASE_MODEL_ID,
         "revision": _VIT_REVISION,
-        "lora": {
+        "lora_visual": {
             "rank": 8,
             "alpha": 16,
             "dropout": 0.1,

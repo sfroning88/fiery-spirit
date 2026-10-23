@@ -24,7 +24,7 @@ from src.build_loaders import (
     _SEISMIC_EMPTY,
     _VIT_PX,
     _array_to_tensor,
-    _build_lora_loaders,
+    _build_lora_visual_loaders,
     _build_quantize_loaders,
     _calibrate_loader,
     _generator,
@@ -59,7 +59,7 @@ def test_build_loaders_raises_when_stage_invalid():
     "stage,builder",
     [
         (TrainingStage.PRETRAIN.value, "_build_pretrain_loaders"),
-        (TrainingStage.LORA.value, "_build_lora_loaders"),
+        (TrainingStage.LORA_VISUAL.value, "_build_lora_visual_loaders"),
         (TrainingStage.DISTILL.value, "_build_distill_loaders"),
         (TrainingStage.PRUNE.value, "_build_prune_loaders"),
         (TrainingStage.QUANTIZE.value, "_build_quantize_loaders"),
@@ -179,7 +179,7 @@ def test_load_split_tensors_empty_seismic_shape():
     assert targets.shape[0] == 0
 
 
-def test_build_lora_loaders_caps_train_and_skips_empty_splits():
+def test_build_lora_visual_loaders_caps_train_and_skips_empty_splits():
     phase = np.ones((_VIT_PX, _VIT_PX), dtype=np.float32)
     unpacked = [
         ("a", phase, {"label": TrainingDeformationLabel.POSITIVE.value}),
@@ -200,7 +200,7 @@ def test_build_lora_loaders_caps_train_and_skips_empty_splits():
         patch("fiery_python.BlobStorageServices.get_shard", return_value=b"tar"),
         patch("fiery_python.Shard.read", return_value=unpacked),
     ):
-        loaders = _build_lora_loaders(spec)
+        loaders = _build_lora_visual_loaders(spec)
     assert set(loaders) == {
         TrainingSplit.TRAIN.value,
         TrainingSplit.VALIDATE.value,
@@ -211,9 +211,9 @@ def test_build_lora_loaders_caps_train_and_skips_empty_splits():
     assert loaders[TrainingSplit.TRAIN.value].batch_size == _DEFORMATION_BATCH_SIZE
 
 
-def test_build_lora_loaders_raises_when_manifest_missing():
+def test_build_lora_visual_loaders_raises_when_manifest_missing():
     with pytest.raises(RuntimeError, match="Missing manifest_path from spec"):
-        _build_lora_loaders(
+        _build_lora_visual_loaders(
             {
                 "seed": 1,
                 "manifest_path": None,
@@ -222,14 +222,14 @@ def test_build_lora_loaders_raises_when_manifest_missing():
         )
 
 
-def test_build_lora_loaders_raises_when_train_empty():
+def test_build_lora_visual_loaders_raises_when_train_empty():
     manifest = {"splits": {TrainingSplit.TRAIN.value: {"shards": []}}}
     with patch(
         "src.build_loaders.r2_s3.get_bytes",
         return_value=json.dumps(manifest).encode("utf-8"),
     ):
         with pytest.raises(RuntimeError, match="Empty train split"):
-            _build_lora_loaders(
+            _build_lora_visual_loaders(
                 {
                     "manifest_path": "contract/hash/manifest.json",
                     "seed": 1,

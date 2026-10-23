@@ -5,8 +5,9 @@ import {
   TrainingStage,
   TrainingStatus,
   TrainingPrecision,
-  TrainingSeismicLabel,
   TrainingDeformationLabel,
+  TrainingSeismicLabel,
+  TrainingLanguageLabel,
   TrainingWindow,
   TrainingNormalize,
   TrainingOptimizer,
@@ -20,14 +21,18 @@ import {
 import type {
   TrainingDeformationClass as PrismaTrainingDeformationClass,
   TrainingSeismicClass as PrismaTrainingSeismicClass,
+  TrainingLanguageClass as PrismaTrainingLanguageClass,
   TrainingDeformationSource as PrismaTrainingDeformationSource,
   TrainingInterferogram as PrismaTrainingInterferogram,
   TrainingSeismicEvent as PrismaTrainingSeismicEvent,
-  TrainingSeismic as PrismaTrainingSeismic,
+  TrainingPassage as PrismaTrainingPassage,
   TrainingDeformation as PrismaTrainingDeformation,
+  TrainingSeismic as PrismaTrainingSeismic,
+  TrainingLanguage as PrismaTrainingLanguage,
   TrainingHyperparameterPretrain as PrismaTrainingHyperparameterPretrain,
   TrainingTargetModules as PrismaTrainingTargetModules,
-  TrainingHyperparameterLora as PrismaTrainingHyperparameterLora,
+  TrainingHyperparameterLoraVisual as PrismaTrainingHyperparameterLoraVisual,
+  TrainingHyperparameterLoraLanguage as PrismaTrainingHyperparameterLoraLanguage,
   TrainingHyperparameterDistill as PrismaTrainingHyperparameterDistill,
   TrainingHyperparameterPrune as PrismaTrainingHyperparameterPrune,
   TrainingHyperparameterQuantize as PrismaTrainingHyperparameterQuantize,
@@ -42,8 +47,9 @@ export {
   TrainingStage,
   TrainingStatus,
   TrainingPrecision,
-  TrainingSeismicLabel,
   TrainingDeformationLabel,
+  TrainingSeismicLabel,
+  TrainingLanguageLabel,
   TrainingWindow,
   TrainingNormalize,
   TrainingOptimizer,
@@ -57,15 +63,21 @@ export {
 
 export type TrainingDeformationClass = PrismaTrainingDeformationClass;
 export type TrainingSeismicClass = PrismaTrainingSeismicClass;
+export type TrainingLanguageClass = PrismaTrainingLanguageClass;
 export type TrainingDeformationSource = PrismaTrainingDeformationSource;
 export type TrainingInterferogram = PrismaTrainingInterferogram;
 export type TrainingSeismicEvent = PrismaTrainingSeismicEvent;
-export type TrainingSeismic = PrismaTrainingSeismic;
+export type TrainingPassage = PrismaTrainingPassage;
 export type TrainingDeformation = PrismaTrainingDeformation;
+export type TrainingSeismic = PrismaTrainingSeismic;
+export type TrainingLanguage = PrismaTrainingLanguage;
 export type TrainingHyperparameterPretrain =
   PrismaTrainingHyperparameterPretrain;
 export type TrainingTargetModules = PrismaTrainingTargetModules;
-export type TrainingHyperparameterLora = PrismaTrainingHyperparameterLora;
+export type TrainingHyperparameterLoraVisual =
+  PrismaTrainingHyperparameterLoraVisual;
+export type TrainingHyperparameterLoraLanguage =
+  PrismaTrainingHyperparameterLoraLanguage;
 export type TrainingHyperparameterDistill = PrismaTrainingHyperparameterDistill;
 export type TrainingHyperparameterPrune = PrismaTrainingHyperparameterPrune;
 export type TrainingHyperparameterQuantize =

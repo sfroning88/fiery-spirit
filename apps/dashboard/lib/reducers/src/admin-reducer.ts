@@ -17,7 +17,7 @@ export const adminPanelInitialState: AdminPanelState = {
   loadAll: false,
   maxSamples: "",
   source: TrainingSampleSource.hephaestus,
-  stage: TrainingStage.lora,
+  stage: TrainingStage.loraVisual,
   signal: TrainingSignal.deformation,
 };
 

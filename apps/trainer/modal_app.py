@@ -73,7 +73,7 @@ def pretrain_teacher(spec: Dict) -> Dict:
 
 
 @app.function(image=image, gpu="T4", timeout=3600, secrets=secrets)
-def lora_screener(spec: Dict) -> Dict:
+def lora_visual_screener(spec: Dict) -> Dict:
     from src.entrypoint import entrypoint
 
     _VIT_SNAPSHOT = "vit_small_patch16_224.augreg_in21k_ft_in1k"

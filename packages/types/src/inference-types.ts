@@ -2,6 +2,7 @@ import { InferenceAbstainReason } from "@fiery/db/enums";
 import type {
   InferenceDeformation as PrismaInferenceDeformation,
   InferenceSeismic as PrismaInferenceSeismic,
+  InferenceLanguage as PrismaInferenceLanguage,
   InferenceFeedback as PrismaInferenceFeedback,
 } from "@fiery/db";
 import {
@@ -13,6 +14,7 @@ export { InferenceAbstainReason };
 
 export type InferenceDeformation = PrismaInferenceDeformation;
 export type InferenceSeismic = PrismaInferenceSeismic;
+export type InferenceLanguage = PrismaInferenceLanguage;
 export type InferenceFeedback = PrismaInferenceFeedback;
 
 export type InferenceOutcome = {

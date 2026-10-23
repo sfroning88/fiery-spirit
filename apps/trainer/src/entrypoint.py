@@ -91,10 +91,10 @@ def entrypoint(spec: Dict, architecture: str) -> Dict:
                 torch.export.save(exported, buffer)
                 payload = buffer.getvalue()
                 param_count = sum(param.numel() for param in cpu_model.parameters())
-            elif spec.get("lora"):
+            elif spec.get("lora_visual"):
                 from peft import get_peft_model_state_dict
 
-                sidecar["lora"] = spec["lora"]
+                sidecar["lora_visual"] = spec["lora_visual"]
                 sidecar["base_model_id"] = spec["base_model_id"]
                 sidecar["revision"] = spec["revision"]
                 payload = get_peft_model_state_dict(cpu_model)
