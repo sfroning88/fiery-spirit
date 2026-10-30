@@ -51,7 +51,7 @@ def _loader(labels: list[int]) -> DataLoader:
 def _score_spec(**overrides) -> dict:
     data = {
         "session_id": "sess-1",
-        "stage": TrainingStage.LORA.value,
+        "stage": TrainingStage.LORA_VISUAL.value,
         "tier": ModelTier.CLOUD.value,
         "role": ModelRole.SCREENER.value,
         "shard_prefix": "contract-1/" + ("a" * 64) + "/",
@@ -91,6 +91,56 @@ def test_score_model_dispatches_teacher():
     score.assert_called_once()
     assert score.call_args.kwargs["name"] is ModelMetricName.MACRO_F1_SCORE
     assert score.call_args.kwargs["score"] is _macro_f1
+
+
+class _FixedToken(nn.Module):
+    def __init__(self, token: int, vocab: int) -> None:
+        super().__init__()
+        self.bias = nn.Parameter(torch.zeros(1))
+        self.token = token
+        self.vocab = vocab
+
+    def forward(self, input_ids, attention_mask=None):
+        logits = torch.full(
+            (input_ids.shape[0], input_ids.shape[1], self.vocab),
+            -10.0,
+        )
+        logits[:, :, self.token] = 10.0
+        return logits + self.bias
+
+
+def _passage_loader() -> DataLoader:
+    rows = [
+        {
+            "input_ids": torch.tensor([[1, 2, 3, 3, 3, 3]]),
+            "attention_mask": torch.tensor([[1, 1, 1, 1, 1, 1]]),
+            "labels": torch.tensor([[-100, -100, 3, 3, 3, 3]]),
+        }
+    ]
+    return DataLoader(rows, batch_size=1, collate_fn=lambda batch: batch[0])
+
+
+def test_score_model_emits_bleu_for_analyst():
+    metrics, decision = score_model(
+        _score_spec(
+            stage=TrainingStage.LORA_LANGUAGE.value,
+            role=ModelRole.ANALYST.value,
+        ),
+        _FixedToken(3, 6),
+        {
+            TrainingSplit.TEST.value: _passage_loader(),
+            TrainingSplit.HOLDOUT.value: _passage_loader(),
+        },
+    )
+    assert [metric.name for metric in metrics] == [
+        ModelMetricName.BLEU_SCORE,
+        ModelMetricName.BLEU_SCORE,
+    ]
+    assert metrics[0].split is TrainingSplit.TEST
+    assert metrics[1].split is TrainingSplit.HOLDOUT
+    assert metrics[0].value == Decimal("1.000000")
+    assert decision["threshold"] == 0.0
+    assert decision["op_version"] == STORAGE_OP_VERSION
 
 
 def test_score_model_dispatches_student():

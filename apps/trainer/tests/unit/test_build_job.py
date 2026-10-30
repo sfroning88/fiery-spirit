@@ -23,7 +23,7 @@ from src.build_job import (
 )
 
 
-def _lora(**overrides) -> dict:
+def _lora_visual(**overrides) -> dict:
     data = {
         "rank": 8,
         "alpha": 16,
@@ -41,10 +41,10 @@ def _lora(**overrides) -> dict:
     return data
 
 
-def _lora_spec(**overrides) -> dict:
+def _lora_visual_spec(**overrides) -> dict:
     data = {
-        "stage": TrainingStage.LORA.value,
-        "lora": _lora(),
+        "stage": TrainingStage.LORA_VISUAL.value,
+        "lora_visual": _lora_visual(),
         "base_model_id": _VIT_BASE_MODEL_ID,
         "revision": _VIT_REVISION,
     }
@@ -84,11 +84,11 @@ def test_peft_targets_empty_when_all_false():
     )
 
 
-def test_build_lora_job_raises_when_targets_empty():
-    with pytest.raises(RuntimeError, match="Empty LoRA target modules"):
+def test_build_lora_visual_job_raises_when_targets_empty():
+    with pytest.raises(RuntimeError, match="Empty lora_visual target modules"):
         build_job(
-            _lora_spec(
-                lora=_lora(
+            _lora_visual_spec(
+                lora_visual=_lora_visual(
                     target_modules={
                         "query": False,
                         "key": False,
@@ -100,12 +100,14 @@ def test_build_lora_job_raises_when_targets_empty():
         )
 
 
-def test_build_lora_job_raises_when_pin_missing():
+def test_build_lora_visual_job_raises_when_pin_missing():
     with pytest.raises(RuntimeError, match="Empty base_model_id"):
-        build_job({"stage": TrainingStage.LORA.value, "lora": _lora()})
+        build_job(
+            {"stage": TrainingStage.LORA_VISUAL.value, "lora_visual": _lora_visual()}
+        )
 
 
-def test_build_lora_job_wraps_timm_backbone():
+def test_build_lora_visual_job_wraps_timm_backbone():
     backbone = MagicMock(name="backbone")
     wrapped = MagicMock(name="peft")
     with (
@@ -116,7 +118,7 @@ def test_build_lora_job_wraps_timm_backbone():
         patch("timm.create_model", return_value=backbone) as create_model,
         patch("peft.get_peft_model", return_value=wrapped) as get_peft_model,
     ):
-        result = build_job(_lora_spec())
+        result = build_job(_lora_visual_spec())
     assert result is wrapped
     download.assert_called_once_with(
         repo_id=_VIT_BASE_MODEL_ID,

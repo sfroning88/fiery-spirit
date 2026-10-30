@@ -13,8 +13,10 @@ import numpy as np
 from fiery_python import (
     PoolFetch,
     InferenceDeformation,
+    InferenceLanguage,
     InferenceSeismic,
     TrainingDeformationLabel,
+    TrainingLanguageLabel,
     TrainingNormalize,
     TrainingSampleSource,
     TrainingSeismicLabel,
@@ -322,3 +324,65 @@ def test_upsert_seismic_passes_storage_dict():
     assert params["probabilities"] == seismic.probabilities
     assert params["artifact_id"] == seismic.artifact_id
     assert params["seismic_event_id"] == seismic.seismic_event_id
+
+
+def test_select_language_maps_row():
+    row = {
+        "id": "lang-1",
+        "max_characters": 800,
+        "class_id": "class-1",
+    }
+    with patch(
+        "integrations.inference.services.persist_service.db_pool.run",
+        return_value=row,
+    ) as run:
+        language = InferencePersistService.select_language("session-1")
+    assert run.call_args.args[1] == ("session-1",)
+    assert run.call_args.kwargs["fetch"] is PoolFetch.ONE
+    assert language.id == "lang-1"
+    assert language.max_characters == 800
+    assert language.class_id == "class-1"
+
+
+def test_select_language_returns_none_when_empty():
+    with patch(
+        "integrations.inference.services.persist_service.db_pool.run",
+        return_value=None,
+    ):
+        assert InferencePersistService.select_language("session-1") is None
+
+
+def test_upsert_language_passes_storage_dict():
+    inferred_at = datetime.now(timezone.utc)
+    language = InferenceLanguage(
+        label=TrainingLanguageLabel.ORANGE,
+        probabilities=[
+            Decimal("0.05000"),
+            Decimal("0.10000"),
+            Decimal("0.80000"),
+            Decimal("0.05000"),
+        ],
+        class_order=[
+            TrainingLanguageLabel.GREEN,
+            TrainingLanguageLabel.YELLOW,
+            TrainingLanguageLabel.ORANGE,
+            TrainingLanguageLabel.RED,
+        ],
+        threshold_used=Decimal("0.50000"),
+        abstention_band=Decimal("0.00000"),
+        abstained=False,
+        generated_text="because of the swarm, classify this as orange",
+        inferred_at=inferred_at,
+        artifact_id="11111111-1111-1111-1111-111111111111",
+        volcano_id="22222222-2222-2222-2222-222222222222",
+    )
+    with patch("integrations.inference.services.persist_service.db_pool.run") as run:
+        InferencePersistService.upsert_language(language)
+    run.assert_called_once()
+    params = run.call_args.args[1]
+    assert params["id"] == language.deterministic_id()
+    assert params["label"] == TrainingLanguageLabel.ORANGE.value
+    assert params["probabilities"] == language.probabilities
+    assert params["generated_text"] == language.generated_text
+    assert params["artifact_id"] == language.artifact_id
+    assert params["volcano_id"] == language.volcano_id

@@ -15,7 +15,8 @@ from fiery_python import (
     TrainingPrecision,
     TrainingTargetModules,
     TrainingHyperparameterPretrain,
-    TrainingHyperparameterLora,
+    TrainingHyperparameterLoraVisual,
+    TrainingHyperparameterLoraLanguage,
     TrainingHyperparameterDistill,
     TrainingHyperparameterPrune,
     TrainingHyperparameterQuantize,
@@ -26,6 +27,9 @@ from .persist_service import TrainPersistService
 
 _VIT_BASE_MODEL_ID = "timm/vit_small_patch16_224.augreg_in21k_ft_in1k"
 _VIT_REVISION = "7e2c55630205e1266030f18370f4c6ed1a514b52"
+
+_LLM_BASE_MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
+_LLM_REVISION = "7ae557604adf67be50417f59c2c2f167def9a775"
 
 
 class TrainJobSpec:
@@ -42,11 +46,14 @@ class TrainJobSpec:
         ai_api_url = config.get_required("ai_api_url")
         if not ai_api_url or not isinstance(ai_api_url, str):
             raise error("AI_API_URL not configured")
-        pretrain, screener, distill, prune, quantize = hyperparameter
-        lora = None
+        pretrain, screener, analyst, distill, prune, quantize = hyperparameter
+        lora_visual = None
+        lora_language = None
         modules = None
         if screener:
-            lora, modules = screener
+            lora_visual, modules = screener
+        if analyst:
+            lora_language, modules = analyst
         parent = None
         if parent_id:
             parent = TrainPersistService.select_artifact(parent_id)
@@ -70,10 +77,18 @@ class TrainJobSpec:
                 if not pretrain:
                     return None
                 return spec | TrainJobSpec.build_pretrain_job_spec(pretrain)
-            case TrainingStage.LORA:
-                if not lora or not modules:
+            case TrainingStage.LORA_VISUAL:
+                if not lora_visual or not modules:
                     return None
-                return spec | TrainJobSpec.build_lora_job_spec(modules, lora)
+                return spec | TrainJobSpec.build_lora_visual_job_spec(
+                    modules, lora_visual
+                )
+            case TrainingStage.LORA_LANGUAGE:
+                if not lora_language or not modules:
+                    return None
+                return spec | TrainJobSpec.build_lora_language_job_spec(
+                    modules, lora_language
+                )
             case TrainingStage.DISTILL:
                 if not distill or not parent:
                     return None
@@ -109,17 +124,17 @@ class TrainJobSpec:
         }
 
     @staticmethod
-    def build_lora_job_spec(
-        modules: TrainingTargetModules, lora: TrainingHyperparameterLora
+    def build_lora_visual_job_spec(
+        modules: TrainingTargetModules, lora_visual: TrainingHyperparameterLoraVisual
     ) -> Dict[str, Any]:
         return {
-            "lora": {
-                "id": lora.id,
-                "rank": lora.rank,
-                "alpha": lora.alpha,
-                "dropout": lora.dropout,
-                "epochs": lora.epochs,
-                "learning_rate": lora.learning_rate,
+            "lora_visual": {
+                "id": lora_visual.id,
+                "rank": lora_visual.rank,
+                "alpha": lora_visual.alpha,
+                "dropout": lora_visual.dropout,
+                "epochs": lora_visual.epochs,
+                "learning_rate": lora_visual.learning_rate,
                 "target_modules": {
                     "query": modules.query,
                     "key": modules.key,
@@ -131,6 +146,33 @@ class TrainJobSpec:
             "revision": _VIT_REVISION,
             "tier": ModelTier.CLOUD.value,
             "role": ModelRole.SCREENER.value,
+        }
+
+    @staticmethod
+    def build_lora_language_job_spec(
+        modules: TrainingTargetModules,
+        lora_language: TrainingHyperparameterLoraLanguage,
+    ) -> Dict[str, Any]:
+        return {
+            "lora_language": {
+                "id": lora_language.id,
+                "rank": lora_language.rank,
+                "alpha": lora_language.alpha,
+                "dropout": lora_language.dropout,
+                "epochs": lora_language.epochs,
+                "learning_rate": lora_language.learning_rate,
+                "gradient_accumulation_steps": lora_language.gradient_accumulation_steps,
+                "target_modules": {
+                    "query": modules.query,
+                    "key": modules.key,
+                    "value": modules.value,
+                    "output": modules.output,
+                },
+            },
+            "base_model_id": _LLM_BASE_MODEL_ID,
+            "revision": _LLM_REVISION,
+            "tier": ModelTier.CLOUD.value,
+            "role": ModelRole.ANALYST.value,
         }
 
     @staticmethod

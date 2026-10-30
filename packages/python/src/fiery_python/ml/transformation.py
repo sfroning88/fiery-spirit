@@ -13,7 +13,7 @@ from scipy.signal.windows import tukey
 from typing import Tuple, assert_never
 from ..constants import STORAGE_OP_VERSION
 from ..enums import InferenceAbstainReason, TrainingNormalize, TrainingWindow
-from ..models import TrainingDeformation, TrainingSeismic
+from ..models import TrainingDeformation, TrainingLanguage, TrainingSeismic
 
 _LOG_MEL_EPS = 1e-10
 _BANDPASS_ORDER = 10
@@ -238,6 +238,37 @@ class Transformation:
         return cls._normalize(spec, training_seismic.normalize).astype(np.float32)
 
     @classmethod
+    def apply_language(
+        cls, body: bytes, training_language: TrainingLanguage
+    ) -> np.ndarray:
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as err:
+            raise TransformationRejected("invalid passage json") from err
+        if not isinstance(payload, dict):
+            raise TransformationRejected("invalid passage json")
+        prompt = payload.get("prompt")
+        reference = payload.get("reference")
+        if not isinstance(prompt, str) or not isinstance(reference, str):
+            raise TransformationRejected("missing prompt or reference")
+        prompt = prompt.strip()
+        reference = reference.strip()
+        if not prompt or not reference:
+            raise TransformationRejected("empty prompt or reference")
+        max_characters = training_language.max_characters
+        if max_characters <= 0:
+            raise TransformationRejected("max_characters must be positive int")
+        if len(prompt) > max_characters or len(reference) > max_characters:
+            raise TransformationRejected("text exceeds max_characters")
+        encoded = json.dumps(
+            {"prompt": prompt, "reference": reference},
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        return np.frombuffer(encoded, dtype=np.uint8)
+
+    @classmethod
     def transform_hash_deformation(
         cls, training_deformation: TrainingDeformation
     ) -> str:
@@ -273,6 +304,19 @@ class Transformation:
             "snr_min": str(training_seismic.snr_min),
             "log_mel_eps": str(_LOG_MEL_EPS),
             "array_shape": "1,M,F",
+        }
+        blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode(
+            "utf-8"
+        )
+        return hashlib.sha256(blob).hexdigest()
+
+    @classmethod
+    def transform_hash_language(cls, training_language: TrainingLanguage) -> str:
+        """SHA-256 of sorted language transformations and source of apply"""
+        payload = {
+            "op_version": STORAGE_OP_VERSION,
+            "signal": "language",
+            "max_characters": training_language.max_characters,
         }
         blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode(
             "utf-8"

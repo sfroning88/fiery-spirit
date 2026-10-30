@@ -9,6 +9,7 @@ from ..enums import ModelTier, ModelRole
 
 MODEL_REGISTRY_SLOTS: List[tuple[ModelTier, ModelRole]] = [
     (ModelTier.CLOUD, ModelRole.SCREENER),
+    (ModelTier.CLOUD, ModelRole.ANALYST),
     (ModelTier.CLOUD, ModelRole.TEACHER),
     (ModelTier.EDGE, ModelRole.STUDENT),
 ]

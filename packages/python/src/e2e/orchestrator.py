@@ -7,17 +7,17 @@ Unified test orchestrator for worker pipelines
 Usage: python3 -m src.e2e.orchestrator <workflow>
 Workflows: ingest|refine|train|promote|registry|inference|preview|batch
 Additional Kwargs:
-    [ingest] -source <hephaestus|okada|llaima>
-    [refine] -shards <satellite|sensor
+    [ingest] -source <hephaestus|okada|llaima|academic>
+    [refine] -shards <satellite|sensor|literature>
     [ingest|refine] -samples <max_samples>
-    [train] -job <pretrain|lora|distill|prune|quantize>
-    [inference|preview|batch] -signal <deformation|seismic>
+    [train] -job <pretrain|lora_visual|lora_language|distill|prune|quantize>
+    [inference|preview|batch] -signal <deformation|seismic|language>
     [ingest|refine|train|batch] -timeout <seconds|none>
 
 For example:
 python3 -m src.e2e.orchestrator ingest -source hephaestus -samples 10 -timeout none
 python3 -m src.e2e.orchestrator refine -shards sensor -samples 10 -timeout 300
-python3 -m src.e2e.orchestrator train -job lora -timeout none
+python3 -m src.e2e.orchestrator train -job lora_visual -timeout none
 python3 -m src.e2e.orchestrator inference -signal deformation
 python3 -m src.e2e.orchestrator preview -signal deformation
 python3 -m src.e2e.orchestrator batch -signal deformation -timeout 600
@@ -207,7 +207,7 @@ def _run_workflow(
         from .scripts.ingest import run_ingest_test
 
         if not source:
-            raise ValueError("ingest requires -source hephaestus|okada|llaima")
+            raise ValueError("ingest requires -source hephaestus|okada|llaima|academic")
         extra: Dict[str, Any] = dict(wait)
         if samples is not None:
             extra["max_samples"] = samples
@@ -216,7 +216,7 @@ def _run_workflow(
         from .scripts.refine import run_refine_test
 
         if not shards:
-            raise ValueError("refine requires -shards satellite|sensor")
+            raise ValueError("refine requires -shards satellite|sensor|literature")
         extra: Dict[str, Any] = dict(wait)
         if samples is not None:
             extra["max_samples"] = samples
@@ -225,7 +225,9 @@ def _run_workflow(
         from .scripts.train import run_train_test
 
         if not job:
-            raise ValueError("train requires -job pretrain|lora|distill|prune|quantize")
+            raise ValueError(
+                "train requires -job pretrain|lora_visual|lora_language|distill|prune|quantize"
+            )
         run_train_test(job=job, **wait)
     elif workflow == "promote":
         from .scripts.promote import run_promote_test
@@ -239,19 +241,19 @@ def _run_workflow(
         from .scripts.inference import run_inference_test
 
         if not signal:
-            raise ValueError("inference requires -signal deformation|seismic")
+            raise ValueError("inference requires -signal deformation|seismic|language")
         run_inference_test(signal=signal)
     elif workflow == "preview":
         from .scripts.preview import run_preview_test
 
         if not signal:
-            raise ValueError("preview requires -signal deformation|seismic")
+            raise ValueError("preview requires -signal deformation|seismic|language")
         run_preview_test(signal=signal)
     elif workflow == "batch":
         from .scripts.batch import run_batch_test
 
         if not signal:
-            raise ValueError("batch requires -signal deformation|seismic")
+            raise ValueError("batch requires -signal deformation|seismic|language")
         run_batch_test(signal=signal, **wait)
     else:
         raise ValueError(f"Unknown workflow: {workflow}")
@@ -273,6 +275,10 @@ def _resolve_kwargs(
         if shards and shards != "sensor":
             parser.error("use either -shards sensor or -sensor")
         shards = "sensor"
+    if args.literature:
+        if shards and shards != "literature":
+            parser.error("use either -shards literature or -literature")
+        shards = "literature"
     if source is not None and workflow != "ingest":
         parser.error("-source is only valid for ingest")
     if args.samples is not None and workflow not in ("ingest", "refine"):
@@ -285,22 +291,24 @@ def _resolve_kwargs(
         parser.error("-signal is only valid for inference, batch, preview")
     if workflow == "ingest":
         if source is None:
-            parser.error("ingest requires -source hephaestus|okada|llaima")
-        if source not in ("hephaestus", "okada", "llaima"):
-            parser.error("ingest requires -source hephaestus|okada|llaima")
+            parser.error("ingest requires -source hephaestus|okada|llaima|academic")
+        if source not in ("hephaestus", "okada", "llaima", "academic"):
+            parser.error("ingest requires -source hephaestus|okada|llaima|academic")
     if workflow == "refine":
         if shards is None:
-            parser.error("refine requires -shards satellite|sensor")
-        if shards not in ("satellite", "sensor"):
-            parser.error("refine requires -shards satellite|sensor")
+            parser.error("refine requires -shards satellite|sensor|literature")
+        if shards not in ("satellite", "sensor", "literature"):
+            parser.error("refine requires -shards satellite|sensor|literature")
     if workflow == "train" and args.job is None:
-        parser.error("train requires -job pretrain|lora|distill|prune|quantize")
+        parser.error(
+            "train requires -job pretrain|lora_visual|lora_language|distill|prune|quantize"
+        )
     if workflow == "inference" and args.signal is None:
-        parser.error("inference requires -signal deformation|seismic")
+        parser.error("inference requires -signal deformation|seismic|language")
     if workflow == "preview" and args.signal is None:
-        parser.error("preview requires -signal deformation|seismic")
+        parser.error("preview requires -signal deformation|seismic|language")
     if workflow == "batch" and args.signal is None:
-        parser.error("batch requires -signal deformation|seismic")
+        parser.error("batch requires -signal deformation|seismic|language")
     return source, shards, args.job, args.signal
 
 
@@ -331,8 +339,8 @@ def main() -> None:
     )
     parser.add_argument(
         "-source",
-        choices=("hephaestus", "okada", "llaima"),
-        help="[ingest] hephaestus|okada|llaima",
+        choices=("hephaestus", "okada", "llaima", "academic"),
+        help="[ingest] hephaestus|okada|llaima|academic",
     )
     parser.add_argument(
         "-samples",
@@ -342,8 +350,8 @@ def main() -> None:
     )
     parser.add_argument(
         "-shards",
-        choices=("satellite", "sensor"),
-        help="[refine] satellite interferograms or sensor waveforms",
+        choices=("satellite", "sensor", "literature"),
+        help="[refine] satellite interferograms or sensor waveforms or literature passages",
     )
     parser.add_argument(
         "-satellite",
@@ -356,14 +364,26 @@ def main() -> None:
         help="[refine] alias for -shards sensor",
     )
     parser.add_argument(
+        "-literature",
+        action="store_true",
+        help="[refine] alias for -shards literature",
+    )
+    parser.add_argument(
         "-job",
-        choices=("pretrain", "lora", "distill", "prune", "quantize"),
+        choices=(
+            "pretrain",
+            "lora_visual",
+            "lora_language",
+            "distill",
+            "prune",
+            "quantize",
+        ),
         help="[train] training stage to spawn",
     )
     parser.add_argument(
         "-signal",
-        choices=("deformation", "seismic"),
-        help="[inference|preview|batch] interferogram or waveform sample",
+        choices=("deformation", "seismic", "language"),
+        help="[inference|preview|batch] interferogram or waveform sample or literature passage",
     )
     parser.add_argument(
         "-timeout",

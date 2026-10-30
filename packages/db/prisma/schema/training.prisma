@@ -18,6 +18,7 @@ enum TrainingSampleSource {
     okada
     llaima
     villarrica
+    academic
 
     @@map("training_sample_source")
     @@schema("ai")
@@ -26,6 +27,7 @@ enum TrainingSampleSource {
 enum TrainingSignal {
     deformation
     seismic
+    language
 
     @@map("training_signal")
     @@schema("ai")
@@ -33,7 +35,8 @@ enum TrainingSignal {
 
 enum TrainingStage {
     pretrain
-    lora
+    loraVisual @map("lora_visual")
+    loraLanguage @map("lora_language")
     distill
     prune
     quantize
@@ -62,6 +65,16 @@ enum TrainingPrecision {
     @@schema("ai")
 }
 
+
+enum TrainingDeformationLabel {
+    positive
+    negative
+    uncertain
+
+    @@map("training_deformation_label")
+    @@schema("ai")
+}
+
 enum TrainingSeismicLabel {
     vt
     lp
@@ -72,12 +85,13 @@ enum TrainingSeismicLabel {
     @@schema("ai")
 }
 
-enum TrainingDeformationLabel {
-    positive
-    negative
-    uncertain
+enum TrainingLanguageLabel {
+    green
+    yellow
+    orange
+    red
 
-    @@map("training_deformation_label")
+    @@map("training_language_label")
     @@schema("ai")
 }
 
@@ -168,14 +182,14 @@ enum TrainingNoiseModel {
 }
 
 model TrainingDeformationClass {
-    id                          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    deformation                 Boolean @default(true)
-    seismic                     Boolean @default(true)
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    deformation                     Boolean @default(true)
+    seismic                         Boolean @default(true)
 
-    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-    deformations                TrainingDeformation[]
+    deformations                    TrainingDeformation[]
 
     @@unique([deformation, seismic])
     @@map("training_deformation_class")
@@ -183,75 +197,91 @@ model TrainingDeformationClass {
 }
 
 model TrainingSeismicClass {
-    id                          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    vt                          Boolean @default(true)
-    lp                          Boolean @default(true)
-    tr                          Boolean @default(true)
-    tc                          Boolean @default(true)
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    vt                              Boolean @default(true)
+    lp                              Boolean @default(true)
+    tr                              Boolean @default(true)
+    tc                              Boolean @default(true)
 
-    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-    seismics                    TrainingSeismic[]
+    seismics                        TrainingSeismic[]
 
     @@unique([vt, lp, tr, tc])
     @@map("training_seismic_class")
     @@schema("ai")
 }
 
+model TrainingLanguageClass {
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    background                      Boolean @default(true)
+    unrest                          Boolean @default(true)
+    eruption                        Boolean @default(true)
+
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+    languages                       TrainingLanguage[]
+
+    @@unique([background, unrest, eruption])
+    @@map("training_language_class")
+    @@schema("ai")
+}
+
 model TrainingDeformationSource {
-    id                          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    source                      TrainingDeformationSourceType
-    latitude                    Decimal @db.Decimal(9,6)
-    longitude                   Decimal @db.Decimal(9,6)
-    depthKm                     Decimal @map("depth_km") @db.Decimal(6,3)
-    volumeChangeM3              Decimal? @map("volume_change_m3") @db.Decimal(14,2)
-    pressureChangePa            Decimal? @map("pressure_change_pa") @db.Decimal(14,2)
-    strikeDeg                   Decimal? @map("strike_deg") @db.Decimal(5,2)
-    dipDeg                      Decimal? @map("dip_deg") @db.Decimal(5,2)
-    lengthKm                    Decimal? @map("length_km") @db.Decimal(6,3)
-    widthKm                     Decimal? @map("width_km") @db.Decimal(6,3)
-    rakeDeg                     Decimal? @map("rake_deg") @db.Decimal(5,2)
-    slipM                       Decimal? @map("slip_m") @db.Decimal(6,3)
-    openingM                    Decimal? @map("opening_m") @db.Decimal(6,3)
-    poissonsRatio               Decimal @map("poissons_ratio") @default(0.25) @db.Decimal(4,3)
-    shearModulusPa              Decimal? @map("shear_modulus_pa") @db.Decimal(14,2)
-    losIncidenceDeg             Decimal @map("los_incidence_deg") @db.Decimal(5,2)
-    losHeadingDeg               Decimal @map("los_heading_deg") @db.Decimal(6,2)
-    wavelengthM                 Decimal @map("wavelength_m") @db.Decimal(6,4)
-    noiseModel                  TrainingNoiseModel @map("noise_model") @default(none)
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    source                          TrainingDeformationSourceType
+    latitude                        Decimal @db.Decimal(9,6)
+    longitude                       Decimal @db.Decimal(9,6)
+    depthKm                         Decimal @map("depth_km") @db.Decimal(6,3)
+    volumeChangeM3                  Decimal? @map("volume_change_m3") @db.Decimal(14,2)
+    pressureChangePa                Decimal? @map("pressure_change_pa") @db.Decimal(14,2)
+    strikeDeg                       Decimal? @map("strike_deg") @db.Decimal(5,2)
+    dipDeg                          Decimal? @map("dip_deg") @db.Decimal(5,2)
+    lengthKm                        Decimal? @map("length_km") @db.Decimal(6,3)
+    widthKm                         Decimal? @map("width_km") @db.Decimal(6,3)
+    rakeDeg                         Decimal? @map("rake_deg") @db.Decimal(5,2)
+    slipM                           Decimal? @map("slip_m") @db.Decimal(6,3)
+    openingM                        Decimal? @map("opening_m") @db.Decimal(6,3)
+    poissonsRatio                   Decimal @map("poissons_ratio") @default(0.25) @db.Decimal(4,3)
+    shearModulusPa                  Decimal? @map("shear_modulus_pa") @db.Decimal(14,2)
+    losIncidenceDeg                 Decimal @map("los_incidence_deg") @db.Decimal(5,2)
+    losHeadingDeg                   Decimal @map("los_heading_deg") @db.Decimal(6,2)
+    wavelengthM                     Decimal @map("wavelength_m") @db.Decimal(6,4)
+    noiseModel                      TrainingNoiseModel @map("noise_model") @default(none)
 
-    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-    interferogram               TrainingInterferogram?
+    interferogram                   TrainingInterferogram?
 
     @@map("training_deformation_source")
     @@schema("ai")
 }
 
 model TrainingInterferogram {
-    id                          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    source                      TrainingSampleSource
-    split                       TrainingSplit
-    label                       TrainingDeformationLabel
-    frameId                     String? @map("frame_id")
-    primaryAt                   DateTime? @map("primary_at") @db.Date
-    secondaryAt                 DateTime? @map("secondary_at") @db.Date
-    coherenceMean               Decimal? @map("coherence_mean") @db.Decimal(4,3)
-    isAugmented                 Boolean @default(false) @map("is_augmented")
-    storagePath                 String @map("storage_path")
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    source                          TrainingSampleSource
+    split                           TrainingSplit
+    label                           TrainingDeformationLabel
+    frameId                         String? @map("frame_id")
+    primaryAt                       DateTime? @map("primary_at") @db.Date
+    secondaryAt                     DateTime? @map("secondary_at") @db.Date
+    coherenceMean                   Decimal? @map("coherence_mean") @db.Decimal(4,3)
+    isAugmented                     Boolean @default(false) @map("is_augmented")
+    storagePath                     String @map("storage_path")
     
-    deformationSourceId         String? @unique @map("deformation_source_id") @db.Uuid
-    deformationSource           TrainingDeformationSource? @relation(fields: [deformationSourceId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+    deformationSourceId             String? @unique @map("deformation_source_id") @db.Uuid
+    deformationSource               TrainingDeformationSource? @relation(fields: [deformationSourceId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-    volcanoId                   String? @map("volcano_id") @db.Uuid
-    volcano                     Volcano? @relation(fields: [volcanoId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+    volcanoId                       String? @map("volcano_id") @db.Uuid
+    volcano                         Volcano? @relation(fields: [volcanoId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-    inferences                  InferenceDeformation[]
+    inferences                      InferenceDeformation[]
 
     @@index([split, source, label], map: "idx_interferogram_by_split")
     @@index([coherenceMean], map: "idx_interferogram_by_coherence_mean")
@@ -261,24 +291,24 @@ model TrainingInterferogram {
 }
 
 model TrainingSeismicEvent {
-    id                          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    source                      TrainingSampleSource
-    split                       TrainingSplit
-    label                       TrainingSeismicLabel
-    station                     String @default("LAV")
-    recordedAt                  DateTime @map("recorded_at") @db.Timestamptz(6)
-    durationS                   Decimal @map("duration_s") @db.Decimal(8,3)
-    samplingHz                  Int @map("sampling_hz")
-    waveformPath                String @map("waveform_path")
-    spectrogramPath             String? @map("spectrogram_path")
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    source                          TrainingSampleSource
+    split                           TrainingSplit
+    label                           TrainingSeismicLabel
+    station                         String @default("LAV")
+    recordedAt                      DateTime @map("recorded_at") @db.Timestamptz(6)
+    durationS                       Decimal @map("duration_s") @db.Decimal(8,3)
+    samplingHz                      Int @map("sampling_hz")
+    waveformPath                    String @map("waveform_path")
+    spectrogramPath                 String? @map("spectrogram_path")
 
-    volcanoId                   String? @map("volcano_id") @db.Uuid
-    volcano                     Volcano? @relation(fields: [volcanoId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+    volcanoId                       String? @map("volcano_id") @db.Uuid
+    volcano                         Volcano? @relation(fields: [volcanoId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-    inferences                  InferenceSeismic[]
+    inferences                      InferenceSeismic[]
 
     @@index([split, source, label], map: "idx_seismic_event_by_split")
     @@index([station, recordedAt(sort: Desc)], map: "idx_seismic_event_by_station")
@@ -287,176 +317,240 @@ model TrainingSeismicEvent {
     @@schema("ai")
 }
 
-model TrainingSeismic {
-    id                          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    nfft                        Int
-    hop                         Int
-    window                      TrainingWindow
-    windowS                     Decimal @map("window_s") @db.Decimal(8,3)
-    samplingHz                  Int @map("sampling_hz")
-    melBins                     Int @map("mel_bins")
-    bandpassLowHz               Decimal @map("bandpass_low_hz") @db.Decimal(5,2)
-    bandpassHighHz              Decimal @map("bandpass_high_hz") @db.Decimal(5,2)
-    normalize                   TrainingNormalize
-    snrMin                      Decimal @map("snr_min") @db.Decimal(6,3)
-    
-    classId                     String @map("class_id") @db.Uuid
-    class                       TrainingSeismicClass @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+model TrainingPassage {
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    source                          TrainingSampleSource
+    split                           TrainingSplit
+    label                           TrainingLanguageLabel
+    citation                        String
+    publishedAt                     DateTime @map("published_at") @db.Timestamptz(6)
+    chunkIndex                      Int @map("chunk_index")
+    storagePath                     String @map("storage_path")
 
-    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    volcanoId                       String? @map("volcano_id") @db.Uuid
+    volcano                         Volcano? @relation(fields: [volcanoId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-    contracts                   TrainingContract[]
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-    @@map("training_seismic")
+    @@index([split, source, label], map: "idx_passage_by_split")
+    @@index([volcanoId, publishedAt(sort: Desc)], map: "idx_passage_by_volcano")
+    @@map("training_passage")
     @@schema("ai")
 }
 
+
 model TrainingDeformation {
-    id                          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    patchPx                     Int @map("patch_px")
-    wrapRad                     Decimal @map("wrap_rad") @db.Decimal(6,5)
-    normalize                   TrainingNormalize
-    coherenceMin                Decimal @map("coherence_min") @db.Decimal(4,3)
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    patchPx                         Int @map("patch_px")
+    wrapRad                         Decimal @map("wrap_rad") @db.Decimal(6,5)
+    normalize                       TrainingNormalize
+    coherenceMin                    Decimal @map("coherence_min") @db.Decimal(4,3)
 
-    classId                     String @map("class_id") @db.Uuid
-    class                       TrainingDeformationClass @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+    classId                         String @map("class_id") @db.Uuid
+    class                           TrainingDeformationClass @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-    contracts                   TrainingContract[]
+    contracts                       TrainingContract[]
 
     @@map("training_deformation")
     @@schema("ai")
 }
 
+model TrainingSeismic {
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    nfft                            Int
+    hop                             Int
+    window                          TrainingWindow
+    windowS                         Decimal @map("window_s") @db.Decimal(8,3)
+    samplingHz                      Int @map("sampling_hz")
+    melBins                         Int @map("mel_bins")
+    bandpassLowHz                   Decimal @map("bandpass_low_hz") @db.Decimal(5,2)
+    bandpassHighHz                  Decimal @map("bandpass_high_hz") @db.Decimal(5,2)
+    normalize                       TrainingNormalize
+    snrMin                          Decimal @map("snr_min") @db.Decimal(6,3)
+    
+    classId                         String @map("class_id") @db.Uuid
+    class                           TrainingSeismicClass @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+    contracts                       TrainingContract[]
+
+    @@map("training_seismic")
+    @@schema("ai")
+}
+
+model TrainingLanguage {
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    maxCharacters                   Int @map("max_characters")
+
+    classId                         String @map("class_id") @db.Uuid
+    class                           TrainingLanguageClass @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+    contracts                       TrainingContract[]
+
+    @@map("training_language")
+    @@schema("ai")
+}
+
 model TrainingHyperparameterPretrain {
-    id                          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    epochs                      Int @default(50)
-    batchSize                   Int @map("batch_size") @default(32)
-    learningRate                Float @map("learning_rate") @default(0.001)
-    optimizer                   TrainingOptimizer @default(adamw)
-    weightDecay                 Decimal @map("weight_decay") @db.Decimal(10,8) @default(0.01)
-    lrSchedule                  TrainingRateSchedule @map("lr_schedule") @default(cosine)
-    seed                        Int @default(42)
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    epochs                          Int @default(50)
+    batchSize                       Int @map("batch_size") @default(32)
+    learningRate                    Float @map("learning_rate") @default(0.001)
+    optimizer                       TrainingOptimizer @default(adamw)
+    weightDecay                     Decimal @map("weight_decay") @db.Decimal(10,8) @default(0.01)
+    lrSchedule                      TrainingRateSchedule @map("lr_schedule") @default(cosine)
+    seed                            Int @default(42)
 
-    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-    sessions                    TrainingSession[]
+    sessions                        TrainingSession[]
     
     @@map("training_hyperparameter_pretrain")
     @@schema("ai")
 }
 
 model TrainingTargetModules {  
-    id                          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    query                       Boolean @default(true)
-    key                         Boolean @default(false)
-    value                       Boolean @default(true)
-    output                      Boolean @default(false)
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    query                           Boolean @default(true)
+    key                             Boolean @default(false)
+    value                           Boolean @default(true)
+    output                          Boolean @default(false)
 
-    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-    hyperparameters             TrainingHyperparameterLora[]
+    hyperparametersVisual           TrainingHyperparameterLoraVisual[]
+    hyperparametersLanguage         TrainingHyperparameterLoraLanguage[]
 
     @@unique([query, key, value, output])
     @@map("training_target_modules")
     @@schema("ai")
 }
 
-model TrainingHyperparameterLora {
-    id                          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    rank                        Int @default(8)
-    alpha                       Int @default(16)
-    dropout                     Float @default(0.1)
-    epochs                      Int @default(10)
-    learningRate                Float @map("learning_rate") @default(0.0003)
+model TrainingHyperparameterLoraVisual {
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    rank                            Int @default(8)
+    alpha                           Int @default(16)
+    dropout                         Float @default(0.1)
+    epochs                          Int @default(10)
+    learningRate                    Float @map("learning_rate") @default(0.0003)
     
-    targetModulesId             String @map("target_modules_id") @db.Uuid
-    targetModules               TrainingTargetModules @relation(fields: [targetModulesId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+    targetModulesId                 String @map("target_modules_id") @db.Uuid
+    targetModules                   TrainingTargetModules @relation(fields: [targetModulesId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-    sessions                    TrainingSession[]
+    sessions                        TrainingSession[]
     
-    @@map("training_hyperparameter_lora")
+    @@map("training_hyperparameter_lora_visual")
+    @@schema("ai")
+}
+
+model TrainingHyperparameterLoraLanguage {
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    rank                            Int @default(8)
+    alpha                           Int @default(16)
+    dropout                         Float @default(0.05)
+    epochs                          Int @default(3)
+    learningRate                    Float @map("learning_rate") @default(0.00002)
+    gradientAccumulationSteps       Int @map("gradient_accumulation_steps") @default(8)
+    
+    targetModulesId                 String @map("target_modules_id") @db.Uuid
+    targetModules                   TrainingTargetModules @relation(fields: [targetModulesId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+    sessions                        TrainingSession[]
+    
+    @@map("training_hyperparameter_lora_language")
     @@schema("ai")
 }
 
 model TrainingHyperparameterDistill {
-    id                          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    temperature                 Float @default(4.0)
-    alpha                       Decimal @db.Decimal(4,3) @default(0.7)
-    epochs                      Int @default(30)
-    batchSize                   Int @map("batch_size") @default(64)
-    learningRate                Float @map("learning_rate") @default(0.001)
-    studentArchitecture         String @map("student_architecture")
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    temperature                     Float @default(4.0)
+    alpha                           Decimal @db.Decimal(4,3) @default(0.7)
+    epochs                          Int @default(30)
+    batchSize                       Int @map("batch_size") @default(64)
+    learningRate                    Float @map("learning_rate") @default(0.001)
+    studentArchitecture             String @map("student_architecture")
     
-    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-    sessions                    TrainingSession[]
+    sessions                        TrainingSession[]
     
     @@map("training_hyperparameter_distill")
     @@schema("ai")
 }
 
 model TrainingHyperparameterPrune {
-    id                          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    targetSparsity              Decimal @map("target_sparsity") @db.Decimal(4,3) @default(0.7)
-    iterations                  Int @default(5)
-    sparsitySchedule            TrainingSparsitySchedule @map("sparsity_schedule") @default(linear)
-    finetuneEpochsPerIter       Int @map("finetune_epochs_per_iter") @default(3)
-    pruningCriterion            TrainingPruningCriterion @map("pruning_criterion") @default(l1Magnitude)
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    targetSparsity                  Decimal @map("target_sparsity") @db.Decimal(4,3) @default(0.7)
+    iterations                      Int @default(5)
+    sparsitySchedule                TrainingSparsitySchedule @map("sparsity_schedule") @default(linear)
+    finetuneEpochsPerIter           Int @map("finetune_epochs_per_iter") @default(3)
+    pruningCriterion                TrainingPruningCriterion @map("pruning_criterion") @default(l1Magnitude)
     
-    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-    sessions                    TrainingSession[]
+    sessions                        TrainingSession[]
     
     @@map("training_hyperparameter_prune")
     @@schema("ai")
 }
 
 model TrainingHyperparameterQuantize {
-    id                          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    method                      TrainingQuantizeMethod @default(ptq)
-    precision                   TrainingPrecision @default(int8)
-    calibrationSamples          Int @map("calibration_samples") @default(100)
-    accuracyDropThreshold       Decimal @map("accuracy_drop_threshold") @db.Decimal(6,5) @default(0.02)
-    qatEpochs                   Int @map("qat_epochs") @default(5)
-    qatLearningRate             Float @map("qat_learning_rate") @default(0.001)
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    method                          TrainingQuantizeMethod @default(ptq)
+    precision                       TrainingPrecision @default(int8)
+    calibrationSamples              Int @map("calibration_samples") @default(100)
+    accuracyDropThreshold           Decimal @map("accuracy_drop_threshold") @db.Decimal(6,5) @default(0.02)
+    qatEpochs                       Int @map("qat_epochs") @default(5)
+    qatLearningRate                 Float @map("qat_learning_rate") @default(0.001)
     
-    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-    sessions                    TrainingSession[]
+    sessions                        TrainingSession[]
 
     @@map("training_hyperparameter_quantize")
     @@schema("ai")
 }
 
 model TrainingContract {
-    id                          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    signal                      TrainingSignal
-    notes                       String?
-    version                     Int @default(1)
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    signal                          TrainingSignal
+    notes                           String?
+    version                         Int @default(1)
 
-    seismicId                   String? @map("seismic_id") @db.Uuid
-    seismic                     TrainingSeismic? @relation(fields: [seismicId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+    seismicId                       String? @map("seismic_id") @db.Uuid
+    seismic                         TrainingSeismic? @relation(fields: [seismicId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-    deformationId               String? @map("deformation_id") @db.Uuid
-    deformation                 TrainingDeformation? @relation(fields: [deformationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+    deformationId                   String? @map("deformation_id") @db.Uuid
+    deformation                     TrainingDeformation? @relation(fields: [deformationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    languageId                      String? @map("language_id") @db.Uuid
+    language                        TrainingLanguage? @relation(fields: [languageId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-    sessions                    TrainingSession[]
-    versions                    DatasetVersion[]
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+    sessions                        TrainingSession[]
+    versions                        DatasetVersion[]
 
     @@unique([signal, version])
     @@map("training_contract")
@@ -464,43 +558,46 @@ model TrainingContract {
 }
 
 model TrainingSession {
-    id                          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    signal                      TrainingSignal
-    stage                       TrainingStage
-    status                      TrainingStatus
-    samples                     Int
-    seed                        Int
-    gitSha                      String? @map("git_sha")
-    gitUrl                      String? @map("git_url")
-    startedAt                   DateTime? @map("started_at") @db.Timestamptz(6)
-    finishedAt                  DateTime? @map("finished_at") @db.Timestamptz(6)
-    errorMessage                String? @map("error_message")
+    id                              String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    signal                          TrainingSignal
+    stage                           TrainingStage
+    status                          TrainingStatus
+    samples                         Int
+    seed                            Int
+    gitSha                          String? @map("git_sha")
+    gitUrl                          String? @map("git_url")
+    startedAt                       DateTime? @map("started_at") @db.Timestamptz(6)
+    finishedAt                      DateTime? @map("finished_at") @db.Timestamptz(6)
+    errorMessage                    String? @map("error_message")
 
-    hyperparameterPretrainId    String? @map("hyperparameter_pretrain_id") @db.Uuid
-    hyperparameterPretrain      TrainingHyperparameterPretrain? @relation(fields: [hyperparameterPretrainId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+    hyperparameterPretrainId        String? @map("hyperparameter_pretrain_id") @db.Uuid
+    hyperparameterPretrain          TrainingHyperparameterPretrain? @relation(fields: [hyperparameterPretrainId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-    hyperparameterLoraId        String? @map("hyperparameter_lora_id") @db.Uuid
-    hyperparameterLora          TrainingHyperparameterLora? @relation(fields: [hyperparameterLoraId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+    hyperparameterLoraVisualId      String? @map("hyperparameter_lora_visual_id") @db.Uuid
+    hyperparameterLoraVisual        TrainingHyperparameterLoraVisual? @relation(fields: [hyperparameterLoraVisualId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-    hyperparameterDistillId     String? @map("hyperparameter_distill_id") @db.Uuid
-    hyperparameterDistill       TrainingHyperparameterDistill? @relation(fields: [hyperparameterDistillId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+    hyperparameterLoraLanguageId    String? @map("hyperparameter_lora_language_id") @db.Uuid
+    hyperparameterLoraLanguage      TrainingHyperparameterLoraLanguage? @relation(fields: [hyperparameterLoraLanguageId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-    hyperparameterPruneId       String? @map("hyperparameter_prune_id") @db.Uuid
-    hyperparameterPrune         TrainingHyperparameterPrune? @relation(fields: [hyperparameterPruneId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+    hyperparameterDistillId         String? @map("hyperparameter_distill_id") @db.Uuid
+    hyperparameterDistill           TrainingHyperparameterDistill? @relation(fields: [hyperparameterDistillId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-    hyperparameterQuantizeId    String? @map("hyperparameter_quantize_id") @db.Uuid
-    hyperparameterQuantize      TrainingHyperparameterQuantize? @relation(fields: [hyperparameterQuantizeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+    hyperparameterPruneId           String? @map("hyperparameter_prune_id") @db.Uuid
+    hyperparameterPrune             TrainingHyperparameterPrune? @relation(fields: [hyperparameterPruneId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-    contractId                  String @map("contract_id") @db.Uuid
-    contract                    TrainingContract @relation(fields: [contractId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+    hyperparameterQuantizeId        String? @map("hyperparameter_quantize_id") @db.Uuid
+    hyperparameterQuantize          TrainingHyperparameterQuantize? @relation(fields: [hyperparameterQuantizeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-    versionId                   String @map("version_id") @db.Uuid
-    version                     DatasetVersion @relation(fields: [versionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+    contractId                      String @map("contract_id") @db.Uuid
+    contract                        TrainingContract @relation(fields: [contractId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    versionId                       String @map("version_id") @db.Uuid
+    version                         DatasetVersion @relation(fields: [versionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-    artifact                    ModelArtifact?
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+    artifact                        ModelArtifact?
 
     @@index([signal, createdAt(sort: Desc)], map: "idx_training_session_by_recency")
     @@index([signal, stage, status], map: "idx_training_session_by_stage_and_status")

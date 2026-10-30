@@ -16,8 +16,9 @@ from ..enums import (
     TrainingStage,
     TrainingStatus,
     TrainingPrecision,
-    TrainingSeismicLabel,
     TrainingDeformationLabel,
+    TrainingSeismicLabel,
+    TrainingLanguageLabel,
     TrainingWindow,
     TrainingNormalize,
     TrainingOptimizer,
@@ -53,6 +54,18 @@ class TrainingSeismicClass(BaseFiery):
     def deterministic_id(self) -> Optional[str]:
         """Stable id derived from (vt, lp, tr, tc)"""
         return UuidUtils.deterministic_uuid(self.vt, self.lp, self.tr, self.tc)
+
+
+class TrainingLanguageClass(BaseFiery):
+    """Normalized Training Language Class"""
+
+    background: bool = True
+    unrest: bool = True
+    eruption: bool = True
+
+    def deterministic_id(self) -> Optional[str]:
+        """Stable id derived from (background, unrest, eruption)"""
+        return UuidUtils.deterministic_uuid(self.background, self.unrest, self.eruption)
 
 
 class TrainingDeformationSource(BaseFiery):
@@ -130,6 +143,41 @@ class TrainingSeismicEvent(BaseFiery):
         return UuidUtils.deterministic_uuid(self.waveform_path)
 
 
+class TrainingPassage(BaseFiery):
+    """Normalized Training Passage"""
+
+    source: TrainingSampleSource
+    split: TrainingSplit
+    label: TrainingLanguageLabel
+    citation: str
+    published_at: datetime
+    chunk_index: int
+    storage_path: str
+    volcano_id: Optional[str] = None
+
+    def deterministic_id(self) -> Optional[str]:
+        """Stable id derived from (storage_path)"""
+        if not self.storage_path:
+            return None
+        return UuidUtils.deterministic_uuid(self.storage_path)
+
+
+class TrainingDeformation(BaseFiery):
+    """Normalized Training Deformation"""
+
+    patch_px: int
+    wrap_rad: Decimal
+    normalize: TrainingNormalize
+    coherence_min: Decimal
+    class_id: str
+
+    def deterministic_id(self) -> Optional[str]:
+        """Stable id derived from (patch_px, normalize, class_id)"""
+        return UuidUtils.deterministic_uuid(
+            self.patch_px, self.normalize.value, self.class_id
+        )
+
+
 class TrainingSeismic(BaseFiery):
     """Normalized Training Seismic"""
 
@@ -152,20 +200,15 @@ class TrainingSeismic(BaseFiery):
         )
 
 
-class TrainingDeformation(BaseFiery):
-    """Normalized Training Deformation"""
+class TrainingLanguage(BaseFiery):
+    """Normalized Training Language"""
 
-    patch_px: int
-    wrap_rad: Decimal
-    normalize: TrainingNormalize
-    coherence_min: Decimal
+    max_characters: int
     class_id: str
 
     def deterministic_id(self) -> Optional[str]:
-        """Stable id derived from (patch_px, normalize, class_id)"""
-        return UuidUtils.deterministic_uuid(
-            self.patch_px, self.normalize.value, self.class_id
-        )
+        """Stable id derived from (max_characters, class_id)"""
+        return UuidUtils.deterministic_uuid(self.max_characters, self.class_id)
 
 
 class TrainingHyperparameterPretrain(BaseFiery):
@@ -201,14 +244,34 @@ class TrainingTargetModules(BaseFiery):
         )
 
 
-class TrainingHyperparameterLora(BaseFiery):
-    """Normalized Training Hyperparameter LoRA"""
+class TrainingHyperparameterLoraVisual(BaseFiery):
+    """Normalized Training Hyperparameter LoRA Visual"""
 
     rank: int = 8
     alpha: int = 16
     dropout: float = 0.1
     epochs: int = 10
     learning_rate: float = 0.0003
+    target_modules_id: str
+
+    def deterministic_id(self) -> Optional[str]:
+        """Stable id derived from (rank, alpha, target_modules_id)"""
+        if not self.target_modules_id:
+            return None
+        return UuidUtils.deterministic_uuid(
+            self.rank, self.alpha, self.target_modules_id
+        )
+
+
+class TrainingHyperparameterLoraLanguage(BaseFiery):
+    """Normalized Training Hyperparameter LoRA Language"""
+
+    rank: int = 8
+    alpha: int = 16
+    dropout: float = 0.05
+    epochs: int = 3
+    learning_rate: float = 0.00002
+    gradient_accumulation_steps: int = 8
     target_modules_id: str
 
     def deterministic_id(self) -> Optional[str]:
@@ -282,6 +345,7 @@ class TrainingContract(BaseFiery):
     version: int = 1
     seismic_id: Optional[str] = None
     deformation_id: Optional[str] = None
+    language_id: Optional[str] = None
 
     def deterministic_id(self) -> Optional[str]:
         """Stable id derived from (signal, version)"""
@@ -302,7 +366,8 @@ class TrainingSession(BaseFiery):
     finished_at: Optional[datetime] = None
     error_message: Optional[str] = None
     hyperparameter_pretrain_id: Optional[str] = None
-    hyperparameter_lora_id: Optional[str] = None
+    hyperparameter_lora_visual_id: Optional[str] = None
+    hyperparameter_lora_language_id: Optional[str] = None
     hyperparameter_distill_id: Optional[str] = None
     hyperparameter_prune_id: Optional[str] = None
     hyperparameter_quantize_id: Optional[str] = None

@@ -60,7 +60,7 @@ def _loaded(deformation: TrainingDeformation, **overrides) -> LoadedModel:
         artifact_id="art-1",
         tier=ModelTier.CLOUD,
         role=ModelRole.SCREENER,
-        stage=TrainingStage.LORA,
+        stage=TrainingStage.LORA_VISUAL,
         precision=TrainingPrecision.FP32,
         architecture="vit_small_patch16_224.augreg_in21k_ft_in1k",
         param_count=1,

@@ -12,7 +12,8 @@ from fiery_python import (
     ModelRole,
     ModelTier,
     TrainingHyperparameterDistill,
-    TrainingHyperparameterLora,
+    TrainingHyperparameterLoraLanguage,
+    TrainingHyperparameterLoraVisual,
     TrainingHyperparameterPretrain,
     TrainingHyperparameterPrune,
     TrainingHyperparameterQuantize,
@@ -28,6 +29,8 @@ from integrations.train.services.job_spec import (
     TrainJobSpec,
     _VIT_BASE_MODEL_ID,
     _VIT_REVISION,
+    _LLM_BASE_MODEL_ID,
+    _LLM_REVISION,
 )
 
 
@@ -35,7 +38,7 @@ def _session(**overrides) -> TrainingSession:
     payload = {
         "id": "sess-1",
         "signal": TrainingSignal.DEFORMATION,
-        "stage": TrainingStage.LORA,
+        "stage": TrainingStage.LORA_VISUAL,
         "status": TrainingStatus.PENDING,
         "samples": 10,
         "seed": 42,
@@ -63,8 +66,10 @@ def _pretrain() -> TrainingHyperparameterPretrain:
     return TrainingHyperparameterPretrain(id="pretrain-1")
 
 
-def _lora() -> TrainingHyperparameterLora:
-    return TrainingHyperparameterLora(id="lora-1", target_modules_id="mod-1")
+def _lora_visual() -> TrainingHyperparameterLoraVisual:
+    return TrainingHyperparameterLoraVisual(
+        id="lora_visual-1", target_modules_id="mod-1"
+    )
 
 
 def _modules() -> TrainingTargetModules:
@@ -113,14 +118,14 @@ def _parent_id(stage: TrainingStage) -> str | None:
 
 def _packed(stage: TrainingStage):
     if stage is TrainingStage.PRETRAIN:
-        return (_pretrain(), None, None, None, None)
-    if stage is TrainingStage.LORA:
-        return (None, (_lora(), _modules()), None, None, None)
+        return (_pretrain(), None, None, None, None, None)
+    if stage is TrainingStage.LORA_VISUAL:
+        return (None, (_lora_visual(), _modules()), None, None, None, None)
     if stage is TrainingStage.DISTILL:
-        return (None, None, _distill(), None, None)
+        return (None, None, None, _distill(), None, None)
     if stage is TrainingStage.PRUNE:
-        return (None, None, None, _prune(), None)
-    return (None, None, None, None, _quantize())
+        return (None, None, None, None, _prune(), None)
+    return (None, None, None, None, None, _quantize())
 
 
 @pytest.mark.parametrize(
@@ -135,9 +140,9 @@ def _packed(stage: TrainingStage):
             TrainingPrecision.FP32,
         ),
         (
-            TrainingStage.LORA,
+            TrainingStage.LORA_VISUAL,
             TrainingSignal.DEFORMATION,
-            "lora",
+            "lora_visual",
             ModelTier.CLOUD,
             ModelRole.SCREENER,
             TrainingPrecision.FP32,
@@ -205,7 +210,7 @@ def test_build_job_spec_payload(
         assert spec["parent_precision"] == TrainingPrecision.FP32.value
     else:
         assert "parent_id" not in spec
-    if stage is TrainingStage.LORA:
+    if stage is TrainingStage.LORA_VISUAL:
         assert spec["base_model_id"] == _VIT_BASE_MODEL_ID
         assert spec["revision"] == _VIT_REVISION
     else:
@@ -213,16 +218,36 @@ def test_build_job_spec_payload(
         assert "revision" not in spec
 
 
-def test_build_job_spec_lora_target_modules(monkeypatch):
+def test_build_job_spec_lora_visual_target_modules(monkeypatch):
     monkeypatch.setattr(
         "integrations.train.services.job_spec.config.get_required",
         lambda _key: "https://ai.example",
     )
     spec = TrainJobSpec.build_job_spec(
-        _session(), _version(), _packed(TrainingStage.LORA), "nonce-1"
+        _session(), _version(), _packed(TrainingStage.LORA_VISUAL), "nonce-1"
     )
-    assert spec["lora"]["target_modules"]["query"] is True
-    assert spec["lora"]["target_modules"]["key"] is False
+    assert spec["lora_visual"]["target_modules"]["query"] is True
+    assert spec["lora_visual"]["target_modules"]["key"] is False
+
+
+def test_build_job_spec_lora_language_pins(monkeypatch):
+    monkeypatch.setattr(
+        "integrations.train.services.job_spec.config.get_required",
+        lambda _key: "https://ai.example",
+    )
+    modules = TrainingTargetModules(query=True, key=True, value=True, output=True)
+    lora_language = TrainingHyperparameterLoraLanguage(target_modules_id=modules.id)
+    spec = TrainJobSpec.build_job_spec(
+        _session(stage=TrainingStage.LORA_LANGUAGE, signal=TrainingSignal.LANGUAGE),
+        _version(),
+        (None, None, (lora_language, modules), None, None, None),
+        "nonce-1",
+    )
+    assert spec["base_model_id"] == _LLM_BASE_MODEL_ID
+    assert spec["revision"] == _LLM_REVISION
+    assert "passage_repo_id" not in spec
+    assert "passage_revision" not in spec
+    assert spec["role"] == ModelRole.ANALYST.value
 
 
 def test_build_job_spec_returns_none_when_parent_missing(monkeypatch):
@@ -245,9 +270,9 @@ def test_build_job_spec_returns_none_when_stage_slot_empty(monkeypatch):
         lambda _key: "https://ai.example",
     )
     spec = TrainJobSpec.build_job_spec(
-        _session(stage=TrainingStage.LORA),
+        _session(stage=TrainingStage.LORA_VISUAL),
         _version(),
-        (_pretrain(), None, None, None, None),
+        (_pretrain(), None, None, None, None, None),
         "nonce-1",
     )
     assert spec is None
@@ -260,5 +285,5 @@ def test_build_job_spec_requires_api_url(monkeypatch):
     )
     with pytest.raises(AppError, match="AI_API_URL"):
         TrainJobSpec.build_job_spec(
-            _session(), _version(), _packed(TrainingStage.LORA), "nonce-1"
+            _session(), _version(), _packed(TrainingStage.LORA_VISUAL), "nonce-1"
         )

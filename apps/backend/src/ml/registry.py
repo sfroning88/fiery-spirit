@@ -14,6 +14,7 @@ from huggingface_hub import hf_hub_download
 from peft import LoraConfig, get_peft_model, set_peft_model_state_dict
 from safetensors.torch import load
 from timm.models import load_checkpoint
+from transformers import AutoModelForCausalLM
 from typing import Any, Dict, Optional, Tuple
 from fiery_python import db_pool, logging, SyncLazyResource
 from fiery_python import (
@@ -34,6 +35,12 @@ _VIT_SNAPSHOT = "vit_small_patch16_224.augreg_in21k_ft_in1k"
 _VIT_BASE_MODEL_ID = "timm/vit_small_patch16_224.augreg_in21k_ft_in1k"
 _VIT_REVISION = "7e2c55630205e1266030f18370f4c6ed1a514b52"
 _VIT_WEIGHTS = "model.safetensors"
+
+_LLM_SNAPSHOT = "Qwen2.5-0.5B-Instruct"
+_LLM_BASE_MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
+_LLM_REVISION = "7ae557604adf67be50417f59c2c2f167def9a775"
+_LLM_WEIGHTS = "model.safetensors"
+
 _CNN_WIDTHS = {
     TrainingStage.PRETRAIN: (32, 64, 128),
     TrainingStage.DISTILL: (16, 32, 64),
@@ -203,24 +210,26 @@ class _ModelRegistry:
             stage = None
         if not stage:
             raise RuntimeError("Stage from sidecar missing or malformed")
-        if stage is TrainingStage.LORA:
+        if stage is TrainingStage.LORA_VISUAL:
             return _ModelRegistry._materialize_screener(sidecar)
+        elif stage is TrainingStage.LORA_LANGUAGE:
+            return _ModelRegistry._materialize_analyst(sidecar)
         else:
             return _ModelRegistry._materialize_cnn(stage)
 
     @staticmethod
     def _materialize_screener(sidecar: dict) -> nn.Module:
-        lora = sidecar.get("lora")
-        if not lora:
-            raise RuntimeError("sidecar missing lora")
-        modules = lora.get("target_modules") or {}
+        lora_visual = sidecar.get("lora_visual")
+        if not lora_visual:
+            raise RuntimeError("sidecar missing lora_visual")
+        modules = lora_visual.get("target_modules") or {}
         targets = []
         if modules.get("query") or modules.get("key") or modules.get("value"):
             targets.append("qkv")
         if modules.get("output"):
             targets.append("proj")
         if not targets:
-            raise RuntimeError("Empty LoRA target modules")
+            raise RuntimeError("Empty lora_visual target modules")
         base_model_id = sidecar.get("base_model_id")
         revision = sidecar.get("revision")
         if (
@@ -244,12 +253,58 @@ class _ModelRegistry:
         load_checkpoint(backbone, weights_path, strict=False)
         backbone.reset_classifier(num_classes=2)
         config = LoraConfig(
-            r=lora["rank"],
-            lora_alpha=lora["alpha"],
-            lora_dropout=lora["dropout"],
+            r=lora_visual["rank"],
+            lora_alpha=lora_visual["alpha"],
+            lora_dropout=lora_visual["dropout"],
             target_modules=targets,
             modules_to_save=["head"],
             bias="none",
+        )
+        return get_peft_model(backbone, config)
+
+    @staticmethod
+    def _materialize_analyst(sidecar: dict) -> nn.Module:
+        lora_language = sidecar.get("lora_language")
+        if not lora_language:
+            raise RuntimeError("sidecar missing lora_language")
+        modules = lora_language.get("target_modules") or {}
+        targets = []
+        if modules.get("query") or modules.get("key") or modules.get("value"):
+            targets.append("qkv")
+        if modules.get("output"):
+            targets.append("proj")
+        if not targets:
+            raise RuntimeError("Empty lora_language target modules")
+        base_model_id = sidecar.get("base_model_id")
+        revision = sidecar.get("revision")
+        if (
+            not base_model_id
+            or not revision
+            or not isinstance(base_model_id, str)
+            or not isinstance(revision, str)
+        ):
+            raise RuntimeError("Empty base_model_id and/or revision")
+        weights_path = hf_hub_download(
+            repo_id=base_model_id,
+            filename=_LLM_WEIGHTS,
+            revision=revision,
+            local_files_only=True,
+        )
+        backbone = AutoModelForCausalLM.from_pretrained(
+            base_model_id,
+            revision=revision,
+            torch_dtype=torch.bfloat16,
+        )
+        load_checkpoint(backbone, weights_path, strict=False)
+        backbone.reset_classifier(num_classes=2)
+        config = LoraConfig(
+            r=lora_language["rank"],
+            lora_alpha=lora_language["alpha"],
+            lora_dropout=lora_language["dropout"],
+            target_modules=targets,
+            modules_to_save=["head"],
+            bias="none",
+            task_type="CAUSAL_LM",
         )
         return get_peft_model(backbone, config)
 
@@ -289,7 +344,7 @@ class _ModelRegistry:
             else:
                 state_dict = payload if isinstance(payload, dict) else load(payload)
                 model = self.materialize(sidecar)
-                if stage is TrainingStage.LORA:
+                if stage is TrainingStage.LORA_VISUAL:
                     set_peft_model_state_dict(model, state_dict)
                 else:
                     model.load_state_dict(state_dict, strict=True)

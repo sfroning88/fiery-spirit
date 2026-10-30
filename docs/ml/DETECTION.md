@@ -26,6 +26,7 @@ The crux of `fiery-spirit` explores how `TinyML` practice can improve monitoring
 The system contains a `cloud-based visual model` and an `edge device (on-ground sensor) waveform model`.
 The bane of volcanology is signal reliability – there's a plethora of red herrings for eruption indicators.
 The challenge boils down to unifying multiple noisy data streams to leverage machine learning.
+The system further aids experts with a `cloud-based language model` adapted to domain-specific `volcanology` knowledge.
 
 ### Cloud AI
 
@@ -75,3 +76,4 @@ The project is based on these sources:
 - [Llaima volcano dataset: In-depth comparison of deep artificial neural network architectures on seismic events classification](https://pmc.ncbi.nlm.nih.gov/articles/PMC7206203/)
 - [OkadaTorch A Differentiable Programming of Okada Model to Calculate Displacements and Strains from Fault Parameters](https://arxiv.org/abs/2507.17126)
 - [Tsunami Early Warning From Global Navigation Satellite System Data Using Convolutional Neural Networks](https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2022GL099511)
+- [Mechanistic Interpretability of LoRA-Adapted Language Models for Nuclear Reactor Safety Applications](https://arxiv.org/abs/2507.09931)
