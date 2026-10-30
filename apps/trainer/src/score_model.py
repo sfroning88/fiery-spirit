@@ -52,6 +52,12 @@ def score_model(
         ):
             return _score_screener_model(model, loaders, artifact_id, spec)
         case (
+            TrainingStage.LORA_LANGUAGE.value,
+            ModelTier.CLOUD.value,
+            ModelRole.ANALYST.value,
+        ):
+            return _score_analyst_model(model, loaders, artifact_id, spec)
+        case (
             TrainingStage.PRETRAIN.value,
             ModelTier.CLOUD.value,
             ModelRole.TEACHER.value,
@@ -142,6 +148,33 @@ def _score_screener_model(
     if not metrics:
         raise RuntimeError("Missing test or holdout loader")
     return metrics, _decision(spec, threshold)
+
+
+def _score_analyst_model(
+    model: nn.Module,
+    loaders: dict[str, DataLoader],
+    artifact_id: str,
+    spec: dict,
+) -> Tuple[List[ModelMetric], dict]:
+    device = _model_device(model)
+    model.eval()
+    metrics: List[ModelMetric] = []
+    for split in (TrainingSplit.TEST, TrainingSplit.HOLDOUT):
+        loader = loaders.get(split.value)
+        if not loader:
+            continue
+        score = _mean_bleu(model, loader, device)
+        metrics.append(
+            ModelMetric(
+                name=ModelMetricName.BLEU_SCORE,
+                split=split,
+                value=Decimal(str(round(score, 6))),
+                artifact_id=artifact_id,
+            )
+        )
+    if not metrics:
+        raise RuntimeError("Missing test or holdout loader")
+    return metrics, _decision(spec, 0.0)
 
 
 def _score_teacher_or_student_model(
@@ -238,6 +271,92 @@ def _macro_f1(preds: Tensor, labels: Tensor) -> float:
     if not scores:
         raise RuntimeError("Empty split while scoring")
     return sum(scores) / len(scores)
+
+
+def _mean_bleu(model: nn.Module, loader: DataLoader, device: device) -> float:
+    import torch
+
+    scores = []
+    with torch.no_grad():
+        for batch in loader:
+            input_ids = batch["input_ids"].to(device)
+            attention_mask = batch["attention_mask"].to(device)
+            labels = batch["labels"].to(device)
+            prompt_len = int((labels[0] == -100).sum().item())
+            if prompt_len <= 0 or prompt_len >= int(labels.size(1)):
+                raise RuntimeError("Passage batch has no reference tokens")
+            reference = [
+                int(token)
+                for token in labels[0, prompt_len:].tolist()
+                if int(token) != -100
+            ]
+            hypothesis = _greedy_tokens(
+                model,
+                input_ids[:, :prompt_len],
+                attention_mask[:, :prompt_len],
+                len(reference),
+            )
+            scores.append(_sentence_bleu(reference, hypothesis))
+    if not scores:
+        raise RuntimeError("Empty split while scoring")
+    return sum(scores) / len(scores)
+
+
+def _greedy_tokens(
+    model: nn.Module,
+    prompt_ids: Tensor,
+    attention_mask: Tensor,
+    steps: int,
+) -> List[int]:
+    import torch
+
+    ids = prompt_ids
+    mask = attention_mask
+    generated = []
+    for _ in range(steps):
+        logits = model(input_ids=ids, attention_mask=mask)
+        if hasattr(logits, "logits"):
+            logits = logits.logits
+        next_id = logits[:, -1, :].argmax(dim=-1)
+        generated.append(int(next_id[0].item()))
+        next_column = next_id.unsqueeze(1)
+        ids = torch.cat([ids, next_column], dim=1)
+        mask = torch.cat([mask, torch.ones_like(next_column)], dim=1)
+    return generated
+
+
+def _sentence_bleu(reference: List[int], hypothesis: List[int]) -> float:
+    import math
+
+    if not reference or not hypothesis:
+        return 0.0
+    precisions = [_ngram_precision(reference, hypothesis, n) for n in range(1, 5)]
+    if any(precision == 0.0 for precision in precisions):
+        return 0.0
+    overlap = math.exp(sum(math.log(precision) for precision in precisions) / 4)
+    if len(hypothesis) > len(reference):
+        return overlap
+    return math.exp(1 - (len(reference) / len(hypothesis))) * overlap
+
+
+def _ngram_precision(reference: List[int], hypothesis: List[int], n: int) -> float:
+    if len(hypothesis) < n or len(reference) < n:
+        return 0.0
+    ref_counts: dict = {}
+    hyp_counts: dict = {}
+    for index in range(len(reference) - n + 1):
+        gram = tuple(reference[index : index + n])
+        ref_counts[gram] = ref_counts.get(gram, 0) + 1
+    for index in range(len(hypothesis) - n + 1):
+        gram = tuple(hypothesis[index : index + n])
+        hyp_counts[gram] = hyp_counts.get(gram, 0) + 1
+    clipped = sum(
+        min(count, ref_counts.get(gram, 0)) for gram, count in hyp_counts.items()
+    )
+    total = sum(hyp_counts.values())
+    if total == 0:
+        return 0.0
+    return clipped / total
 
 
 def _accuracy(preds: Tensor, labels: Tensor) -> float:

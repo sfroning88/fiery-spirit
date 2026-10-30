@@ -43,7 +43,7 @@ TEMPLATE = sql.SQL("""
         %(label)s::{label_enum},
         %(citation)s,
         %(published_at)s,
-        %(citation)s,
+        %(chunk_index)s,
         %(storage_path)s,
         %(volcano_id)s::uuid,
         NOW(),

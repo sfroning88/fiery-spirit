@@ -12,6 +12,7 @@ from fiery_python import (
     ModelRole,
     ModelTier,
     TrainingHyperparameterDistill,
+    TrainingHyperparameterLoraLanguage,
     TrainingHyperparameterLoraVisual,
     TrainingHyperparameterPretrain,
     TrainingHyperparameterPrune,
@@ -28,6 +29,8 @@ from integrations.train.services.job_spec import (
     TrainJobSpec,
     _VIT_BASE_MODEL_ID,
     _VIT_REVISION,
+    _LLM_BASE_MODEL_ID,
+    _LLM_REVISION,
 )
 
 
@@ -225,6 +228,26 @@ def test_build_job_spec_lora_visual_target_modules(monkeypatch):
     )
     assert spec["lora_visual"]["target_modules"]["query"] is True
     assert spec["lora_visual"]["target_modules"]["key"] is False
+
+
+def test_build_job_spec_lora_language_pins(monkeypatch):
+    monkeypatch.setattr(
+        "integrations.train.services.job_spec.config.get_required",
+        lambda _key: "https://ai.example",
+    )
+    modules = TrainingTargetModules(query=True, key=True, value=True, output=True)
+    lora_language = TrainingHyperparameterLoraLanguage(target_modules_id=modules.id)
+    spec = TrainJobSpec.build_job_spec(
+        _session(stage=TrainingStage.LORA_LANGUAGE, signal=TrainingSignal.LANGUAGE),
+        _version(),
+        (None, None, (lora_language, modules), None, None, None),
+        "nonce-1",
+    )
+    assert spec["base_model_id"] == _LLM_BASE_MODEL_ID
+    assert spec["revision"] == _LLM_REVISION
+    assert "passage_repo_id" not in spec
+    assert "passage_revision" not in spec
+    assert spec["role"] == ModelRole.ANALYST.value
 
 
 def test_build_job_spec_returns_none_when_parent_missing(monkeypatch):

@@ -35,8 +35,8 @@ enum TrainingSignal {
 
 enum TrainingStage {
     pretrain
-    loraVisual
-    loraLanguage
+    loraVisual @map("lora_visual")
+    loraLanguage @map("lora_language")
     distill
     prune
     quantize

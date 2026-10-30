@@ -20,10 +20,12 @@ from fiery_python import (
 )
 from src.build_loaders import (
     _DEFORMATION_BATCH_SIZE,
+    _LANGUAGE_BATCH_SIZE,
     _SEISMIC_BATCH_SIZE,
     _SEISMIC_EMPTY,
     _VIT_PX,
     _array_to_tensor,
+    _build_lora_language_loaders,
     _build_lora_visual_loaders,
     _build_quantize_loaders,
     _calibrate_loader,
@@ -277,3 +279,51 @@ def test_calibrate_loader_is_seeded_subset():
     )
     assert first.dataset.indices == second.dataset.indices
     assert len(first.dataset.indices) == 3
+
+
+class _FakeTokenizer:
+    pad_token_id = 0
+    eos_token_id = 1
+    eos_token = "<eos>"
+
+    def __call__(self, text, add_special_tokens=False):
+        return {"input_ids": [ord(char) for char in text]}
+
+
+def test_build_lora_language_loaders_tokenizes_reference_only():
+    passage_bytes = json.dumps(
+        {"prompt": "ab", "reference": "c"}, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    passage = np.frombuffer(passage_bytes, dtype=np.uint8)
+    unpacked = [
+        (
+            "a",
+            passage,
+            {"label": "orange", "split": "train"},
+        )
+    ]
+    spec = {
+        "seed": 7,
+        "samples": 1,
+        "manifest_path": "contract/hash/manifest.json",
+        "base_model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+        "revision": "def",
+    }
+    with (
+        patch(
+            "src.build_loaders.r2_s3.get_bytes",
+            return_value=json.dumps(_manifest()).encode("utf-8"),
+        ),
+        patch("fiery_python.BlobStorageServices.get_shard", return_value=b"tar"),
+        patch("fiery_python.Shard.read", return_value=unpacked),
+        patch(
+            "src.build_loaders._language_tokenizer",
+            return_value=_FakeTokenizer(),
+        ),
+    ):
+        loaders = _build_lora_language_loaders(spec)
+    batch = next(iter(loaders["train"]))
+    assert loaders["train"].batch_size == _LANGUAGE_BATCH_SIZE
+    assert batch["input_ids"].tolist() == [[ord("a"), ord("b"), ord("c"), 1]]
+    assert batch["labels"].tolist() == [[-100, -100, ord("c"), 1]]
+    assert batch["attention_mask"].tolist() == [[1, 1, 1, 1]]

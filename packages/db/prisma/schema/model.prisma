@@ -28,6 +28,7 @@ enum ModelMetricName {
     abstentionRate @map("abstention_rate")
     f1Score @map("f1_score")
     macrof1Score @map("macro_f1_score")
+    bleuScore @map("bleu_score")
 
     @@map("model_metric_name")
     @@schema("ai")

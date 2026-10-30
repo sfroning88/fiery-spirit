@@ -11,13 +11,16 @@ ALTER TYPE "ai"."training_sample_source" ADD VALUE 'academic';
 ALTER TYPE "ai"."training_signal" ADD VALUE 'language';
 
 -- AlterEnum
+ALTER TYPE "ai"."model_metric_name" ADD VALUE 'bleu_score';
+
+-- AlterEnum
 BEGIN;
-CREATE TYPE "ai"."training_stage_new" AS ENUM ('pretrain', 'loraVisual', 'loraLanguage', 'distill', 'prune', 'quantize');
+CREATE TYPE "ai"."training_stage_new" AS ENUM ('pretrain', 'lora_visual', 'lora_language', 'distill', 'prune', 'quantize');
 ALTER TABLE "ai"."model_artifact" ALTER COLUMN "stage" TYPE "ai"."training_stage_new" USING (
-    CASE "stage"::text WHEN 'lora' THEN 'loraVisual' ELSE "stage"::text END::"ai"."training_stage_new"
+    CASE "stage"::text WHEN 'lora' THEN 'lora_visual' ELSE "stage"::text END::"ai"."training_stage_new"
 );
 ALTER TABLE "ai"."training_session" ALTER COLUMN "stage" TYPE "ai"."training_stage_new" USING (
-    CASE "stage"::text WHEN 'lora' THEN 'loraVisual' ELSE "stage"::text END::"ai"."training_stage_new"
+    CASE "stage"::text WHEN 'lora' THEN 'lora_visual' ELSE "stage"::text END::"ai"."training_stage_new"
 );
 ALTER TYPE "ai"."training_stage" RENAME TO "training_stage_old";
 ALTER TYPE "ai"."training_stage_new" RENAME TO "training_stage";

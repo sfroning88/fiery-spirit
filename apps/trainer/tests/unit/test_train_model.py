@@ -24,6 +24,7 @@ from src.train_model import (
     _class_weights,
     _sparsity_at,
     _train_distill_model,
+    _train_lora_language_model,
     _train_lora_visual_model,
     _train_pretrain_model,
     _train_prune_model,
@@ -88,6 +89,53 @@ def test_train_lora_visual_model_runs_one_step():
     )
     assert trained is model
     assert not torch.equal(before, model.weight.detach())
+
+
+class _TokenModel(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.embed = nn.Embedding(8, 4)
+        self.out = nn.Linear(4, 8)
+
+    def forward(self, input_ids, attention_mask=None):
+        return self.out(self.embed(input_ids))
+
+
+def test_train_lora_language_model_runs_one_step():
+    model = _TokenModel()
+    rows = [
+        {
+            "input_ids": torch.tensor([1, 2, 3]),
+            "attention_mask": torch.tensor([1, 1, 1]),
+            "labels": torch.tensor([-100, 2, 3]),
+        },
+        {
+            "input_ids": torch.tensor([1, 4, 5]),
+            "attention_mask": torch.tensor([1, 1, 1]),
+            "labels": torch.tensor([-100, 4, 5]),
+        },
+    ]
+    loader = DataLoader(
+        rows,
+        batch_size=1,
+        collate_fn=lambda batch: {
+            key: torch.stack([row[key] for row in batch]) for key in batch[0]
+        },
+    )
+    before = model.out.weight.detach().clone()
+    trained = _train_lora_language_model(
+        model,
+        {"train": loader},
+        {
+            "lora_language": {
+                "epochs": 1,
+                "learning_rate": 1e-2,
+                "gradient_accumulation_steps": 2,
+            }
+        },
+    )
+    assert trained is model
+    assert not torch.equal(before, model.out.weight.detach())
 
 
 def test_train_pretrain_model_runs_one_epoch():

@@ -18,6 +18,10 @@ from ml.registry import (
     _VIT_REVISION,
     _VIT_SNAPSHOT,
     _VIT_WEIGHTS,
+    _LLM_BASE_MODEL_ID,
+    _LLM_REVISION,
+    _LLM_SNAPSHOT,
+    _LLM_WEIGHTS,
 )
 
 KEY = (ModelTier.CLOUD, ModelRole.SCREENER)

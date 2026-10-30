@@ -6,9 +6,9 @@ from fiery_python import (
 )
 
 QUERY = sql.SQL("""
-    SELECT training_seismic.id::text,
-        training_seismic.max_characters,
-        training_seismic.class_id::text
+    SELECT training_language.id::text,
+        training_language.max_characters,
+        training_language.class_id::text
     FROM {language_table} training_language
     INNER JOIN {contract_table} training_contract
         ON training_language.id = training_contract.language_id

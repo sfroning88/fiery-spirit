@@ -106,6 +106,23 @@ def lora_cloud_screener(model, loader, spec):
             epoch(model, loader, optimizer, loss_fn, device)
 ```
 
+```python
+def _lora_cloud_analyst(model, loader, spec):
+    params = (param for param in model.parameters if requires_grad)
+    optimizer = AdamW(params, learning_rate)
+    loss_fn = CrossEntropyLoss()
+    for _ in range(epochs):
+        pending = 0
+        for input_ids, attention_mask, labels in loader:
+            logits = model(input_ids, attention_mask).logits
+            # CE(logits[:, :-1], labels[:, 1:]); prompt positions are -100
+            (loss_fn(logits[:, :-1], labels[:, 1:]) / steps).backward()
+            pending += 1
+            if pending == steps:
+                optimizer.step()
+                pending = 0
+```
+
 ### Knowledge Distillation
 
 For `transfer learning` from `teacher CNN`:
@@ -227,6 +244,7 @@ The promotion can occur per `MODEL_REGISTRY_SLOT` from `/api/ml/promote`:
 ```python
 MODEL_REGISTRY_SLOTS = [
     (CLOUD, SCREENER),
+    (CLOUD, ANALYST),
     (CLOUD, TEACHER),
     (EDGE, STUDENT),
 ]
@@ -247,6 +265,8 @@ Depending on the `MODEL_REGISTRY_SLOT`, different metrics are checked:
 match MODEL_REGISTRY_SLOT:
     case (CLOUD, SCREENER):
         _screener_gate # RECALL, PRECISION, FALSE_POSITIVE_RATE, ABSTENTION_RATE
+    case (CLOUD, ANALYST):
+        _analyst_gate # BLEU_SCORE
     case (CLOUD, TEACHER):
         _teacher_gate # MACRO_F1_SCORE
     case (EDGE, STUDENT):

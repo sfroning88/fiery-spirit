@@ -14,6 +14,12 @@ _VIT_SNAPSHOT = "vit_small_patch16_224.augreg_in21k_ft_in1k"
 _VIT_BASE_MODEL_ID = "timm/vit_small_patch16_224.augreg_in21k_ft_in1k"
 _VIT_REVISION = "7e2c55630205e1266030f18370f4c6ed1a514b52"
 _VIT_WEIGHTS = "model.safetensors"
+
+_LLM_SNAPSHOT = "Qwen2.5-0.5B-Instruct"
+_LLM_BASE_MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
+_LLM_REVISION = "7ae557604adf67be50417f59c2c2f167def9a775"
+_LLM_WEIGHTS = "model.safetensors"
+
 _NUM_SEISMIC_CLASSES = 4
 _TEACHER_ARCHITECTURE = "cnn_small"
 _STUDENT_ARCHITECTURE = "cnn_tiny"
@@ -78,6 +84,8 @@ def build_job(spec: dict) -> Optional[nn.Module]:
             return _build_pretrain_job(spec)
         case TrainingStage.LORA_VISUAL.value:
             return _build_lora_visual_job(spec)
+        case TrainingStage.LORA_LANGUAGE.value:
+            return _build_lora_language_job(spec)
         case TrainingStage.DISTILL.value:
             return _build_distill_job(spec)
         case TrainingStage.PRUNE.value:
@@ -126,6 +134,46 @@ def _build_lora_visual_job(spec: dict) -> Optional[PeftModel]:
         target_modules=targets,
         modules_to_save=["head"],
         bias="none",
+    )
+    return get_peft_model(backbone, config)
+
+
+def _build_lora_language_job(spec: dict) -> Optional[PeftModel]:
+    import torch
+    from peft import LoraConfig, get_peft_model
+    from transformers import AutoModelForCausalLM
+
+    lora_language = spec["lora_language"]
+    targets = _peft_targets(lora_language["target_modules"])
+    if not targets:
+        raise RuntimeError("Empty lora_language target modules")
+    base_model_id = spec.get("base_model_id")
+    revision = spec.get("revision")
+    if (
+        not base_model_id
+        or not revision
+        or not isinstance(base_model_id, str)
+        or not isinstance(revision, str)
+    ):
+        raise RuntimeError("Empty base_model_id and/or revision")
+    hf_hub_download(
+        repo_id=base_model_id,
+        filename=_LLM_WEIGHTS,
+        revision=revision,
+    )
+    backbone = AutoModelForCausalLM.from_pretrained(
+        base_model_id,
+        revision=revision,
+        torch_dtype=torch.bfloat16,
+    )
+    config = LoraConfig(
+        r=lora_language["rank"],
+        lora_alpha=lora_language["alpha"],
+        lora_dropout=lora_language["dropout"],
+        target_modules=targets,
+        modules_to_save=["head"],
+        bias="none",
+        task_type="CAUSAL_LM",
     )
     return get_peft_model(backbone, config)
 

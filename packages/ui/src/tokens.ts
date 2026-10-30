@@ -56,6 +56,7 @@ export const metricLabel: Record<ModelMetricName, string> = {
   abstentionRate: "Abs",
   f1Score: "F1",
   macrof1Score: "Macro-F1",
+  bleuScore: "BLEU",
 };
 
 export const budgetLabel: Record<ModelBudgetMetricName, string> = {

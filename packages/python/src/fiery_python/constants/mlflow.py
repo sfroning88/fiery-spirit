@@ -8,6 +8,7 @@ from ..enums import ModelTier, ModelRole
 
 MLFLOW_REGISTERED_MODELS = {
     (ModelTier.CLOUD, ModelRole.SCREENER): "Fiery-Screener",
+    (ModelTier.CLOUD, ModelRole.ANALYST): "Fiery-Analyst",
     (ModelTier.CLOUD, ModelRole.TEACHER): "Fiery-Teacher",
     (ModelTier.EDGE, ModelRole.STUDENT): "Fiery-Student",
 }

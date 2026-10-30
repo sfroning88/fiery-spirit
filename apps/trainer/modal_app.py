@@ -33,6 +33,28 @@ def _download_vit_small() -> None:
     )
 
 
+def _download_llm_instruct() -> None:
+    import torch
+    from huggingface_hub import hf_hub_download
+    from transformers import AutoModelForCausalLM
+
+    _LLM_SNAPSHOT = "Qwen2.5-0.5B-Instruct"
+    _LLM_BASE_MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
+    _LLM_REVISION = "7ae557604adf67be50417f59c2c2f167def9a775"
+    _LLM_WEIGHTS = "model.safetensors"
+
+    hf_hub_download(
+        repo_id=_LLM_BASE_MODEL_ID,
+        filename=_LLM_WEIGHTS,
+        revision=_LLM_REVISION,
+    )
+    AutoModelForCausalLM.from_pretrained(
+        _LLM_BASE_MODEL_ID,
+        revision=_LLM_REVISION,
+        torch_dtype=torch.bfloat16,
+    )
+
+
 image = (
     modal.Image.debian_slim(python_version="3.13")
     .uv_pip_install(
@@ -46,6 +68,7 @@ image = (
         "webdataset==1.0.2",
     )
     .run_function(_download_vit_small, secrets=secrets)
+    .run_function(_download_llm_instruct, secrets=secrets)
     .add_local_dir(
         "../../packages/python",
         remote_path="/opt/packages/python",
@@ -79,6 +102,15 @@ def lora_visual_screener(spec: Dict) -> Dict:
     _VIT_SNAPSHOT = "vit_small_patch16_224.augreg_in21k_ft_in1k"
 
     return entrypoint(spec, architecture=_VIT_SNAPSHOT)
+
+
+@app.function(image=image, gpu="T4", timeout=3600, secrets=secrets)
+def lora_language_analyst(spec: Dict) -> Dict:
+    from src.entrypoint import entrypoint
+
+    _LLM_SNAPSHOT = "Qwen2.5-0.5B-Instruct"
+
+    return entrypoint(spec, architecture=_LLM_SNAPSHOT)
 
 
 @app.function(image=image, gpu="T4", timeout=3600, secrets=secrets)

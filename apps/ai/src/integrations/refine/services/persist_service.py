@@ -60,6 +60,7 @@ class RefinePersistService:
             version=row.get("version"),
             seismic_id=row.get("seismic_id"),
             deformation_id=row.get("deformation_id"),
+            language_id=row.get("language_id"),
         )
 
     @staticmethod

@@ -10,7 +10,8 @@ QUERY = sql.SQL("""
         notes,
         version,
         seismic_id::text,
-        deformation_id::text
+        deformation_id::text,
+        language_id::text
     FROM {table}
     WHERE id = %s::uuid
 """).format(

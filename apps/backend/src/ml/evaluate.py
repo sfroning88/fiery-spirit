@@ -6,6 +6,7 @@ Operations pertaining to ML promotion
 
 from datetime import datetime, timezone
 from decimal import Decimal
+from this import d
 from typing import List, Optional, Tuple
 from fiery_python import db_pool, logging
 from fiery_python import (
@@ -44,6 +45,8 @@ _SCREENER_MIN_RECALL = Decimal("0.70")
 _SCREENER_MIN_PRECISION = Decimal("0.80")
 _SCREENER_MAX_FPR = Decimal("0.05")
 _SCREENER_MIN_RECALL_DELTA = Decimal("0.01")
+_ANALYST_MIN_BLEU_SCORE = Decimal("0.30")
+_ANALYST_MIN_BLEU_SCORE_DELTA = Decimal("0.01")
 _TEACHER_MIN_MACRO_F1_SCORE = Decimal("0.75")
 _TEACHER_MIN_MACRO_F1_SCORE_DELTA = Decimal("0.02")
 _STUDENT_MIN_ACCURACY = Decimal("0.80")
@@ -150,6 +153,8 @@ class _ModelEvaluator:
         match key:
             case (ModelTier.CLOUD, ModelRole.SCREENER):
                 return cls._screener_gate(challenger_metrics, metrics_to_beat)
+            case (ModelTier.CLOUD, ModelRole.ANALYST):
+                return cls._analyst_gate(challenger_metrics, metrics_to_beat)
             case (ModelTier.CLOUD, ModelRole.TEACHER):
                 return cls._teacher_gate(challenger_metrics, metrics_to_beat)
             case (ModelTier.EDGE, ModelRole.STUDENT):
@@ -194,6 +199,22 @@ class _ModelEvaluator:
                 return True
             return abstention_rate < incumbent_abstention_rate
         return recall_delta >= _SCREENER_MIN_RECALL_DELTA
+
+    @classmethod
+    def _analyst_gate(
+        cls,
+        challenger_metrics: List[ModelMetric],
+        metrics_to_beat: List[ModelMetric],
+    ) -> bool:
+        bleu_score = cls.metric_value(challenger_metrics, ModelMetricName.BLUE_SCORE)
+        if bleu_score is None:
+            return False
+        if bleu_score < _ANALYST_MIN_BLEU_SCORE:
+            return False
+        incumbent_bleu_score = cls._metric_value(
+            metrics_to_beat, ModelMetricName.BLEU_SCORE
+        )
+        return bleu_score - incumbent_bleu_score >= _ANALYST_MIN_BLEU_SCORE_DELTA
 
     @classmethod
     def _teacher_gate(

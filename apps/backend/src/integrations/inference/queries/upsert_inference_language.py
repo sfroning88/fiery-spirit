@@ -9,7 +9,8 @@ QUERY = sql.SQL("""
     INSERT INTO {table}
     (
         id,
-        score,
+        probabilities,
+        class_order,
         label,
         threshold_used,
         abstention_band,
@@ -25,7 +26,8 @@ QUERY = sql.SQL("""
     )
     VALUES (
         %(id)s,
-        %(score)s,
+        %(probabilities)s,
+        %(class_order)s::{label_enum}[],
         %(label)s::{label_enum},
         %(threshold_used)s,
         %(abstention_band)s,
@@ -41,7 +43,8 @@ QUERY = sql.SQL("""
     )
     ON CONFLICT (id)
     DO UPDATE SET
-        score = EXCLUDED.score,
+        probabilities = EXCLUDED.probabilities,
+        class_order = EXCLUDED.class_order,
         label = EXCLUDED.label,
         threshold_used = EXCLUDED.threshold_used,
         abstention_band = EXCLUDED.abstention_band,

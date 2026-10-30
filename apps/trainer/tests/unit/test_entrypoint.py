@@ -19,11 +19,15 @@ from fiery_python import (
     TrainingStage,
 )
 from src.build_job import DistillPair
-from src.entrypoint import _VIT_PARAMS, _seed, entrypoint
+from src.entrypoint import _VIT_PARAMS, _LLM_PARAMS, _seed, entrypoint
 
 _VIT_SNAPSHOT = "vit_small_patch16_224.augreg_in21k_ft_in1k"
 _VIT_BASE_MODEL_ID = "timm/vit_small_patch16_224.augreg_in21k_ft_in1k"
 _VIT_REVISION = "7e2c55630205e1266030f18370f4c6ed1a514b52"
+
+_LLM_SNAPSHOT = "Qwen2.5-0.5B-Instruct"
+_LLM_BASE_MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
+_LLM_REVISION = "7ae557604adf67be50417f59c2c2f167def9a775"
 
 
 class _TinyModel(nn.Module):
@@ -135,6 +139,52 @@ def test_entrypoint_saves_then_callbacks():
         "spec": "sess-1",
         "storage_path": "cloud/screener/sess-1.safetensors",
     }
+
+
+def test_entrypoint_saves_language_adapter():
+    metrics = _metrics()
+    decision = _decision()
+    model = _TinyModel()
+    spec = _spec(
+        stage=TrainingStage.LORA_LANGUAGE.value,
+        role=ModelRole.ANALYST.value,
+        lora_language={"epochs": 3, "learning_rate": 2e-5},
+        base_model_id=_LLM_BASE_MODEL_ID,
+        revision=_LLM_REVISION,
+    )
+    spec.pop("lora_visual")
+    adapter = {"lora_language_A": torch.ones(2)}
+    with (
+        patch("src.entrypoint.build_loaders", return_value={"train": object()}),
+        patch("src.entrypoint.build_job", return_value=model),
+        patch("src.entrypoint.train_model", return_value=model),
+        patch("src.entrypoint.score_model", return_value=(metrics, decision)),
+        patch("peft.get_peft_model_state_dict", return_value=adapter),
+        patch("src.entrypoint.ModelStorageServices.save_artifact") as save,
+        patch(
+            "src.entrypoint.ModelStorageServices.head_hmac",
+            return_value="b" * 64,
+        ),
+        patch(
+            "src.entrypoint.save_checkpoint", side_effect=lambda *a, **k: k["sidecar"]
+        ),
+        patch("src.entrypoint.send_callback") as callback,
+    ):
+        result = entrypoint(spec, _LLM_SNAPSHOT)
+    sidecar = save.call_args[0][1]
+    assert save.call_args[0][0] is adapter
+    assert save.call_args[0][2] == "cloud/analyst/sess-1.safetensors"
+    assert sidecar["architecture"] == _LLM_SNAPSHOT
+    assert sidecar["lora_language"] == spec["lora_language"]
+    assert sidecar["base_model_id"] == _LLM_BASE_MODEL_ID
+    assert sidecar["revision"] == _LLM_REVISION
+    assert "passage_repo_id" not in sidecar
+    assert "passage_revision" not in sidecar
+    assert "lora_visual" not in sidecar
+    assert callback.call_args.kwargs["param_count"] == _LLM_PARAMS + 2
+    assert callback.call_args.kwargs["architecture"] == _LLM_SNAPSHOT
+    assert result["ok"] is True
+    assert result["storage_path"] == "cloud/analyst/sess-1.safetensors"
 
 
 def test_entrypoint_skips_callback_when_train_fails():
