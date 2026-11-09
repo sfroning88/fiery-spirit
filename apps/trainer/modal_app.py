@@ -64,6 +64,7 @@ image = (
         "torch==2.13.0",
         "torchao==0.18.0",
         "timm==1.0.28",
+        "transformers==5.15.1",
         "peft==0.20.0",
         "webdataset==1.0.2",
     )

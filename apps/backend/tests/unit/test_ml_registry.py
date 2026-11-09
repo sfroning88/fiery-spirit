@@ -9,7 +9,13 @@ from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fiery_python import ModelRole, ModelTier, TrainingPrecision, TrainingStage
+from fiery_python import (
+    ModelRole,
+    ModelTier,
+    TrainingPrecision,
+    TrainingStage,
+    TrainingTargetModules,
+)
 from ml.models import LoadedModel
 from ml.registry import (
     SeismicCnn,
@@ -444,7 +450,7 @@ def test_materialize_screener_requires_base_pin():
                     "rank": 8,
                     "alpha": 16,
                     "dropout": 0.1,
-                    "target_modules": {"query": True},
+                    "target_modules": TrainingTargetModules(query=True),
                 },
             }
         )
@@ -461,7 +467,7 @@ def test_materialize_screener_wraps_pinned_backbone():
             "rank": 8,
             "alpha": 16,
             "dropout": 0.1,
-            "target_modules": {"query": True, "output": True},
+            "target_modules": TrainingTargetModules(query=True, output=True),
         },
     }
     with (

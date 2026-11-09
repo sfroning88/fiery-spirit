@@ -10,7 +10,11 @@ from ..endpoints import (
     INFERENCE_SINGLE_URL,
     endpoint_test,
 )
-from ..helpers import random_interferogram_id, random_seismic_event_id
+from ..helpers import (
+    random_interferogram_id,
+    random_seismic_event_id,
+    random_volcano_id,
+)
 from ...fiery_python import (
     MODEL_REGISTRY_SLOTS,
     ModelRole,
@@ -30,12 +34,21 @@ def run_inference_test(
     if signal not in (
         TrainingSignal.DEFORMATION.value,
         TrainingSignal.SEISMIC.value,
+        TrainingSignal.LANGUAGE.value,
     ):
-        raise ValueError("inference requires -signal deformation|seismic")
+        raise ValueError("inference requires -signal deformation|seismic|language")
 
     inferred: Dict[Tuple[ModelTier, ModelRole], Dict[str, Any]] = {}
-    if signal == TrainingSignal.SEISMIC.value:
+    if signal == TrainingSignal.LANGUAGE.value:
         slots: List[Tuple[ModelTier, ModelRole]] = [
+            key
+            for key in MODEL_REGISTRY_SLOTS
+            if key == (ModelTier.CLOUD, ModelRole.ANALYST)
+        ]
+        sample_key = "volcano_id"
+        sample_id = random_volcano_id()
+    elif signal == TrainingSignal.SEISMIC.value:
+        slots = [
             key
             for key in MODEL_REGISTRY_SLOTS
             if key

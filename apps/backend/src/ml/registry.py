@@ -24,8 +24,10 @@ from fiery_python import (
     ModelRole,
     TrainingStage,
     TrainingPrecision,
+    TrainingTargetModules,
     ModelStorageServices,
 )
+
 from .models import LoadedModel, ArtifactRegistry
 from .queries.select_promoted_artifact import QUERY as SELECT_PROMOTED_ARTIFACT
 
@@ -222,14 +224,10 @@ class _ModelRegistry:
         lora_visual = sidecar.get("lora_visual")
         if not lora_visual:
             raise RuntimeError("sidecar missing lora_visual")
-        modules = lora_visual.get("target_modules") or {}
-        targets = []
-        if modules.get("query") or modules.get("key") or modules.get("value"):
-            targets.append("qkv")
-        if modules.get("output"):
-            targets.append("proj")
-        if not targets:
+        target_modules: Optional[TrainingTargetModules] = lora_visual["target_modules"]
+        if not target_modules or not isinstance(target_modules, TrainingTargetModules):
             raise RuntimeError("Empty lora_visual target modules")
+        targets = target_modules._peft_targets(language=False)
         base_model_id = sidecar.get("base_model_id")
         revision = sidecar.get("revision")
         if (
@@ -267,14 +265,12 @@ class _ModelRegistry:
         lora_language = sidecar.get("lora_language")
         if not lora_language:
             raise RuntimeError("sidecar missing lora_language")
-        modules = lora_language.get("target_modules") or {}
-        targets = []
-        if modules.get("query") or modules.get("key") or modules.get("value"):
-            targets.append("qkv")
-        if modules.get("output"):
-            targets.append("proj")
-        if not targets:
+        target_modules: Optional[TrainingTargetModules] = lora_language[
+            "target_modules"
+        ]
+        if not target_modules or not isinstance(target_modules, TrainingTargetModules):
             raise RuntimeError("Empty lora_language target modules")
+        targets = target_modules._peft_targets(language=True)
         base_model_id = sidecar.get("base_model_id")
         revision = sidecar.get("revision")
         if (
@@ -295,14 +291,11 @@ class _ModelRegistry:
             revision=revision,
             torch_dtype=torch.bfloat16,
         )
-        load_checkpoint(backbone, weights_path, strict=False)
-        backbone.reset_classifier(num_classes=2)
         config = LoraConfig(
             r=lora_language["rank"],
             lora_alpha=lora_language["alpha"],
             lora_dropout=lora_language["dropout"],
             target_modules=targets,
-            modules_to_save=["head"],
             bias="none",
             task_type="CAUSAL_LM",
         )
@@ -344,7 +337,7 @@ class _ModelRegistry:
             else:
                 state_dict = payload if isinstance(payload, dict) else load(payload)
                 model = self.materialize(sidecar)
-                if stage is TrainingStage.LORA_VISUAL:
+                if stage in (TrainingStage.LORA_VISUAL, TrainingStage.LORA_LANGUAGE):
                     set_peft_model_state_dict(model, state_dict)
                 else:
                     model.load_state_dict(state_dict, strict=True)

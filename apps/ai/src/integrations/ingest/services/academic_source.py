@@ -138,7 +138,10 @@ class IngestAcademicSource:
                 return raw.replace(tzinfo=timezone.utc)
             return raw
         if isinstance(raw, str) and raw:
-            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            try:
+                parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            except:
+                return None
             if parsed.tzinfo is None:
                 return parsed.replace(tzinfo=timezone.utc)
             return parsed

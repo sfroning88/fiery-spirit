@@ -6,7 +6,7 @@ Class objects for Training schema
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional
+from typing import List, Optional
 from pydantic import Field
 from ._base_fiery import BaseFiery
 from ..enums import (
@@ -242,6 +242,30 @@ class TrainingTargetModules(BaseFiery):
         return UuidUtils.deterministic_uuid(
             self.query, self.key, self.value, self.output
         )
+
+    def _peft_targets(self, language: bool = False) -> List[str]:
+        targets = []
+        qkv_flag = False
+        if self.query:
+            if language:
+                targets.append("q_proj")
+            else:
+                qkv_flag = True
+        if self.key:
+            if language:
+                targets.append("k_proj")
+            else:
+                qkv_flag = True
+        if self.value:
+            if language:
+                targets.append("v_proj")
+            else:
+                qkv_flag = True
+        if qkv_flag:
+            targets.append("qkv")
+        if self.output:
+            targets.append("o_proj" if language else "proj")
+        return targets
 
 
 class TrainingHyperparameterLoraVisual(BaseFiery):

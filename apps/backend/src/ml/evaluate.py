@@ -6,7 +6,6 @@ Operations pertaining to ML promotion
 
 from datetime import datetime, timezone
 from decimal import Decimal
-from this import d
 from typing import List, Optional, Tuple
 from fiery_python import db_pool, logging
 from fiery_python import (
@@ -206,7 +205,7 @@ class _ModelEvaluator:
         challenger_metrics: List[ModelMetric],
         metrics_to_beat: List[ModelMetric],
     ) -> bool:
-        bleu_score = cls.metric_value(challenger_metrics, ModelMetricName.BLUE_SCORE)
+        bleu_score = cls._metric_value(challenger_metrics, ModelMetricName.BLEU_SCORE)
         if bleu_score is None:
             return False
         if bleu_score < _ANALYST_MIN_BLEU_SCORE:
@@ -214,6 +213,8 @@ class _ModelEvaluator:
         incumbent_bleu_score = cls._metric_value(
             metrics_to_beat, ModelMetricName.BLEU_SCORE
         )
+        if not incumbent_bleu_score:
+            return True
         return bleu_score - incumbent_bleu_score >= _ANALYST_MIN_BLEU_SCORE_DELTA
 
     @classmethod

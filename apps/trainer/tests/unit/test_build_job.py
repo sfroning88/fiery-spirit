@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import torch
-from fiery_python import TrainingStage
+from fiery_python import TrainingStage, TrainingTargetModules
 from src.build_job import (
     DistillPair,
     SeismicCnn,
@@ -18,7 +18,6 @@ from src.build_job import (
     _VIT_REVISION,
     _VIT_SNAPSHOT,
     _VIT_WEIGHTS,
-    _peft_targets,
     build_job,
 )
 
@@ -30,12 +29,12 @@ def _lora_visual(**overrides) -> dict:
         "dropout": 0.1,
         "epochs": 1,
         "learning_rate": 1e-4,
-        "target_modules": {
-            "query": True,
-            "key": False,
-            "value": False,
-            "output": True,
-        },
+        "target_modules": TrainingTargetModules(
+            query=True,
+            key=False,
+            value=False,
+            output=True,
+        ),
     }
     data.update(overrides)
     return data
@@ -72,32 +71,29 @@ def test_build_job_raises_when_stage_invalid():
 
 
 def test_peft_targets_maps_qkv_and_proj():
-    assert _peft_targets(
-        {"query": True, "key": False, "value": False, "output": True}
-    ) == ["qkv", "proj"]
+    modules = TrainingTargetModules(query=True, key=False, value=False, output=True)
+    assert modules._peft_targets() == ["qkv", "proj"]
+
+
+def test_peft_targets_maps_language_projections():
+    modules = TrainingTargetModules(query=True, key=True, value=True, output=True)
+    assert modules._peft_targets(language=True) == [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+    ]
 
 
 def test_peft_targets_empty_when_all_false():
-    assert (
-        _peft_targets({"query": False, "key": False, "value": False, "output": False})
-        == []
-    )
+    modules = TrainingTargetModules(query=False, key=False, value=False, output=False)
+    assert modules._peft_targets() == []
+    assert modules._peft_targets(language=True) == []
 
 
 def test_build_lora_visual_job_raises_when_targets_empty():
     with pytest.raises(RuntimeError, match="Empty lora_visual target modules"):
-        build_job(
-            _lora_visual_spec(
-                lora_visual=_lora_visual(
-                    target_modules={
-                        "query": False,
-                        "key": False,
-                        "value": False,
-                        "output": False,
-                    }
-                )
-            )
-        )
+        build_job(_lora_visual_spec(lora_visual=_lora_visual(target_modules=None)))
 
 
 def test_build_lora_visual_job_raises_when_pin_missing():

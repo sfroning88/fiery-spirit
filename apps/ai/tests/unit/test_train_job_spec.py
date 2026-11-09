@@ -72,6 +72,12 @@ def _lora_visual() -> TrainingHyperparameterLoraVisual:
     )
 
 
+def _lora_language() -> TrainingHyperparameterLoraLanguage:
+    return TrainingHyperparameterLoraLanguage(
+        id="lora_language-1", target_modules_id="mod-1"
+    )
+
+
 def _modules() -> TrainingTargetModules:
     return TrainingTargetModules(id="mod-1")
 
@@ -121,6 +127,8 @@ def _packed(stage: TrainingStage):
         return (_pretrain(), None, None, None, None, None)
     if stage is TrainingStage.LORA_VISUAL:
         return (None, (_lora_visual(), _modules()), None, None, None, None)
+    if stage is TrainingStage.LORA_LANGUAGE:
+        return (None, None, (_lora_language(), _modules()), None, None, None)
     if stage is TrainingStage.DISTILL:
         return (None, None, None, _distill(), None, None)
     if stage is TrainingStage.PRUNE:

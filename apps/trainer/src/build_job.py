@@ -8,7 +8,7 @@ import torch.nn as nn
 from huggingface_hub import hf_hub_download
 from peft import PeftModel
 from typing import Callable, Dict, List, Optional
-from fiery_python import ModelStorageServices, TrainingStage
+from fiery_python import ModelStorageServices, TrainingStage, TrainingTargetModules
 
 _VIT_SNAPSHOT = "vit_small_patch16_224.augreg_in21k_ft_in1k"
 _VIT_BASE_MODEL_ID = "timm/vit_small_patch16_224.augreg_in21k_ft_in1k"
@@ -105,9 +105,10 @@ def _build_lora_visual_job(spec: dict) -> Optional[PeftModel]:
     from peft import LoraConfig, get_peft_model
 
     lora_visual = spec["lora_visual"]
-    targets = _peft_targets(lora_visual["target_modules"])
-    if not targets:
+    target_modules: Optional[TrainingTargetModules] = lora_visual["target_modules"]
+    if not target_modules or not isinstance(target_modules, TrainingTargetModules):
         raise RuntimeError("Empty lora_visual target modules")
+    targets = target_modules._peft_targets(language=False)
     base_model_id = spec.get("base_model_id")
     revision = spec.get("revision")
     if (
@@ -144,9 +145,10 @@ def _build_lora_language_job(spec: dict) -> Optional[PeftModel]:
     from transformers import AutoModelForCausalLM
 
     lora_language = spec["lora_language"]
-    targets = _peft_targets(lora_language["target_modules"])
-    if not targets:
+    target_modules: Optional[TrainingTargetModules] = lora_language["target_modules"]
+    if not target_modules or not isinstance(target_modules, TrainingTargetModules):
         raise RuntimeError("Empty lora_language target modules")
+    targets = target_modules._peft_targets(language=True)
     base_model_id = spec.get("base_model_id")
     revision = spec.get("revision")
     if (
@@ -230,16 +232,3 @@ def _kaiming(module: nn.Module) -> None:
         elif isinstance(child, nn.BatchNorm2d):
             nn.init.ones_(child.weight)
             nn.init.zeros_(child.bias)
-
-
-def _peft_targets(target_modules: dict) -> List[str]:
-    targets = []
-    if (
-        target_modules.get("query")
-        or target_modules.get("key")
-        or target_modules.get("value")
-    ):
-        targets.append("qkv")
-    if target_modules.get("output"):
-        targets.append("proj")
-    return targets

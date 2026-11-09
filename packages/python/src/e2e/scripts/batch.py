@@ -29,12 +29,19 @@ def run_batch_test(
     if signal not in (
         TrainingSignal.DEFORMATION.value,
         TrainingSignal.SEISMIC.value,
+        TrainingSignal.LANGUAGE.value,
     ):
-        raise ValueError("batch requires -signal deformation|seismic")
+        raise ValueError("batch requires -signal deformation|seismic|language")
 
     batched: Dict[Tuple[ModelTier, ModelRole], Dict[str, Any]] = {}
-    if signal == TrainingSignal.SEISMIC.value:
+    if signal == TrainingSignal.LANGUAGE.value:
         slots: List[Tuple[ModelTier, ModelRole]] = [
+            key
+            for key in MODEL_REGISTRY_SLOTS
+            if key == (ModelTier.CLOUD, ModelRole.ANALYST)
+        ]
+    elif signal == TrainingSignal.SEISMIC.value:
+        slots = [
             key
             for key in MODEL_REGISTRY_SLOTS
             if key
