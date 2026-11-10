@@ -23,8 +23,10 @@ from fiery_python import (
     TrainingDeformationLabel,
     TrainingSeismicLabel,
     InferenceDeformation,
+    InferenceLanguage,
     InferenceSeismic,
     TrainingDeformation,
+    TrainingLanguageLabel,
     TrainingSeismic,
 )
 from ml import LoadedModel, model_registry
@@ -43,6 +45,13 @@ _SEISMIC_CLASS_ORDER = [
     TrainingSeismicLabel.TC,
 ]
 _VIT_PX = 224
+_LANGUAGE_CLASS_ORDER = [
+    TrainingLanguageLabel.GREEN,
+    TrainingLanguageLabel.YELLOW,
+    TrainingLanguageLabel.ORANGE,
+    TrainingLanguageLabel.RED,
+]
+_LANGUAGE_MAX_NEW_TOKENS = 64
 
 
 class InferenceServingWaiter:
@@ -52,10 +61,23 @@ class InferenceServingWaiter:
     def run(
         cls,
         key: Tuple[ModelTier, ModelRole],
-        sample: np.ndarray,
+        sample: Optional[np.ndarray] = None,
         interferogram_id: Optional[str] = None,
         seismic_event_id: Optional[str] = None,
-    ) -> Tuple[Union[InferenceDeformation, InferenceSeismic], Dict[str, Decimal]]:
+        volcano_id: Optional[str] = None,
+    ) -> Tuple[
+        Union[InferenceDeformation, InferenceSeismic, InferenceLanguage],
+        Dict[str, Decimal],
+    ]:
+        if key == (ModelTier.CLOUD, ModelRole.ANALYST):
+            if not volcano_id:
+                raise error("No volcano_id is selected")
+            inference, probabilities, _transform_hash, _op_version = cls._language(
+                volcano_id
+            )
+            return inference, probabilities
+        if sample is None:
+            raise error("Missing inference sample")
         if not model_registry.is_ready(key):
             raise error(f"No is_ready model for {key} in registry")
         if interferogram_id and seismic_event_id:
@@ -181,6 +203,96 @@ class InferenceServingWaiter:
             )
         else:
             raise error("Missing both interferogram_id and seismic_event_id")
+
+    @classmethod
+    def _language(
+        cls, volcano_id: str
+    ) -> Tuple[InferenceLanguage, Dict[str, Decimal], str, int]:
+        key = (ModelTier.CLOUD, ModelRole.ANALYST)
+        if not model_registry.is_ready(key):
+            raise error(f"No is_ready model for {key} in registry")
+        model = model_registry.get(key)
+        metadata = LoadedModel(**model_registry.get_metadata(key))
+        training_language = InferencePersistService.select_language(metadata.session_id)
+        if not training_language:
+            raise error("No training_language was found")
+        decision = metadata.preprocessing
+        if int(decision["op_version"]) != STORAGE_OP_VERSION:
+            raise error(f"Artifact-Contract mismatch for {metadata.artifact_id}")
+        resolved = Transformation.transform_hash_language(training_language)
+        if resolved != decision["transform_hash"]:
+            raise error(f"Artifact-Contract mismatch for {metadata.artifact_id}")
+        prompt = f"Volcano {volcano_id}. State the alert color and one sentence why."
+        started = time.perf_counter()
+        from transformers import AutoTokenizer
+
+        name = getattr(model.config, "name_or_path", None)
+        if not isinstance(name, str) or not name:
+            raise error("Analyst model is missing a tokenizer name")
+        tokenizer = AutoTokenizer.from_pretrained(name, local_files_only=True)
+        encoded = tokenizer(prompt, return_tensors="pt", add_special_tokens=False)
+        ids = encoded["input_ids"]
+        mask = encoded["attention_mask"]
+        text = ""
+        max_characters = training_language.max_characters
+        with torch.no_grad():
+            for _ in range(_LANGUAGE_MAX_NEW_TOKENS):
+                logits = model(input_ids=ids, attention_mask=mask)
+                if hasattr(logits, "logits"):
+                    logits = logits.logits
+                next_id = logits[:, -1, :].argmax(dim=-1)
+                token = int(next_id[0].item())
+                if (
+                    tokenizer.eos_token_id is not None
+                    and token == tokenizer.eos_token_id
+                ):
+                    break
+                piece = tokenizer.decode([token], skip_special_tokens=True)
+                if len(text) + len(piece) > max_characters:
+                    break
+                text += piece
+                next_column = next_id.unsqueeze(1)
+                ids = torch.cat([ids, next_column], dim=1)
+                mask = torch.cat([mask, torch.ones_like(next_column)], dim=1)
+        text = text.strip()
+        label = next(
+            (color for color in _LANGUAGE_CLASS_ORDER if color.value in text.lower()),
+            None,
+        )
+        abstained = label is None or not text
+        probabilities = {
+            color.value: Decimal("1") if color is label else Decimal("0")
+            for color in _LANGUAGE_CLASS_ORDER
+        }
+        inferred_at = datetime.now(timezone.utc)
+        latency_ms = Decimal(str(round((time.perf_counter() - started) * 1000, 3)))
+        threshold = Decimal(str(decision.get("threshold", "0")))
+        abstention_band = Decimal(str(decision.get("abstention_band", "0")))
+        return (
+            InferenceLanguage(
+                label=label,
+                probabilities=[
+                    probabilities[color.value] for color in _LANGUAGE_CLASS_ORDER
+                ],
+                class_order=list(_LANGUAGE_CLASS_ORDER),
+                threshold_used=threshold,
+                abstention_band=abstention_band,
+                abstained=abstained,
+                abstained_reason=(
+                    InferenceAbstainReason.LOW_CONFIDENCE if abstained else None
+                ),
+                generated_text=text,
+                latency_ms=latency_ms,
+                inferred_at=inferred_at,
+                transform_hash=decision["transform_hash"],
+                op_version=int(decision["op_version"]),
+                artifact_id=metadata.artifact_id,
+                volcano_id=volcano_id,
+            ),
+            probabilities,
+            decision["transform_hash"],
+            int(decision["op_version"]),
+        )
 
     @classmethod
     def _preprocess(

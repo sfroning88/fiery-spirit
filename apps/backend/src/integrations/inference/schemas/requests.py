@@ -41,6 +41,10 @@ class InferenceSingleRequest(BaseModel):
     volcano_id: Optional[Annotated[str, AfterValidator(SchemaUtils.valid_uuid)]] = None
 
     def validate_payload(self) -> bool:
+        if self.role is ModelRole.ANALYST:
+            return bool(self.volcano_id) and not (
+                self.interferogram_id or self.seismic_event_id
+            )
         if not self.interferogram_id and not self.seismic_event_id:
             return False
         if self.interferogram_id and self.seismic_event_id:

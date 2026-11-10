@@ -89,8 +89,16 @@ def run_inference_test(
             continue
 
         artifact_id = response.get("artifact_id")
-        result = response.get("result") or []
-        if not artifact_id or not result:
+        result = response.get("result") or {}
+        generated_text = (
+            result.get("generated_text") if isinstance(result, dict) else None
+        )
+        ready = bool(artifact_id) and (
+            bool(generated_text)
+            if signal == TrainingSignal.LANGUAGE.value
+            else bool(result)
+        )
+        if not ready:
             print(
                 f"WARNING: inference returned no prediction for "
                 f"({tier.value}, {role.value}) artifact_id={artifact_id!r}"
@@ -102,7 +110,11 @@ def run_inference_test(
             f"Inference complete for ({tier.value}, {role.value}) "
             f"artifact={artifact_id} result={result}"
         )
-        inferred[key] = {"artifact_id": artifact_id, "ready": True}
+        inferred[key] = {
+            "artifact_id": artifact_id,
+            "ready": True,
+            "generated_text": generated_text,
+        }
 
     print("\nInference integration testing complete")
     return inferred

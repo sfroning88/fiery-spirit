@@ -91,7 +91,9 @@ async def single_inference(
         raise
     except NotImplementedError:
         logger.warning("model_inference_unsupported")
-        raise error("(CLOUD, SCREENER) / (CLOUD, TEACHER) / (EDGE, STUDENT)")
+        raise error(
+            "(CLOUD, SCREENER) / (CLOUD, TEACHER) / (CLOUD, ANALYST) / (EDGE, STUDENT)"
+        )
     except ValueError as err:
         logger.warning("model_inference_rejected", error=str(err))
         raise error(str(err), status_code=404)

@@ -372,6 +372,8 @@ def test_upsert_language_passes_storage_dict():
         abstention_band=Decimal("0.00000"),
         abstained=False,
         generated_text="because of the swarm, classify this as orange",
+        transform_hash="a" * 64,
+        op_version=1,
         inferred_at=inferred_at,
         artifact_id="11111111-1111-1111-1111-111111111111",
         volcano_id="22222222-2222-2222-2222-222222222222",

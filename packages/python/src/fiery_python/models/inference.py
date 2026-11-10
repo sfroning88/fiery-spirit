@@ -71,10 +71,19 @@ class InferenceLanguage(BaseFiery):
     abstained: bool = False
     abstained_reason: Optional[InferenceAbstainReason] = None
     generated_text: str
+    transform_hash: str
+    op_version: int
     latency_ms: Optional[Decimal] = None
     inferred_at: datetime
     artifact_id: str
     volcano_id: str
+
+    def prepare_for_storage(self, include_id: bool = True) -> dict:
+        """Hash and op version stay on the serving outcome, not this table"""
+        stored = super().prepare_for_storage(include_id=include_id)
+        stored.pop("transform_hash", None)
+        stored.pop("op_version", None)
+        return stored
 
     def deterministic_id(self) -> Optional[str]:
         """Stable id derived from (artifact_id, volcano_id, inferred_at)"""

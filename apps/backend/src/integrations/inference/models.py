@@ -11,6 +11,7 @@ from typing import Dict, Optional, Union
 from fiery_python import (
     InferenceAbstainReason,
     TrainingDeformationLabel,
+    TrainingLanguageLabel,
     TrainingSeismicLabel,
 )
 
@@ -28,7 +29,10 @@ class InferenceOutcome(BaseModel):
     latency_ms: Optional[Decimal] = None
     inferred_at: datetime
     probabilities: Dict[str, Decimal]
-    label: Optional[Union[TrainingDeformationLabel, TrainingSeismicLabel]] = None
+    label: Optional[
+        Union[TrainingDeformationLabel, TrainingSeismicLabel, TrainingLanguageLabel]
+    ] = None
+    generated_text: Optional[str] = None
     score: Optional[Decimal] = None
     interferogram_id: Optional[str] = None
     seismic_event_id: Optional[str] = None
