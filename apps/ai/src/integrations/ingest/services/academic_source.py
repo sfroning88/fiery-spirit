@@ -23,7 +23,7 @@ from .persist_service import IngestPersistService
 
 HF_TOKEN = config.get("HF_TOKEN")
 
-_HF_ID = "sfroning88/Academic"
+_HF_ID = "sfroning88/Volcanic-States"
 _HF_REVISION = "academic-revision-unpinned"
 _HF_SPLIT_MAP = (
     ("train", TrainingSplit.TRAIN),

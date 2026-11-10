@@ -37,10 +37,12 @@ compile_requirements() {
   require_docker
   echo "Compiling requirements in $dir"
   docker run --rm \
+    --user "$(id -u):$(id -g)" \
+    -e HOME=/tmp \
     -v "$ROOT:/repo" \
     -w "/repo/$dir" \
     python:3.13-slim \
-    sh -c "pip install -q pip-tools && pip-compile -c constraints.txt -o requirements.txt requirements.in"
+    sh -c "pip install -q --user pip-tools && PATH=/tmp/.local/bin:\$PATH pip-compile -c constraints.txt -o requirements.txt requirements.in"
 }
 
 setup_backend_venv() {
