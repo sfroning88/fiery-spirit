@@ -70,12 +70,17 @@ class InferenceServingWaiter:
         Dict[str, Decimal],
     ]:
         if key == (ModelTier.CLOUD, ModelRole.ANALYST):
-            if not volcano_id:
-                raise error("No volcano_id is selected")
-            inference, probabilities, _transform_hash, _op_version = cls._language(
-                volcano_id
-            )
-            return inference, probabilities
+            return cls._infer_with_language(volcano_id)
+        return cls._infer_with_sample(key, sample, interferogram_id, seismic_event_id)
+
+    @classmethod
+    def _infer_with_sample(
+        cls,
+        key: Tuple[ModelTier, ModelRole],
+        sample: Optional[np.ndarray],
+        interferogram_id: Optional[str],
+        seismic_event_id: Optional[str],
+    ) -> Tuple[Union[InferenceDeformation, InferenceSeismic], Dict[str, Decimal]]:
         if sample is None:
             raise error("Missing inference sample")
         if not model_registry.is_ready(key):
@@ -205,10 +210,12 @@ class InferenceServingWaiter:
             raise error("Missing both interferogram_id and seismic_event_id")
 
     @classmethod
-    def _language(
-        cls, volcano_id: str
-    ) -> Tuple[InferenceLanguage, Dict[str, Decimal], str, int]:
+    def _infer_with_language(
+        cls, volcano_id: Optional[str]
+    ) -> Tuple[InferenceLanguage, Dict[str, Decimal]]:
         key = (ModelTier.CLOUD, ModelRole.ANALYST)
+        if not volcano_id:
+            raise error("No volcano_id is selected")
         if not model_registry.is_ready(key):
             raise error(f"No is_ready model for {key} in registry")
         model = model_registry.get(key)
@@ -272,8 +279,6 @@ class InferenceServingWaiter:
                 volcano_id=volcano_id,
             ),
             probabilities,
-            decision["transform_hash"],
-            int(decision["op_version"]),
         )
 
     @classmethod
