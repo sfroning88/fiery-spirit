@@ -81,6 +81,16 @@ async def refine_shards(request: Request, payload: RefineRequest) -> RefineRespo
 
             transform_hash = Transformation.transform_hash_seismic(seismic)
 
+        elif contract.language_id:
+            language = RefinePersistService.select_language(contract.id)
+            if not language:
+                logger.error(
+                    "fetch_language_failed",
+                    contract_id=contract.id,
+                )
+
+            transform_hash = Transformation.transform_hash_language(language)
+
         else:
             logger.error(
                 "contract_missing_deformation_and_seismic",

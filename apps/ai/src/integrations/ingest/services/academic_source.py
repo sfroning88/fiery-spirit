@@ -60,6 +60,7 @@ class IngestAcademicSource:
         page: List[TrainingPassage] = []
         asset_count = 0
         try:
+            volcano_ids = IngestPersistService.select_volcano_ids_by_name()
             for sample in cls._iter_samples(max_samples):
                 body = cls._passage_body_bytes(sample["prompt"], sample["reference"])
                 storage_path = BlobStorageServices.put_unrefined(
@@ -73,7 +74,7 @@ class IngestAcademicSource:
                     published_at=sample.get("published_at"),
                     chunk_index=sample.get("chunk_index"),
                     storage_path=storage_path,
-                    volcano_id=sample.get("volcano_id"),
+                    volcano_id=volcano_ids[sample["volcano_id"]],
                 )
                 page.append(passage)
                 asset_count += 1

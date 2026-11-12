@@ -150,7 +150,7 @@ def test_select_seismic_returns_none_when_empty():
 def test_select_language_maps_row():
     row = {
         "id": "lang-1",
-        "max_characters": 800,
+        "max_characters": 1024,
         "class_id": "class-1",
     }
     with patch(
@@ -162,7 +162,7 @@ def test_select_language_maps_row():
     assert run.call_args.args[1] == ("contract-1",)
     assert run.call_args.kwargs["fetch"] is PoolFetch.ONE
     assert language.id == "lang-1"
-    assert language.max_characters == 800
+    assert language.max_characters == 1024
     assert language.class_id == "class-1"
 
 

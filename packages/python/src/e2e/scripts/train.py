@@ -59,7 +59,7 @@ def run_train_test(job: str, timeout: Optional[int] = _JOB_TIMEOUT_SECONDS) -> N
         )
     elif stage is TrainingStage.LORA_LANGUAGE:
         language = TrainingLanguage(
-            max_characters=800,
+            max_characters=1024,
             class_id="ignored-for-hash",
         )
         transform_hash = Transformation.transform_hash_language(language)

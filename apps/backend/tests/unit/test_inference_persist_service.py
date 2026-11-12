@@ -329,7 +329,7 @@ def test_upsert_seismic_passes_storage_dict():
 def test_select_language_maps_row():
     row = {
         "id": "lang-1",
-        "max_characters": 800,
+        "max_characters": 1024,
         "class_id": "class-1",
     }
     with patch(
@@ -340,7 +340,7 @@ def test_select_language_maps_row():
     assert run.call_args.args[1] == ("session-1",)
     assert run.call_args.kwargs["fetch"] is PoolFetch.ONE
     assert language.id == "lang-1"
-    assert language.max_characters == 800
+    assert language.max_characters == 1024
     assert language.class_id == "class-1"
 
 

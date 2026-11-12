@@ -18,10 +18,12 @@ from fiery_python import (
     STORAGE_OP_VERSION,
     TRAINING_CONTRACT_DEFORMATION_VERSION,
     TRAINING_CONTRACT_SEISMIC_VERSION,
+    TRAINING_CONTRACT_LANGUAGE_VERSION,
     TrainingNormalize,
     TrainingWindow,
     TrainingDeformation,
     TrainingSeismic,
+    TrainingLanguage,
     UuidUtils,
 )
 
@@ -36,6 +38,11 @@ DEFORMATION_CONTRACT = (
 SEISMIC_CONTRACT = (
     "seismic",
     TRAINING_CONTRACT_SEISMIC_VERSION,
+)
+
+LANGUAGE_CONTRACT = (
+    "language",
+    TRAINING_CONTRACT_LANGUAGE_VERSION,
 )
 
 deformation = TrainingDeformation(
@@ -62,6 +69,12 @@ seismic = TrainingSeismic(
 )
 
 
+language = TrainingLanguage(
+    max_characters=1024,
+    class_id="ignored-for-hash",
+)
+
+
 def transform_hash_deformation(training_deformation: TrainingDeformation) -> str:
     """SHA-256 of sorted deformation transformations and source of apply"""
     payload = {
@@ -76,7 +89,7 @@ def transform_hash_deformation(training_deformation: TrainingDeformation) -> str
 
 
 def transform_hash_seismic(training_seismic: TrainingSeismic) -> str:
-    """SHA-256 of sroted seismic transformations and source of apply"""
+    """SHA-256 of sorted seismic transformations and source of apply"""
     payload = {
         "op_version": STORAGE_OP_VERSION,
         "signal": "seismic",
@@ -98,8 +111,20 @@ def transform_hash_seismic(training_seismic: TrainingSeismic) -> str:
     return hashlib.sha256(blob).hexdigest()
 
 
+def transform_hash_language(training_language: TrainingLanguage) -> str:
+    """SHA-256 of sorted language transformations and source of apply"""
+    payload = {
+        "op_version": STORAGE_OP_VERSION,
+        "signal": "language",
+        "max_characters": training_language.max_characters,
+    }
+    blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(blob).hexdigest()
+
+
 _TRANSFORM_HASH_DEFORMATION = transform_hash_deformation(deformation)
 _TRANSFORM_HASH_SEISMIC = transform_hash_seismic(seismic)
+_TRANSFORM_HASH_LANGUAGE = transform_hash_language(language)
 
 
 DEFORMATION_VERSION = (
@@ -112,6 +137,11 @@ SEISMIC_VERSION = (
     _TRANSFORM_HASH_SEISMIC,
 )
 
+LANGUAGE_VERSION = (
+    "0aab32fe-c404-5a06-83af-ee87a5043085",
+    _TRANSFORM_HASH_LANGUAGE,
+)
+
 
 print(f"deformation_contract = {UuidUtils.deterministic_uuid(*DEFORMATION_CONTRACT)}")
 print(f"deformation_hash = {_TRANSFORM_HASH_DEFORMATION}")
@@ -121,3 +151,8 @@ print(f"deformation_dataset = {UuidUtils.deterministic_uuid(*DEFORMATION_VERSION
 print(f"seismic_contract = {UuidUtils.deterministic_uuid(*SEISMIC_CONTRACT)}")
 print(f"seismic_hash = {_TRANSFORM_HASH_SEISMIC}")
 print(f"seismic_dataset = {UuidUtils.deterministic_uuid(*SEISMIC_VERSION)}")
+
+
+print(f"language_contract = {UuidUtils.deterministic_uuid(*LANGUAGE_CONTRACT)}")
+print(f"language_hash = {_TRANSFORM_HASH_LANGUAGE}")
+print(f"language_dataset = {UuidUtils.deterministic_uuid(*LANGUAGE_VERSION)}")

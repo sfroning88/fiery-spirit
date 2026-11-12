@@ -177,7 +177,6 @@ def _build_lora_language_job(spec: dict) -> Optional[PeftModel]:
         lora_alpha=lora_language["alpha"],
         lora_dropout=lora_language["dropout"],
         target_modules=targets,
-        modules_to_save=["head"],
         bias="none",
         task_type="CAUSAL_LM",
     )

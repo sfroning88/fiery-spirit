@@ -7,10 +7,11 @@ Operations pertaining to Ingest persistence
 import io
 import numpy as np
 from psycopg2.extras import execute_values
-from typing import List
+from typing import Dict, List
 from fiery_python import db_pool
 from fiery_python import (
     TRAINING_DB_PAGE_SIZE,
+    PoolFetch,
     DatasetIngest,
     TrainingInterferogram,
     TrainingDeformationSource,
@@ -35,6 +36,7 @@ from ..queries.upsert_training_passages import (
     QUERY as UPSERT_PASSAGES,
     TEMPLATE as UPSERT_PASSAGES_TEMPLATE,
 )
+from ..queries.select_volcano_ids import QUERY as SELECT_VOLCANO_IDS
 
 
 class IngestPersistService:
@@ -146,6 +148,20 @@ class IngestPersistService:
                 template=UPSERT_INTERFEROGRAMS_TEMPLATE.as_string(cursor),
                 page_size=TRAINING_DB_PAGE_SIZE,
             )
+
+    @staticmethod
+    def select_volcano_ids_by_name() -> Dict[str, str]:
+        rows = (
+            db_pool.run(
+                SELECT_VOLCANO_IDS,
+                fetch=PoolFetch.ALL,
+                error_event="fetch_volcano_ids_by_names_failed",
+            )
+            or []
+        )
+        return {
+            row["name"]: row["id"] for row in rows if row.get("name") and row.get("id")
+        }
 
     @staticmethod
     def upsert_passages(passages: List[TrainingPassage]) -> None:

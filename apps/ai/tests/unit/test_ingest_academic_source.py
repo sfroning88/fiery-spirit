@@ -189,8 +189,13 @@ def test_run_upserts_completed_and_returns_count():
             "volcano_id": "vol-1",
         }
     ]
+    resolved = "11111111-1111-4111-8111-111111111111"
     with (
         patch.object(IngestAcademicSource, "_iter_samples", return_value=samples),
+        patch(
+            "integrations.ingest.services.academic_source.IngestPersistService.select_volcano_ids_by_name",
+            return_value={"vol-1": resolved},
+        ),
         patch(
             "integrations.ingest.services.academic_source.IngestPersistService.upsert_ingest"
         ) as upsert_ingest,
@@ -217,7 +222,7 @@ def test_run_upserts_completed_and_returns_count():
     assert rows[0].label == TrainingLanguageLabel.ORANGE
     assert rows[0].citation == "SERNAGEOMIN bulletin"
     assert rows[0].chunk_index == 2
-    assert rows[0].volcano_id == "vol-1"
+    assert rows[0].volcano_id == resolved
 
 
 def test_run_marks_failed_and_reraises():
@@ -226,6 +231,10 @@ def test_run_marks_failed_and_reraises():
             IngestAcademicSource,
             "_iter_samples",
             side_effect=RuntimeError("hf down"),
+        ),
+        patch(
+            "integrations.ingest.services.academic_source.IngestPersistService.select_volcano_ids_by_name",
+            return_value={},
         ),
         patch(
             "integrations.ingest.services.academic_source.IngestPersistService.upsert_ingest"
@@ -241,6 +250,10 @@ def test_run_passes_max_samples_through():
         patch.object(
             IngestAcademicSource, "_iter_samples", return_value=[]
         ) as iter_samples,
+        patch(
+            "integrations.ingest.services.academic_source.IngestPersistService.select_volcano_ids_by_name",
+            return_value={},
+        ),
         patch(
             "integrations.ingest.services.academic_source.IngestPersistService.upsert_ingest"
         ),
