@@ -88,7 +88,7 @@ export const API_ROUTES = {
   // apps/ai: refine deformation or seismic samples
   refine: createRoute("/api/refine"),
 
-  // apps/ai: enqueue pretrain, lora, distill, prune, or quantize job
+  // apps/ai: enqueue pretrain, loraVisual, loraLanguage, distill, prune, or quantize job
   train: createRoute("/api/train"),
 
   // apps/backend: png preview for interferogram or seismic sample

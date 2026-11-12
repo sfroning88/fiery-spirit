@@ -10,7 +10,11 @@ from ..endpoints import (
     INFERENCE_SINGLE_URL,
     endpoint_test,
 )
-from ..helpers import random_interferogram_id, random_seismic_event_id
+from ..helpers import (
+    random_interferogram_id,
+    random_seismic_event_id,
+    random_volcano_id,
+)
 from ...fiery_python import (
     MODEL_REGISTRY_SLOTS,
     ModelRole,
@@ -30,12 +34,21 @@ def run_inference_test(
     if signal not in (
         TrainingSignal.DEFORMATION.value,
         TrainingSignal.SEISMIC.value,
+        TrainingSignal.LANGUAGE.value,
     ):
-        raise ValueError("inference requires -signal deformation|seismic")
+        raise ValueError("inference requires -signal deformation|seismic|language")
 
     inferred: Dict[Tuple[ModelTier, ModelRole], Dict[str, Any]] = {}
-    if signal == TrainingSignal.SEISMIC.value:
+    if signal == TrainingSignal.LANGUAGE.value:
         slots: List[Tuple[ModelTier, ModelRole]] = [
+            key
+            for key in MODEL_REGISTRY_SLOTS
+            if key == (ModelTier.CLOUD, ModelRole.ANALYST)
+        ]
+        sample_key = "volcano_id"
+        sample_id = random_volcano_id()
+    elif signal == TrainingSignal.SEISMIC.value:
+        slots = [
             key
             for key in MODEL_REGISTRY_SLOTS
             if key
@@ -76,8 +89,16 @@ def run_inference_test(
             continue
 
         artifact_id = response.get("artifact_id")
-        result = response.get("result") or []
-        if not artifact_id or not result:
+        result = response.get("result") or {}
+        generated_text = (
+            result.get("generated_text") if isinstance(result, dict) else None
+        )
+        ready = bool(artifact_id) and (
+            bool(generated_text)
+            if signal == TrainingSignal.LANGUAGE.value
+            else bool(result)
+        )
+        if not ready:
             print(
                 f"WARNING: inference returned no prediction for "
                 f"({tier.value}, {role.value}) artifact_id={artifact_id!r}"
@@ -89,7 +110,11 @@ def run_inference_test(
             f"Inference complete for ({tier.value}, {role.value}) "
             f"artifact={artifact_id} result={result}"
         )
-        inferred[key] = {"artifact_id": artifact_id, "ready": True}
+        inferred[key] = {
+            "artifact_id": artifact_id,
+            "ready": True,
+            "generated_text": generated_text,
+        }
 
     print("\nInference integration testing complete")
     return inferred

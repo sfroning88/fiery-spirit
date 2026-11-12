@@ -10,7 +10,7 @@ import pytest
 from fiery_python import (
     DatasetVersion,
     TrainingHyperparameterDistill,
-    TrainingHyperparameterLora,
+    TrainingHyperparameterLoraVisual,
     TrainingHyperparameterPretrain,
     TrainingHyperparameterPrune,
     TrainingHyperparameterQuantize,
@@ -28,11 +28,11 @@ def _session(**overrides) -> TrainingSession:
     payload = {
         "id": "sess-1",
         "signal": TrainingSignal.DEFORMATION,
-        "stage": TrainingStage.LORA,
+        "stage": TrainingStage.LORA_VISUAL,
         "status": TrainingStatus.PENDING,
         "samples": 10,
         "seed": 42,
-        "hyperparameter_lora_id": "lora-1",
+        "hyperparameter_lora_visual_id": "lora_visual-1",
         "contract_id": "contract-1",
         "version_id": "ver-1",
     }
@@ -56,19 +56,35 @@ def _version(**overrides) -> DatasetVersion:
 
 def _packed(stage: TrainingStage):
     if stage is TrainingStage.PRETRAIN:
-        return (TrainingHyperparameterPretrain(id="pretrain-1"), None, None, None, None)
-    if stage is TrainingStage.LORA:
-        lora = TrainingHyperparameterLora(id="lora-1", target_modules_id="mod-1")
+        return (
+            TrainingHyperparameterPretrain(id="pretrain-1"),
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+    if stage is TrainingStage.LORA_VISUAL:
+        lora_visual = TrainingHyperparameterLoraVisual(
+            id="lora_visual-1", target_modules_id="mod-1"
+        )
         modules = TrainingTargetModules(id="mod-1")
-        return (None, (lora, modules), None, None, None)
+        return (None, (lora_visual, modules), None, None, None, None)
     if stage is TrainingStage.DISTILL:
         distill = TrainingHyperparameterDistill(
             id="distill-1", student_architecture="seismic_cnn_student"
         )
-        return (None, None, distill, None, None)
+        return (None, None, None, distill, None, None)
     if stage is TrainingStage.PRUNE:
-        return (None, None, None, TrainingHyperparameterPrune(id="prune-1"), None)
-    return (None, None, None, None, TrainingHyperparameterQuantize(id="quantize-1"))
+        return (None, None, None, None, TrainingHyperparameterPrune(id="prune-1"), None)
+    return (
+        None,
+        None,
+        None,
+        None,
+        None,
+        TrainingHyperparameterQuantize(id="quantize-1"),
+    )
 
 
 def test_run_raises_when_session_missing():
@@ -104,7 +120,7 @@ def test_run_fails_when_version_not_ready():
     "stage,fn_name",
     [
         (TrainingStage.PRETRAIN, "pretrain_teacher"),
-        (TrainingStage.LORA, "lora_screener"),
+        (TrainingStage.LORA_VISUAL, "lora_visual_screener"),
         (TrainingStage.DISTILL, "distill_student"),
         (TrainingStage.PRUNE, "prune_student"),
         (TrainingStage.QUANTIZE, "quantize_student"),
@@ -138,7 +154,7 @@ def test_run_fails_when_hyperparameters_missing(stage, fn_name):
     "stage,fn_name,parent_id",
     [
         (TrainingStage.PRETRAIN, "pretrain_teacher", None),
-        (TrainingStage.LORA, "lora_screener", None),
+        (TrainingStage.LORA_VISUAL, "lora_visual_screener", None),
         (TrainingStage.DISTILL, "distill_student", "parent-1"),
         (TrainingStage.PRUNE, "prune_student", "parent-1"),
         (TrainingStage.QUANTIZE, "quantize_student", "parent-1"),
@@ -192,7 +208,7 @@ def test_run_fails_when_job_spec_missing():
         ),
         patch(
             "integrations.train.services.modal_spawn.TrainPersistService.select_hyperparameters",
-            return_value=(_packed(TrainingStage.LORA), "lora_screener"),
+            return_value=(_packed(TrainingStage.LORA_VISUAL), "lora_visual_screener"),
         ),
         patch(
             "integrations.train.services.modal_spawn.TrainPersistService.upsert_session"
@@ -210,7 +226,7 @@ def test_run_fails_when_job_spec_missing():
 def test_spawn_modal_function_handles_import_error():
     with patch.dict("sys.modules", {"modal": None}):
         call_id, message = TrainModalSpawn._spawn_modal_function(
-            {"session_id": "s"}, "lora_screener"
+            {"session_id": "s"}, "lora_visual_screener"
         )
     assert call_id is None
     assert "import modal" in message

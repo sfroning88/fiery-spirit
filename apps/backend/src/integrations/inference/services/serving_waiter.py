@@ -23,8 +23,10 @@ from fiery_python import (
     TrainingDeformationLabel,
     TrainingSeismicLabel,
     InferenceDeformation,
+    InferenceLanguage,
     InferenceSeismic,
     TrainingDeformation,
+    TrainingLanguageLabel,
     TrainingSeismic,
 )
 from ml import LoadedModel, model_registry
@@ -43,6 +45,13 @@ _SEISMIC_CLASS_ORDER = [
     TrainingSeismicLabel.TC,
 ]
 _VIT_PX = 224
+_LANGUAGE_CLASS_ORDER = [
+    TrainingLanguageLabel.GREEN,
+    TrainingLanguageLabel.YELLOW,
+    TrainingLanguageLabel.ORANGE,
+    TrainingLanguageLabel.RED,
+]
+_LANGUAGE_MAX_NEW_TOKENS = 64
 
 
 class InferenceServingWaiter:
@@ -52,10 +61,28 @@ class InferenceServingWaiter:
     def run(
         cls,
         key: Tuple[ModelTier, ModelRole],
-        sample: np.ndarray,
+        sample: Optional[np.ndarray] = None,
         interferogram_id: Optional[str] = None,
         seismic_event_id: Optional[str] = None,
+        volcano_id: Optional[str] = None,
+    ) -> Tuple[
+        Union[InferenceDeformation, InferenceSeismic, InferenceLanguage],
+        Dict[str, Decimal],
+    ]:
+        if key == (ModelTier.CLOUD, ModelRole.ANALYST):
+            return cls._infer_with_language(volcano_id)
+        return cls._infer_with_sample(key, sample, interferogram_id, seismic_event_id)
+
+    @classmethod
+    def _infer_with_sample(
+        cls,
+        key: Tuple[ModelTier, ModelRole],
+        sample: Optional[np.ndarray],
+        interferogram_id: Optional[str],
+        seismic_event_id: Optional[str],
     ) -> Tuple[Union[InferenceDeformation, InferenceSeismic], Dict[str, Decimal]]:
+        if sample is None:
+            raise error("Missing inference sample")
         if not model_registry.is_ready(key):
             raise error(f"No is_ready model for {key} in registry")
         if interferogram_id and seismic_event_id:
@@ -181,6 +208,78 @@ class InferenceServingWaiter:
             )
         else:
             raise error("Missing both interferogram_id and seismic_event_id")
+
+    @classmethod
+    def _infer_with_language(
+        cls, volcano_id: Optional[str]
+    ) -> Tuple[InferenceLanguage, Dict[str, Decimal]]:
+        key = (ModelTier.CLOUD, ModelRole.ANALYST)
+        if not volcano_id:
+            raise error("No volcano_id is selected")
+        if not model_registry.is_ready(key):
+            raise error(f"No is_ready model for {key} in registry")
+        model = model_registry.get(key)
+        metadata = LoadedModel(**model_registry.get_metadata(key))
+        training_language = InferencePersistService.select_language(metadata.session_id)
+        if not training_language:
+            raise error("No training_language was found")
+        decision = metadata.preprocessing
+        if int(decision["op_version"]) != STORAGE_OP_VERSION:
+            raise error(f"Artifact-Contract mismatch for {metadata.artifact_id}")
+        resolved = Transformation.transform_hash_language(training_language)
+        if resolved != decision["transform_hash"]:
+            raise error(f"Artifact-Contract mismatch for {metadata.artifact_id}")
+        prompt = f"Volcano {volcano_id}. State the alert color and one sentence why."
+        started = time.perf_counter()
+        tokenizer = model_registry.get_tokenizer(key)
+        encoded = tokenizer(prompt, return_tensors="pt", add_special_tokens=False)
+        with torch.no_grad():
+            output = model.generate(
+                **encoded,
+                max_new_tokens=_LANGUAGE_MAX_NEW_TOKENS,
+                do_sample=False,
+            )
+        prompt_len = int(encoded["input_ids"].shape[-1])
+        text = tokenizer.decode(
+            output[0, prompt_len:], skip_special_tokens=True
+        ).strip()
+        text = text[: training_language.max_characters]
+        label = next(
+            (color for color in _LANGUAGE_CLASS_ORDER if color.value in text.lower()),
+            None,
+        )
+        abstained = label is None or not text
+        probabilities = {
+            color.value: Decimal("1") if color is label else Decimal("0")
+            for color in _LANGUAGE_CLASS_ORDER
+        }
+        inferred_at = datetime.now(timezone.utc)
+        latency_ms = Decimal(str(round((time.perf_counter() - started) * 1000, 3)))
+        threshold = Decimal(str(decision.get("threshold", "0")))
+        abstention_band = Decimal(str(decision.get("abstention_band", "0")))
+        return (
+            InferenceLanguage(
+                label=label,
+                probabilities=[
+                    probabilities[color.value] for color in _LANGUAGE_CLASS_ORDER
+                ],
+                class_order=list(_LANGUAGE_CLASS_ORDER),
+                threshold_used=threshold,
+                abstention_band=abstention_band,
+                abstained=abstained,
+                abstained_reason=(
+                    InferenceAbstainReason.LOW_CONFIDENCE if abstained else None
+                ),
+                generated_text=text,
+                latency_ms=latency_ms,
+                inferred_at=inferred_at,
+                transform_hash=decision["transform_hash"],
+                op_version=int(decision["op_version"]),
+                artifact_id=metadata.artifact_id,
+                volcano_id=volcano_id,
+            ),
+            probabilities,
+        )
 
     @classmethod
     def _preprocess(

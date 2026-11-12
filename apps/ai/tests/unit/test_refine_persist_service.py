@@ -15,6 +15,7 @@ from fiery_python import (
     DatasetVersion,
     PoolFetch,
     TrainingDeformationLabel,
+    TrainingLanguageLabel,
     TrainingNormalize,
     TrainingSampleSource,
     TrainingSeismicLabel,
@@ -146,6 +147,33 @@ def test_select_seismic_returns_none_when_empty():
         assert RefinePersistService.select_seismic("contract-1") is None
 
 
+def test_select_language_maps_row():
+    row = {
+        "id": "lang-1",
+        "max_characters": 800,
+        "class_id": "class-1",
+    }
+    with patch(
+        "integrations.refine.services.persist_service.db_pool.run",
+        return_value=row,
+    ) as run:
+        language = RefinePersistService.select_language("contract-1")
+    run.assert_called_once()
+    assert run.call_args.args[1] == ("contract-1",)
+    assert run.call_args.kwargs["fetch"] is PoolFetch.ONE
+    assert language.id == "lang-1"
+    assert language.max_characters == 800
+    assert language.class_id == "class-1"
+
+
+def test_select_language_returns_none_when_empty():
+    with patch(
+        "integrations.refine.services.persist_service.db_pool.run",
+        return_value=None,
+    ):
+        assert RefinePersistService.select_language("contract-1") is None
+
+
 def test_select_version_maps_row():
     row = {
         "id": "ver-1",
@@ -274,6 +302,58 @@ def test_select_seismic_events_returns_empty_when_missing():
     ):
         assert (
             RefinePersistService.select_seismic_events(
+                TrainingSplit.TEST,
+                "00000000-0000-0000-0000-000000000000",
+            )
+            == []
+        )
+
+
+def test_select_passages_maps_rows():
+    published_at = datetime(2015, 3, 3, tzinfo=timezone.utc)
+    rows = [
+        {
+            "id": "pass-1",
+            "source": TrainingSampleSource.ACADEMIC.value,
+            "split": TrainingSplit.TRAIN.value,
+            "label": TrainingLanguageLabel.ORANGE.value,
+            "citation": "SERNAGEOMIN bulletin",
+            "published_at": published_at,
+            "chunk_index": 2,
+            "storage_path": "academic/abc.txt",
+            "volcano_id": None,
+        }
+    ]
+    with patch(
+        "integrations.refine.services.persist_service.db_pool.run",
+        return_value=rows,
+    ) as run:
+        passages = RefinePersistService.select_passages(
+            TrainingSplit.TRAIN,
+            "00000000-0000-0000-0000-000000000000",
+        )
+    assert run.call_args.args[1] == (
+        TrainingSplit.TRAIN,
+        "00000000-0000-0000-0000-000000000000",
+        TRAINING_DB_FETCH_SIZE,
+    )
+    assert run.call_args.kwargs["fetch"] is PoolFetch.ALL
+    assert len(passages) == 1
+    assert passages[0].id == "pass-1"
+    assert passages[0].storage_path == "academic/abc.txt"
+    assert passages[0].label is TrainingLanguageLabel.ORANGE
+    assert passages[0].citation == "SERNAGEOMIN bulletin"
+    assert passages[0].chunk_index == 2
+    assert passages[0].published_at == published_at
+
+
+def test_select_passages_returns_empty_when_missing():
+    with patch(
+        "integrations.refine.services.persist_service.db_pool.run",
+        return_value=None,
+    ):
+        assert (
+            RefinePersistService.select_passages(
                 TrainingSplit.TEST,
                 "00000000-0000-0000-0000-000000000000",
             )

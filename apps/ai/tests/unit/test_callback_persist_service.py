@@ -28,7 +28,7 @@ def _artifact() -> ModelArtifact:
         id="11111111-1111-1111-1111-111111111111",
         tier=ModelTier.CLOUD,
         role=ModelRole.SCREENER,
-        stage=TrainingStage.LORA,
+        stage=TrainingStage.LORA_VISUAL,
         precision=TrainingPrecision.FP32,
         architecture="vit-small",
         param_count=22000000,
@@ -49,7 +49,7 @@ def test_select_artifact_maps_row():
     row = {
         "tier": ModelTier.CLOUD.value,
         "role": ModelRole.SCREENER.value,
-        "stage": TrainingStage.LORA.value,
+        "stage": TrainingStage.LORA_VISUAL.value,
         "precision": TrainingPrecision.FP32.value,
         "architecture": "vit-small",
         "param_count": 22000000,
@@ -75,7 +75,7 @@ def test_select_artifact_maps_row():
     assert artifact.id == "art-1"
     assert artifact.tier is ModelTier.CLOUD
     assert artifact.role is ModelRole.SCREENER
-    assert artifact.stage is TrainingStage.LORA
+    assert artifact.stage is TrainingStage.LORA_VISUAL
     assert artifact.precision is TrainingPrecision.FP32
     assert artifact.architecture == "vit-small"
     assert artifact.param_count == 22000000
@@ -88,12 +88,60 @@ def test_select_artifact_maps_row():
     assert artifact.parent_id is None
 
 
+def test_select_artifact_maps_language_row():
+    signed_at = datetime(2026, 8, 24, tzinfo=timezone.utc)
+    row = {
+        "tier": ModelTier.CLOUD.value,
+        "role": ModelRole.ANALYST.value,
+        "stage": TrainingStage.LORA_LANGUAGE.value,
+        "precision": TrainingPrecision.FP32.value,
+        "architecture": "qwen2.5-0.5b",
+        "param_count": 500000000,
+        "sparsity": Decimal("0"),
+        "storage_path": "cloud/analyst/art-1.safetensors",
+        "signature": "b" * 64,
+        "signed_at": signed_at,
+        "promoted": False,
+        "promoted_at": None,
+        "mlflow_run_id": "run-2",
+        "hf_repo_id": "sfroning88/Fiery-Analyst",
+        "hf_revision": "rev-def",
+        "session_id": "33333333-3333-3333-3333-333333333333",
+        "parent_id": None,
+    }
+    with patch(
+        "integrations.callback.services.persist_service.db_pool.run",
+        return_value=row,
+    ):
+        artifact = CallbackPersistService.select_artifact("art-2")
+    assert artifact.role is ModelRole.ANALYST
+    assert artifact.stage is TrainingStage.LORA_LANGUAGE
+    assert artifact.architecture == "qwen2.5-0.5b"
+    assert artifact.storage_path == "cloud/analyst/art-1.safetensors"
+    assert artifact.hf_repo_id == "sfroning88/Fiery-Analyst"
+
+
+def test_upsert_language_artifact_passes_storage_dict():
+    artifact = _artifact()
+    artifact.role = ModelRole.ANALYST
+    artifact.stage = TrainingStage.LORA_LANGUAGE
+    artifact.architecture = "qwen2.5-0.5b"
+    artifact.storage_path = "cloud/analyst/art-1.safetensors"
+    with patch("integrations.callback.services.persist_service.db_pool.run") as run:
+        CallbackPersistService.upsert_artifact(artifact)
+    params = run.call_args.args[1]
+    assert params["role"] == ModelRole.ANALYST.value
+    assert params["stage"] == TrainingStage.LORA_LANGUAGE.value
+    assert params["architecture"] == "qwen2.5-0.5b"
+    assert params["storage_path"] == "cloud/analyst/art-1.safetensors"
+
+
 def test_select_artifact_maps_null_hub_fields():
     signed_at = datetime(2026, 8, 24, tzinfo=timezone.utc)
     row = {
         "tier": ModelTier.CLOUD.value,
         "role": ModelRole.SCREENER.value,
-        "stage": TrainingStage.LORA.value,
+        "stage": TrainingStage.LORA_VISUAL.value,
         "precision": TrainingPrecision.FP32.value,
         "architecture": "vit-small",
         "param_count": 22000000,

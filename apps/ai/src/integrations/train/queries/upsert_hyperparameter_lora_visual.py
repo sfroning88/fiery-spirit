@@ -1,5 +1,5 @@
 from psycopg2 import sql
-from fiery_python import TRAINING_HYPERPARAMETER_LORA_TABLE
+from fiery_python import TRAINING_HYPERPARAMETER_LORA_VISUAL_TABLE
 
 QUERY = sql.SQL("""
     INSERT INTO {table}
@@ -34,4 +34,4 @@ QUERY = sql.SQL("""
         learning_rate = EXCLUDED.learning_rate,
         target_modules_id = EXCLUDED.target_modules_id,
         updated_at = NOW()
-""").format(table=sql.Identifier(*TRAINING_HYPERPARAMETER_LORA_TABLE))
+""").format(table=sql.Identifier(*TRAINING_HYPERPARAMETER_LORA_VISUAL_TABLE))

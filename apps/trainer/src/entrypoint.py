@@ -25,6 +25,7 @@ logger = logging.get_logger(__name__)
 
 _MAX_TRAINING_ATTEMPTS = 2
 _VIT_PARAMS = 22_100_000
+_LLM_PARAMS = 494_000_000
 
 
 def entrypoint(spec: Dict, architecture: str) -> Dict:
@@ -91,14 +92,24 @@ def entrypoint(spec: Dict, architecture: str) -> Dict:
                 torch.export.save(exported, buffer)
                 payload = buffer.getvalue()
                 param_count = sum(param.numel() for param in cpu_model.parameters())
-            elif spec.get("lora"):
+            elif spec.get("lora_visual"):
                 from peft import get_peft_model_state_dict
 
-                sidecar["lora"] = spec["lora"]
+                sidecar["lora_visual"] = spec["lora_visual"]
                 sidecar["base_model_id"] = spec["base_model_id"]
                 sidecar["revision"] = spec["revision"]
                 payload = get_peft_model_state_dict(cpu_model)
                 param_count = _VIT_PARAMS + sum(
+                    tensor.numel() for tensor in payload.values()
+                )
+            elif spec.get("lora_language"):
+                from peft import get_peft_model_state_dict
+
+                sidecar["lora_language"] = spec["lora_language"]
+                sidecar["base_model_id"] = spec["base_model_id"]
+                sidecar["revision"] = spec["revision"]
+                payload = get_peft_model_state_dict(cpu_model)
+                param_count = _LLM_PARAMS + sum(
                     tensor.numel() for tensor in payload.values()
                 )
             else:

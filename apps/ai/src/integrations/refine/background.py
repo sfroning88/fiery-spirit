@@ -31,6 +31,7 @@ class RefineBackgroundJobs:
                 version_id=version_id,
                 deformation_id=contract.deformation_id or "None",
                 seismic_id=contract.seismic_id or "None",
+                language_id=contract.language_id or "None",
                 sample_count=sample_count,
             )
         except Exception as err:
@@ -40,6 +41,7 @@ class RefineBackgroundJobs:
                 version_id=version_id,
                 deformation_id=contract.deformation_id or "None",
                 seismic_id=contract.seismic_id or "None",
+                language_id=contract.language_id or "None",
                 error=str(err),
             )
             raise

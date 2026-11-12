@@ -15,16 +15,20 @@ from fiery_python import (
     TrainingSplit,
     TrainingInterferogram,
     TrainingSeismicEvent,
+    TrainingPassage,
     TrainingDeformation,
     TrainingSeismic,
+    TrainingLanguage,
     TrainingContract,
 )
 from ..queries.select_training_contract import QUERY as SELECT_CONTRACT
 from ..queries.select_training_deformation import QUERY as SELECT_DEFORMATION
 from ..queries.select_training_seismic import QUERY as SELECT_SEISMIC
+from ..queries.select_training_language import QUERY as SELECT_LANGUAGE
 from ..queries.select_dataset_version import QUERY as SELECT_VERSION
 from ..queries.select_training_interferograms import QUERY as SELECT_INTERFEROGRAMS
 from ..queries.select_training_seismic_events import QUERY as SELECT_SEISMIC_EVENTS
+from ..queries.select_training_passages import QUERY as SELECT_PASSAGES
 from ..queries.upsert_dataset_version import QUERY as UPSERT_VERSION
 
 logger = logging.get_logger(__name__)
@@ -56,6 +60,7 @@ class RefinePersistService:
             version=row.get("version"),
             seismic_id=row.get("seismic_id"),
             deformation_id=row.get("deformation_id"),
+            language_id=row.get("language_id"),
         )
 
     @staticmethod
@@ -101,6 +106,23 @@ class RefinePersistService:
             bandpass_high_hz=row.get("bandpass_high_hz"),
             normalize=row.get("normalize"),
             snr_min=row.get("snr_min"),
+            class_id=row.get("class_id"),
+        )
+
+    @staticmethod
+    def select_language(contract_id: str) -> Optional[TrainingLanguage]:
+        row = db_pool.run(
+            SELECT_LANGUAGE,
+            (contract_id,),
+            fetch=PoolFetch.ONE,
+            error_event="fetch_training_language_failed",
+        )
+        if not row:
+            logger.warning("fetch_training_language_empty", contract_id=contract_id)
+            return None
+        return TrainingLanguage(
+            id=row.get("id"),
+            max_characters=row.get("max_characters"),
             class_id=row.get("class_id"),
         )
 
@@ -191,6 +213,36 @@ class RefinePersistService:
                 )
             )
         return seismic_events
+
+    @staticmethod
+    def select_passages(
+        split: TrainingSplit, after_id: str, limit: int = TRAINING_DB_FETCH_SIZE
+    ) -> List[TrainingPassage]:
+        rows = db_pool.run(
+            SELECT_PASSAGES,
+            (split, after_id, limit),
+            fetch=PoolFetch.ALL,
+            error_event="fetch_training_passages_failed",
+        )
+        if not rows:
+            logger.warning("fetch_training_passages_empty")
+            return []
+        passages: List[TrainingPassage] = []
+        for row in rows:
+            passages.append(
+                TrainingPassage(
+                    id=row.get("id"),
+                    source=row.get("source"),
+                    split=row.get("split"),
+                    label=row.get("label"),
+                    citation=row.get("citation"),
+                    published_at=row.get("published_at"),
+                    chunk_index=row.get("chunk_index"),
+                    storage_path=row.get("storage_path"),
+                    volcano_id=row.get("volcano_id"),
+                )
+            )
+        return passages
 
     @staticmethod
     def upsert_version(version: DatasetVersion) -> None:

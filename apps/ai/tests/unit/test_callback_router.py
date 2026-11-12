@@ -46,11 +46,11 @@ def _session() -> TrainingSession:
     return TrainingSession(
         id="11111111-1111-1111-1111-111111111111",
         signal=TrainingSignal.DEFORMATION,
-        stage=TrainingStage.LORA,
+        stage=TrainingStage.LORA_VISUAL,
         status=TrainingStatus.EXECUTING,
         samples=10,
         seed=42,
-        hyperparameter_lora_id="lora-1",
+        hyperparameter_lora_visual_id="lora_visual-1",
         contract_id="contract-1",
         version_id="ver-1",
     )

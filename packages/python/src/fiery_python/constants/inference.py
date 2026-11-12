@@ -7,4 +7,5 @@ Definitions for Inference structures
 INFERENCE_ABSTAIN_REASON_ENUM = ("ai", "inference_abstain_reason")
 INFERENCE_DEFORMATION_TABLE = ("ai", "inference_deformation")
 INFERENCE_SEISMIC_TABLE = ("ai", "inference_seismic")
+INFERENCE_LANGUAGE_TABLE = ("ai", "inference_language")
 INFERENCE_FEEDBACK_TABLE = ("ai", "inference_feedback")

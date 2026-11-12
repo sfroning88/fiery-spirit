@@ -10,6 +10,7 @@ from fiery_python import (
     ModelTier,
     ModelRole,
     InferenceDeformation,
+    InferenceLanguage,
     InferenceSeismic,
 )
 from ..schemas import (
@@ -30,6 +31,7 @@ class InferenceServingOrchestrator:
         if (
             key != (ModelTier.CLOUD, ModelRole.SCREENER)
             and key != (ModelTier.CLOUD, ModelRole.TEACHER)
+            and key != (ModelTier.CLOUD, ModelRole.ANALYST)
             and key != (ModelTier.EDGE, ModelRole.STUDENT)
         ):
             raise NotImplementedError
@@ -46,7 +48,7 @@ class InferenceServingOrchestrator:
             seismic_event = InferencePersistService.select_seismic_event(
                 (seismic_event_id, None)
             )
-        elif volcano_id:
+        elif volcano_id and key != (ModelTier.CLOUD, ModelRole.ANALYST):
             if key == (ModelTier.CLOUD, ModelRole.SCREENER):
                 interferogram = InferencePersistService.select_interferogram(
                     (None, volcano_id)
@@ -60,10 +62,18 @@ class InferenceServingOrchestrator:
                 )
             else:
                 raise NotImplementedError
-        else:
+        elif key != (ModelTier.CLOUD, ModelRole.ANALYST):
             raise error("No interferogram or seismic_event is selected")
         score = None
-        if interferogram:
+        generated_text = None
+        if key == (ModelTier.CLOUD, ModelRole.ANALYST):
+            if not volcano_id:
+                raise error("No volcano_id is selected")
+            inference, probabilities = InferenceServingWaiter.run(
+                key, volcano_id=volcano_id
+            )
+            generated_text = inference.generated_text
+        elif interferogram:
             if not interferogram.id:
                 interferogram.id = interferogram.deterministic_id()
             if not interferogram.id:
@@ -85,16 +95,19 @@ class InferenceServingOrchestrator:
             raise error("No interferogram was found")
         else:
             raise error("No seismic event was found")
-        body = BlobStorageServices.get_unrefined(storage_path)
-        sample = InferencePersistService.load_npz(body)
-        inference, probabilities = InferenceServingWaiter.run(
-            key, sample, interferogram_id, seismic_event_id
-        )
+        if key != (ModelTier.CLOUD, ModelRole.ANALYST):
+            body = BlobStorageServices.get_unrefined(storage_path)
+            sample = InferencePersistService.load_npz(body)
+            inference, probabilities = InferenceServingWaiter.run(
+                key, sample, interferogram_id, seismic_event_id
+            )
         if isinstance(inference, InferenceDeformation):
             InferencePersistService.upsert_deformation(inference)
             score = inference.score
         elif isinstance(inference, InferenceSeismic):
             InferencePersistService.upsert_seismic(inference)
+        elif isinstance(inference, InferenceLanguage):
+            InferencePersistService.upsert_language(inference)
         outcome = InferenceOutcome(
             artifact_id=inference.artifact_id,
             transform_hash=inference.transform_hash,
@@ -107,6 +120,7 @@ class InferenceServingOrchestrator:
             inferred_at=inference.inferred_at,
             probabilities=probabilities,
             label=inference.label,
+            generated_text=generated_text,
             score=score,
             interferogram_id=interferogram_id,
             seismic_event_id=seismic_event_id,

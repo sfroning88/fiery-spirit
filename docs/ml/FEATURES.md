@@ -11,9 +11,13 @@ Last updated: **August 2026**
 - [**`Hephaestus`**](https://arxiv.org/abs/2204.09435) from the [`orion-ai-lab`](https://huggingface.co/orion-ai-lab)
 - [**`Okada model`**](https://www.clawpack.org/v5.5.x/okada.html) for ground deformation
 
-- `Waveform` source:
+`Waveform` source:
 
 - [**`Llaima volcano`**](https://data.mendeley.com/datasets/dv8nwdd36k/1) from [`João Paulo Canárioet al`]
+
+`Passage` sources:
+
+- [**`Various academic papers`**](https://to-fill.com) from [`To Fill`]
 
 `Ingest` functions are requested via `/api/ingest`:
 
@@ -63,6 +67,12 @@ station = "LAV"
 sampling_hz = 100
 value_range = [1, 2] # archive scale
 ops = [] # bandpass 1 - 10 Hz
+```
+
+The current **passage contract** is:
+
+```python
+
 ```
 
 The current **packing contract** is:
@@ -215,6 +225,7 @@ Data credits:
 
 - **Dataset:** [huggingface.co/datasets/orion-ai-lab/Thalia](https://huggingface.co/datasets/orion-ai-lab/Thalia)
 - **Dataset:** [huggingface.co/datasets/sfroning88/Llaima](https://huggingface.co/datasets/sfroning88/Llaima)
+- **Dataset:** [huggingface.co/datasets/sfroning88/Volcanology](https://huggingface.co/datasets/sfroning88/Volcanology)
 - **Codebase:** [github.com/Orion-AI-Lab/Thalia](https://github.com/Orion-AI-Lab/Thalia)
 - **Database:** [data.mendeley.com/datasets/dv8nwdd36k/1](https://data.mendeley.com/datasets/dv8nwdd36k/1)
 

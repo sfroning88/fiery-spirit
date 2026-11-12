@@ -33,26 +33,28 @@ enum VolcanoAlertLevel {
 }
 
 model Volcano {
-    id                          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    gvpNumber                   Int? @unique @map("gvp_number")
-    name                        String
-    country                     String
-    zone                        VolcanoZone
-    latitude                    Decimal @db.Decimal(9,6)
-    longitude                   Decimal @db.Decimal(9,6)
-    elevationM                  Int @map("elevation_m")
-    volcanicClass               String? @map("volcanic_class")
-    isGlaciated                 Boolean @map("is_glaciated") @default(false)
-    isInstrumented              Boolean @map("is_instrumented") @default(false)
-    isHeldOut                   Boolean @map("is_held_out") @default(false)
-    imagePath                   String? @map("image_path")
+    id                              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    gvpNumber                       Int? @unique @map("gvp_number")
+    name                            String
+    country                         String
+    zone                            VolcanoZone
+    latitude                        Decimal @db.Decimal(9,6)
+    longitude                       Decimal @db.Decimal(9,6)
+    elevationM                      Int @map("elevation_m")
+    volcanicClass                   String? @map("volcanic_class")
+    isGlaciated                     Boolean @map("is_glaciated") @default(false)
+    isInstrumented                  Boolean @map("is_instrumented") @default(false)
+    isHeldOut                       Boolean @map("is_held_out") @default(false)
+    imagePath                       String? @map("image_path")
 
-    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-    activities                  VolcanoActivity[]
-    interferograms              TrainingInterferogram[]
-    seismicEvents               TrainingSeismicEvent[]
+    activities                      VolcanoActivity[]
+    interferograms                  TrainingInterferogram[]
+    seismicEvents                   TrainingSeismicEvent[]
+    passages                        TrainingPassage[]
+    analyses                        InferenceLanguage[]
 
     @@index([zone], map: "idx_volcano_by_zone")
     @@index([latitude, longitude], map: "idx_volcano_by_position")
@@ -62,19 +64,19 @@ model Volcano {
 }
 
 model VolcanoActivity {
-    id                          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-    source                      VolcanoActivitySource
-    startedAt                   DateTime? @map("started_at") @db.Date
-    endedAt                     DateTime? @map("ended_at") @db.Date
-    vei                         Int?
-    alertLevel                  VolcanoAlertLevel? @map("alert_level")
-    isConfirmed                 Boolean @map("is_confirmed") @default(true)
+    id                              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    source                          VolcanoActivitySource
+    startedAt                       DateTime? @map("started_at") @db.Date
+    endedAt                         DateTime? @map("ended_at") @db.Date
+    vei                             Int?
+    alertLevel                      VolcanoAlertLevel? @map("alert_level")
+    isConfirmed                     Boolean @map("is_confirmed") @default(true)
 
-    volcanoId                   String @map("volcano_id") @db.Uuid
-    volcano                     Volcano @relation(fields: [volcanoId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    volcanoId                       String @map("volcano_id") @db.Uuid
+    volcano                         Volcano @relation(fields: [volcanoId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-    createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-    updatedAt                   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+    createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+    updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
     @@index([volcanoId, startedAt(sort: Desc)], map: "idx_activity_by_volcano")
     @@map("volcano_activity")

@@ -23,10 +23,7 @@ def run_preview_test(signal: str) -> Dict[str, Any]:
     print("Preview integration endpoint test start")
     print(f"\nAttempting preview signal={signal}")
 
-    if signal not in (
-        TrainingSignal.DEFORMATION.value,
-        TrainingSignal.SEISMIC.value,
-    ):
+    if signal not in (TrainingSignal.DEFORMATION.value, TrainingSignal.SEISMIC.value):
         raise ValueError("preview requires -signal deformation|seismic")
 
     if signal == TrainingSignal.SEISMIC.value:

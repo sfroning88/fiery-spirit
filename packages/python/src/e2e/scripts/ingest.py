@@ -13,6 +13,7 @@ _INGEST_SOURCES = (
     TrainingSampleSource.HEPHAESTUS,
     TrainingSampleSource.OKADA,
     TrainingSampleSource.LLAIMA,
+    TrainingSampleSource.ACADEMIC,
 )
 _MAX_SAMPLES = 100
 _JOB_TIMEOUT_SECONDS = 3000
@@ -29,9 +30,11 @@ def run_ingest_test(
     try:
         sample_source = TrainingSampleSource(source)
     except ValueError as err:
-        raise ValueError("ingest requires -source hephaestus|okada|llaima") from err
+        raise ValueError(
+            "ingest requires -source hephaestus|okada|llaima|academic"
+        ) from err
     if sample_source not in _INGEST_SOURCES:
-        raise ValueError("ingest requires -source hephaestus|okada|llaima")
+        raise ValueError("ingest requires -source hephaestus|okada|llaima|academic")
 
     print(f"\nAttempting ingest for source: {sample_source.value}")
 

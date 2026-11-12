@@ -31,6 +31,7 @@ from ..fiery_python import (
     MODEL_TIER_ENUM,
     TRAINING_INTERFEROGRAM_TABLE,
     TRAINING_SEISMIC_EVENT_TABLE,
+    VOLCANO_TABLE,
     TRAINING_SESSION_TABLE,
     TRAINING_STAGE_ENUM,
     TRAINING_STATUS_ENUM,
@@ -239,6 +240,13 @@ _SELECT_RANDOM_SEISMIC_EVENT = sql.SQL("""
     LIMIT 1
 """).format(table=sql.Identifier(*TRAINING_SEISMIC_EVENT_TABLE))
 
+_SELECT_RANDOM_VOLCANO = sql.SQL("""
+    SELECT id::text
+    FROM {table}
+    ORDER BY RANDOM()
+    LIMIT 1
+""").format(table=sql.Identifier(*VOLCANO_TABLE))
+
 
 def _select_random_id(
     query: Any,
@@ -283,6 +291,15 @@ def random_seismic_event_id() -> str:
         _SELECT_RANDOM_SEISMIC_EVENT,
         "fetch_training_seismic_event_failed",
         "No training_seismic_event row for seismic inference",
+    )
+
+
+def random_volcano_id() -> str:
+    """Random volcano.id for language inference"""
+    return _select_random_id(
+        _SELECT_RANDOM_VOLCANO,
+        "fetch_volcano_failed",
+        "No volcano row for language inference",
     )
 
 

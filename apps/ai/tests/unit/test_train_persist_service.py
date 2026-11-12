@@ -10,7 +10,8 @@ import pytest
 from fiery_python import (
     PoolFetch,
     TrainingHyperparameterDistill,
-    TrainingHyperparameterLora,
+    TrainingHyperparameterLoraLanguage,
+    TrainingHyperparameterLoraVisual,
     TrainingHyperparameterPretrain,
     TrainingHyperparameterPrune,
     TrainingHyperparameterQuantize,
@@ -33,11 +34,11 @@ def _session(**overrides) -> TrainingSession:
     payload = {
         "id": "sess-1",
         "signal": TrainingSignal.DEFORMATION,
-        "stage": TrainingStage.LORA,
+        "stage": TrainingStage.LORA_VISUAL,
         "status": TrainingStatus.PENDING,
         "samples": 10,
         "seed": 42,
-        "hyperparameter_lora_id": "lora-1",
+        "hyperparameter_lora_visual_id": "lora_visual-1",
         "contract_id": "contract-1",
         "version_id": "ver-1",
     }
@@ -98,7 +99,7 @@ def test_select_pretrain_maps_row():
     assert pretrain.lr_schedule is TrainingRateSchedule.COSINE
 
 
-def test_select_lora_maps_row():
+def test_select_lora_visual_maps_row():
     row = {
         "rank": 8,
         "alpha": 16,
@@ -115,15 +116,47 @@ def test_select_lora_maps_row():
         "integrations.train.services.persist_service.db_pool.run",
         return_value=row,
     ) as run:
-        lora, modules = TrainPersistService.select_lora("lora-1")
-    assert run.call_args.args[1] == ("lora-1",)
+        lora_visual, modules = TrainPersistService.select_lora_visual("lora_visual-1")
+    assert run.call_args.args[1] == ("lora_visual-1",)
     assert run.call_args.kwargs["fetch"] is PoolFetch.ONE
-    assert lora.id == "lora-1"
-    assert lora.rank == 8
-    assert lora.target_modules_id == "mod-1"
+    assert lora_visual.id == "lora_visual-1"
+    assert lora_visual.rank == 8
+    assert lora_visual.target_modules_id == "mod-1"
     assert modules.id == "mod-1"
     assert modules.query is True
     assert modules.key is False
+
+
+def test_select_lora_language_maps_row():
+    row = {
+        "rank": 8,
+        "alpha": 16,
+        "dropout": 0.05,
+        "epochs": 3,
+        "learning_rate": 0.00002,
+        "gradient_accumulation_steps": 8,
+        "target_modules_id": "mod-1",
+        "query": True,
+        "key": True,
+        "value": True,
+        "output": True,
+    }
+    with patch(
+        "integrations.train.services.persist_service.db_pool.run",
+        return_value=row,
+    ) as run:
+        lora_language, modules = TrainPersistService.select_lora_language(
+            "lora_language-1"
+        )
+    assert run.call_args.args[1] == ("lora_language-1",)
+    assert run.call_args.kwargs["fetch"] is PoolFetch.ONE
+    assert lora_language.id == "lora_language-1"
+    assert lora_language.rank == 8
+    assert lora_language.gradient_accumulation_steps == 8
+    assert lora_language.target_modules_id == "mod-1"
+    assert modules.id == "mod-1"
+    assert modules.key is True
+    assert modules.output is True
 
 
 def test_select_distill_maps_row():
@@ -190,7 +223,8 @@ def test_select_quantize_maps_row():
     "select_fn,row_id",
     [
         (TrainPersistService.select_pretrain, "pretrain-1"),
-        (TrainPersistService.select_lora, "lora-1"),
+        (TrainPersistService.select_lora_visual, "lora_visual-1"),
+        (TrainPersistService.select_lora_language, "lora_language-1"),
         (TrainPersistService.select_distill, "distill-1"),
         (TrainPersistService.select_prune, "prune-1"),
         (TrainPersistService.select_quantize, "quantize-1"),
@@ -207,7 +241,7 @@ def test_select_hyperparameter_returns_none_when_empty(select_fn, row_id):
 def test_select_session_maps_row():
     row = {
         "signal": TrainingSignal.DEFORMATION.value,
-        "stage": TrainingStage.LORA.value,
+        "stage": TrainingStage.LORA_VISUAL.value,
         "status": TrainingStatus.PENDING.value,
         "samples": 10,
         "seed": 42,
@@ -217,7 +251,8 @@ def test_select_session_maps_row():
         "finished_at": None,
         "error_message": None,
         "hyperparameter_pretrain_id": None,
-        "hyperparameter_lora_id": "lora-1",
+        "hyperparameter_lora_visual_id": "lora_visual-1",
+        "hyperparameter_lora_language_id": None,
         "hyperparameter_distill_id": None,
         "hyperparameter_prune_id": None,
         "hyperparameter_quantize_id": None,
@@ -232,9 +267,10 @@ def test_select_session_maps_row():
     assert run.call_args.args[1] == ("sess-1",)
     assert session.id == "sess-1"
     assert session.signal is TrainingSignal.DEFORMATION
-    assert session.stage is TrainingStage.LORA
+    assert session.stage is TrainingStage.LORA_VISUAL
     assert session.status is TrainingStatus.PENDING
-    assert session.hyperparameter_lora_id == "lora-1"
+    assert session.hyperparameter_lora_visual_id == "lora_visual-1"
+    assert session.hyperparameter_lora_language_id is None
     assert session.version_id == "ver-1"
 
 
@@ -257,12 +293,26 @@ def test_select_session_returns_none_when_empty():
             TrainingHyperparameterPretrain(id="pretrain-1"),
         ),
         (
-            TrainingStage.LORA,
-            "hyperparameter_lora_id",
-            "lora_screener",
-            "select_lora",
+            TrainingStage.LORA_VISUAL,
+            "hyperparameter_lora_visual_id",
+            "lora_visual_screener",
+            "select_lora_visual",
             (
-                TrainingHyperparameterLora(id="lora-1", target_modules_id="mod-1"),
+                TrainingHyperparameterLoraVisual(
+                    id="lora_visual-1", target_modules_id="mod-1"
+                ),
+                TrainingTargetModules(id="mod-1"),
+            ),
+        ),
+        (
+            TrainingStage.LORA_LANGUAGE,
+            "hyperparameter_lora_language_id",
+            "lora_language_analyst",
+            "select_lora_language",
+            (
+                TrainingHyperparameterLoraLanguage(
+                    id="lora_language-1", target_modules_id="mod-1"
+                ),
                 TrainingTargetModules(id="mod-1"),
             ),
         ),
@@ -299,10 +349,11 @@ def test_select_hyperparameters_packs_stage_slot(stage, fk, fn_name, select_attr
     ):
         packed, spawned = TrainPersistService.select_hyperparameters(session)
     assert spawned == fn_name
-    pretrain, screener, distill, prune, quantize = packed
+    pretrain, screener, analyst, distill, prune, quantize = packed
     slots = {
         TrainingStage.PRETRAIN: pretrain,
-        TrainingStage.LORA: screener,
+        TrainingStage.LORA_VISUAL: screener,
+        TrainingStage.LORA_LANGUAGE: analyst,
         TrainingStage.DISTILL: distill,
         TrainingStage.PRUNE: prune,
         TrainingStage.QUANTIZE: quantize,
@@ -312,10 +363,10 @@ def test_select_hyperparameters_packs_stage_slot(stage, fk, fn_name, select_attr
 
 
 def test_select_hyperparameters_returns_none_packed_when_missing():
-    session = _session(hyperparameter_lora_id=None)
+    session = _session(hyperparameter_lora_visual_id=None)
     packed, fn_name = TrainPersistService.select_hyperparameters(session)
     assert packed is None
-    assert fn_name == "lora_screener"
+    assert fn_name == "lora_visual_screener"
 
 
 def test_upsert_pretrain_passes_storage_dict():
@@ -326,14 +377,32 @@ def test_upsert_pretrain_passes_storage_dict():
     assert run.call_args.args[1]["optimizer"] == TrainingOptimizer.ADAMW.value
 
 
-def test_upsert_lora_runs_modules_then_lora():
+def test_upsert_lora_visual_runs_modules_then_lora_visual():
     modules = TrainingTargetModules()
-    lora = TrainingHyperparameterLora(target_modules_id=modules.deterministic_id())
+    lora_visual = TrainingHyperparameterLoraVisual(
+        target_modules_id=modules.deterministic_id()
+    )
     with patch("integrations.train.services.persist_service.db_pool.run") as run:
-        TrainPersistService.upsert_lora(lora, modules)
+        TrainPersistService.upsert_lora_visual(lora_visual, modules)
     assert run.call_count == 2
     assert run.call_args_list[0].args[1]["query"] is True
     assert run.call_args_list[1].args[1]["rank"] == 8
+    assert run.call_args_list[1].args[1]["target_modules_id"] == modules.id
+
+
+def test_upsert_lora_language_runs_modules_then_lora_language():
+    modules = TrainingTargetModules(query=True, key=True, value=True, output=True)
+    lora_language = TrainingHyperparameterLoraLanguage(
+        target_modules_id=modules.deterministic_id()
+    )
+    with patch("integrations.train.services.persist_service.db_pool.run") as run:
+        TrainPersistService.upsert_lora_language(lora_language, modules)
+    assert run.call_count == 2
+    assert run.call_args_list[0].args[1]["key"] is True
+    assert run.call_args_list[0].args[1]["output"] is True
+    assert run.call_args_list[1].args[1]["rank"] == 8
+    assert run.call_args_list[1].args[1]["epochs"] == 3
+    assert run.call_args_list[1].args[1]["gradient_accumulation_steps"] == 8
     assert run.call_args_list[1].args[1]["target_modules_id"] == modules.id
 
 
@@ -368,7 +437,7 @@ def test_upsert_session_passes_storage_dict():
     session = TrainingSession(
         id="11111111-1111-1111-1111-111111111111",
         signal=TrainingSignal.DEFORMATION,
-        stage=TrainingStage.LORA,
+        stage=TrainingStage.LORA_VISUAL,
         status=TrainingStatus.PENDING,
         samples=10,
         seed=42,
@@ -381,6 +450,6 @@ def test_upsert_session_passes_storage_dict():
     params = run.call_args.args[1]
     assert params["id"] == session.id
     assert params["signal"] == TrainingSignal.DEFORMATION.value
-    assert params["stage"] == TrainingStage.LORA.value
+    assert params["stage"] == TrainingStage.LORA_VISUAL.value
     assert params["status"] == TrainingStatus.PENDING.value
     assert params["contract_id"] == session.contract_id

@@ -10,6 +10,7 @@ from ..helpers import wait_for_jobs
 from ...fiery_python import (
     TRAINING_CONTRACT_DEFORMATION_VERSION,
     TRAINING_CONTRACT_SEISMIC_VERSION,
+    TRAINING_CONTRACT_LANGUAGE_VERSION,
     UuidUtils,
 )
 
@@ -27,14 +28,18 @@ def run_refine_test(
 
     print(f"\nAttempting refine shards={shards}")
 
-    if shards not in ("satellite", "sensor"):
-        raise ValueError("refine requires -shards satellite|sensor")
-    signal = "seismic" if shards == "sensor" else "deformation"
-    version = (
-        TRAINING_CONTRACT_SEISMIC_VERSION
-        if shards == "sensor"
-        else TRAINING_CONTRACT_DEFORMATION_VERSION
-    )
+    if shards not in ("satellite", "sensor", "literature"):
+        raise ValueError("refine requires -shards satellite|sensor|literature")
+    match shards:
+        case "satellite":
+            signal = "deformation"
+            version = TRAINING_CONTRACT_DEFORMATION_VERSION
+        case "sensor":
+            signal = "seismic"
+            version = TRAINING_CONTRACT_SEISMIC_VERSION
+        case "literature":
+            signal = "language"
+            version = TRAINING_CONTRACT_LANGUAGE_VERSION
     training_contract_id = UuidUtils.deterministic_uuid(signal, version)
 
     response: Any = endpoint_test(

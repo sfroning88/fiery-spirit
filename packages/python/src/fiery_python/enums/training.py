@@ -24,6 +24,7 @@ class TrainingSampleSource(str, Enum):
     OKADA = "okada"
     LLAIMA = "llaima"
     VILLARRICA = "villarrica"
+    ACADEMIC = "academic"
 
 
 class TrainingSignal(str, Enum):
@@ -31,13 +32,15 @@ class TrainingSignal(str, Enum):
 
     DEFORMATION = "deformation"
     SEISMIC = "seismic"
+    LANGUAGE = "language"
 
 
 class TrainingStage(str, Enum):
     """Training Stage enumeration"""
 
     PRETRAIN = "pretrain"
-    LORA = "lora"
+    LORA_VISUAL = "lora_visual"
+    LORA_LANGUAGE = "lora_language"
     DISTILL = "distill"
     PRUNE = "prune"
     QUANTIZE = "quantize"
@@ -61,6 +64,14 @@ class TrainingPrecision(str, Enum):
     INT8 = "int8"
 
 
+class TrainingDeformationLabel(str, Enum):
+    """Training Deformation Label enumeration"""
+
+    POSITIVE = "positive"
+    NEGATIVE = "negative"
+    UNCERTAIN = "uncertain"
+
+
 class TrainingSeismicLabel(str, Enum):
     """Training Seismic Label enumeration"""
 
@@ -70,12 +81,13 @@ class TrainingSeismicLabel(str, Enum):
     TC = "tc"
 
 
-class TrainingDeformationLabel(str, Enum):
-    """Training Deformation Label enumeration"""
+class TrainingLanguageLabel(str, Enum):
+    """Training Language Label enumeration"""
 
-    POSITIVE = "positive"
-    NEGATIVE = "negative"
-    UNCERTAIN = "uncertain"
+    GREEN = "green"
+    YELLOW = "yellow"
+    ORANGE = "orange"
+    RED = "red"
 
 
 class TrainingWindow(str, Enum):

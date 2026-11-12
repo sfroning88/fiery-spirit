@@ -33,7 +33,7 @@ def _artifact(**overrides) -> ModelArtifact:
         id="11111111-1111-1111-1111-111111111111",
         tier=ModelTier.CLOUD,
         role=ModelRole.SCREENER,
-        stage=TrainingStage.LORA,
+        stage=TrainingStage.LORA_VISUAL,
         precision=TrainingPrecision.FP32,
         architecture="vit-small",
         param_count=22000000,
@@ -143,7 +143,7 @@ def test_log_finished_run_registers_model_and_returns_run_id():
         {
             "tier": ModelTier.CLOUD.value,
             "role": ModelRole.SCREENER.value,
-            "stage": TrainingStage.LORA.value,
+            "stage": TrainingStage.LORA_VISUAL.value,
             "architecture": "vit-small",
             "precision": TrainingPrecision.FP32.value,
             "session_id": artifact.session_id,

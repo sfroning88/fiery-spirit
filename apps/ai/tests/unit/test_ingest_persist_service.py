@@ -17,6 +17,8 @@ from fiery_python import (
     TrainingDeformationSourceType,
     TrainingInterferogram,
     TrainingDeformationLabel,
+    TrainingLanguageLabel,
+    TrainingPassage,
     TrainingSampleSource,
     TrainingSeismicEvent,
     TrainingSeismicLabel,
@@ -145,6 +147,45 @@ def test_upsert_seismic_events_execute_values():
     assert inserted[0]["label"] == TrainingSeismicLabel.LP.value
     assert inserted[0]["station"] == "LAV"
     assert inserted[0]["sampling_hz"] == 100
+    assert inserted[0]["id"] == row.deterministic_id()
+
+
+def test_upsert_passages_execute_values():
+    row = TrainingPassage(
+        source=TrainingSampleSource.ACADEMIC,
+        split=TrainingSplit.TRAIN,
+        label=TrainingLanguageLabel.YELLOW,
+        citation="SERNAGEOMIN bulletin",
+        published_at=datetime(2015, 3, 3, tzinfo=timezone.utc),
+        chunk_index=2,
+        storage_path="academic/abc.txt",
+    )
+    cursor = MagicMock()
+    with (
+        patch(
+            "integrations.ingest.services.persist_service.db_pool.get_cursor"
+        ) as get_cursor,
+        patch(
+            "integrations.ingest.services.persist_service.execute_values"
+        ) as execute_values,
+        patch(
+            "integrations.ingest.services.persist_service.UPSERT_PASSAGES.as_string",
+            return_value="INSERT",
+        ),
+        patch(
+            "integrations.ingest.services.persist_service.UPSERT_PASSAGES_TEMPLATE.as_string",
+            return_value="TEMPLATE",
+        ),
+    ):
+        get_cursor.return_value.__enter__.return_value = cursor
+        IngestPersistService.upsert_passages([row])
+    execute_values.assert_called_once()
+    inserted = execute_values.call_args.args[2]
+    assert inserted[0]["storage_path"] == "academic/abc.txt"
+    assert inserted[0]["source"] == TrainingSampleSource.ACADEMIC.value
+    assert inserted[0]["label"] == TrainingLanguageLabel.YELLOW.value
+    assert inserted[0]["citation"] == "SERNAGEOMIN bulletin"
+    assert inserted[0]["chunk_index"] == 2
     assert inserted[0]["id"] == row.deterministic_id()
 
 

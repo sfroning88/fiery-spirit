@@ -13,10 +13,12 @@ from fiery_python import (
     VOLCANO_DB_FETCH_SIZE,
     InferenceDeformation,
     InferenceSeismic,
+    InferenceLanguage,
     TrainingInterferogram,
     TrainingSeismicEvent,
     TrainingDeformation,
     TrainingSeismic,
+    TrainingLanguage,
     Volcano,
 )
 from ..queries.select_volcanoes import QUERY as SELECT_VOLCANOES
@@ -24,8 +26,10 @@ from ..queries.select_training_interferogram import QUERY as SELECT_INTERFEROGRA
 from ..queries.select_training_seismic_event import QUERY as SELECT_SEISMIC_EVENT
 from ..queries.select_training_deformation import QUERY as SELECT_DEFORMATION
 from ..queries.select_training_seismic import QUERY as SELECT_SEISMIC
+from ..queries.select_training_language import QUERY as SELECT_LANGUAGE
 from ..queries.upsert_inference_deformation import QUERY as UPSERT_DEFORMATION
 from ..queries.upsert_inference_seismic import QUERY as UPSERT_SEISMIC
+from ..queries.upsert_inference_language import QUERY as UPSERT_LANGUAGE
 
 logger = logging.get_logger(__name__)
 
@@ -188,6 +192,23 @@ class InferencePersistService:
         )
 
     @staticmethod
+    def select_language(session_id: str) -> Optional[TrainingLanguage]:
+        row = db_pool.run(
+            SELECT_LANGUAGE,
+            (session_id,),
+            fetch=PoolFetch.ONE,
+            error_event="fetch_training_language_failed",
+        )
+        if not row:
+            logger.warning("fetch_training_language_empty", session_id=session_id)
+            return None
+        return TrainingLanguage(
+            id=row.get("id"),
+            max_characters=row.get("max_characters"),
+            class_id=row.get("class_id"),
+        )
+
+    @staticmethod
     def upsert_deformation(deformation: InferenceDeformation) -> None:
         db_pool.run(
             UPSERT_DEFORMATION,
@@ -199,4 +220,11 @@ class InferencePersistService:
         db_pool.run(
             UPSERT_SEISMIC,
             seismic.prepare_for_storage(include_id=False),
+        )
+
+    @staticmethod
+    def upsert_language(language: InferenceLanguage) -> None:
+        db_pool.run(
+            UPSERT_LANGUAGE,
+            language.prepare_for_storage(include_id=True),
         )

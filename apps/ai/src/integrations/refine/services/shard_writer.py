@@ -15,8 +15,10 @@ from fiery_python import (
     Shard,
     TrainingDeformation,
     TrainingSeismic,
+    TrainingLanguage,
     TrainingInterferogram,
     TrainingSeismicEvent,
+    TrainingPassage,
     TrainingContract,
     TrainingSplit,
     TrainingStatus,
@@ -33,8 +35,8 @@ _FORMAT_VERSION = 1
 _TARGET_SHARD_BYTES = 200 * 1024 * 1024
 _LABEL_OVERHEAD = 256
 _BASE_ID = "00000000-0000-0000-0000-000000000000"
-_Params = Union[TrainingDeformation, TrainingSeismic]
-_Sample = Union[TrainingInterferogram, TrainingSeismicEvent]
+_Params = Union[TrainingDeformation, TrainingSeismic, TrainingLanguage]
+_Sample = Union[TrainingInterferogram, TrainingSeismicEvent, TrainingPassage]
 
 
 class RefineShardWriter:
@@ -59,6 +61,11 @@ class RefineShardWriter:
             if not params:
                 raise error("Training seismic not found")
             transform_hash = Transformation.transform_hash_seismic(params)
+        elif contract.language_id:
+            params = RefinePersistService.select_language(contract.id)
+            if not params:
+                raise error("Training language not found")
+            transform_hash = Transformation.transform_hash_language(params)
         else:
             raise error("Malformed training contract")
         version = RefinePersistService.select_version(contract.id, transform_hash)
@@ -122,6 +129,7 @@ class RefineShardWriter:
                 version_id=version_id,
                 deformation_id=contract.deformation_id or "None",
                 seismic_id=contract.seismic_id or "None",
+                language_id=contract.language_id or "None",
                 error=str(err),
             )
             raise
@@ -152,6 +160,10 @@ class RefineShardWriter:
             elif isinstance(params, TrainingSeismic):
                 page.extend(
                     RefinePersistService.select_seismic_events(split, after_id, limit)
+                )
+            elif isinstance(params, TrainingLanguage):
+                page.extend(
+                    RefinePersistService.select_passages(split, after_id, limit)
                 )
             else:
                 assert_never(params)
@@ -211,6 +223,10 @@ class RefineShardWriter:
             params, TrainingSeismic
         ):
             storage_path = sample.waveform_path
+        elif isinstance(sample, TrainingPassage) and isinstance(
+            params, TrainingLanguage
+        ):
+            storage_path = sample.storage_path
         else:
             raise error("Sample and params signal mismatch")
         if not sample.id or not storage_path:
@@ -218,16 +234,19 @@ class RefineShardWriter:
             return None
         try:
             body = BlobStorageServices.get_unrefined(storage_path)
-            array = RefinePersistService.load_npz(body)
             if isinstance(params, TrainingDeformation):
+                array = RefinePersistService.load_npz(body)
                 transformed = Transformation.apply_deformation(array, params)
             elif isinstance(params, TrainingSeismic):
+                array = RefinePersistService.load_npz(body)
                 if (
                     isinstance(sample, TrainingSeismicEvent)
                     and sample.sampling_hz != params.sampling_hz
                 ):
                     raise TransformationRejected("sampling_hz mismatch")
                 transformed = Transformation.apply_seismic(array, params)
+            elif isinstance(params, TrainingLanguage):
+                transformed = Transformation.apply_language(body, params)
             else:
                 assert_never(params)
         except TransformationRejected as err:

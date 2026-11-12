@@ -22,8 +22,10 @@ def train_model(
     match stage:
         case TrainingStage.PRETRAIN.value:
             return _train_pretrain_model(model, loaders, spec)
-        case TrainingStage.LORA.value:
-            return _train_lora_model(model, loaders, spec)
+        case TrainingStage.LORA_VISUAL.value:
+            return _train_lora_visual_model(model, loaders, spec)
+        case TrainingStage.LORA_LANGUAGE.value:
+            return _train_lora_language_model(model, loaders, spec)
         case TrainingStage.DISTILL.value:
             return _train_distill_model(model, loaders, spec)
         case TrainingStage.PRUNE.value:
@@ -56,21 +58,21 @@ def _train_pretrain_model(
     return model
 
 
-def _train_lora_model(
+def _train_lora_visual_model(
     model: nn.Module, loaders: Dict[str, DataLoader], spec: dict
 ) -> nn.Module:
     import torch
 
-    lora = spec["lora"]
+    lora_visual = spec["lora_visual"]
     loader = loaders["train"]
     device = next(model.parameters()).device
     model.train()
     optimizer = torch.optim.AdamW(
         (param for param in model.parameters() if param.requires_grad),
-        lr=lora["learning_rate"],
+        lr=lora_visual["learning_rate"],
     )
     loss_fn = nn.CrossEntropyLoss()
-    for _ in range(lora["epochs"]):
+    for _ in range(lora_visual["epochs"]):
         for images, targets in loader:
             images = images.to(device)
             targets = targets.to(device)
@@ -78,6 +80,53 @@ def _train_lora_model(
             loss = loss_fn(model(images), targets)
             loss.backward()
             optimizer.step()
+    return model
+
+
+def _train_lora_language_model(
+    model: nn.Module, loaders: Dict[str, DataLoader], spec: dict
+) -> nn.Module:
+    import torch
+
+    lora_language = spec["lora_language"]
+    loader = loaders["train"]
+    device = next(model.parameters()).device
+    steps = lora_language["gradient_accumulation_steps"]
+    if not isinstance(steps, int) or steps <= 0:
+        raise RuntimeError(
+            "Missing lora_language.gradient_accumulation_steps from spec"
+        )
+    model.train()
+    optimizer = torch.optim.AdamW(
+        (param for param in model.parameters() if param.requires_grad),
+        lr=lora_language["learning_rate"],
+    )
+    loss_fn = nn.CrossEntropyLoss()
+    for _ in range(lora_language["epochs"]):
+        optimizer.zero_grad()
+        pending = 0
+        for batch in loader:
+            input_ids = batch["input_ids"].to(device)
+            attention_mask = batch["attention_mask"].to(device)
+            labels = batch["labels"].to(device)
+            logits = model(input_ids=input_ids, attention_mask=attention_mask)
+            if hasattr(logits, "logits"):
+                logits = logits.logits
+            shift_logits = logits[:, :-1, :].contiguous()
+            shift_labels = labels[:, 1:].contiguous()
+            loss = loss_fn(
+                shift_logits.view(-1, shift_logits.size(-1)),
+                shift_labels.view(-1),
+            )
+            (loss / steps).backward()
+            pending += 1
+            if pending == steps:
+                optimizer.step()
+                optimizer.zero_grad()
+                pending = 0
+        if pending:
+            optimizer.step()
+            optimizer.zero_grad()
     return model
 
 

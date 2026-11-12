@@ -9,13 +9,15 @@ from fiery_python import (
     Shard,
     TrainingDeformation,
     TrainingDeformationLabel,
+    TrainingLanguage,
+    TrainingLanguageLabel,
     TrainingSeismic,
     TrainingSeismicLabel,
     TrainingSplit,
 )
 
-_Label = Union[TrainingDeformationLabel, TrainingSeismicLabel]
-_Params = Union[TrainingDeformation, TrainingSeismic]
+_Label = Union[TrainingDeformationLabel, TrainingSeismicLabel, TrainingLanguageLabel]
+_Params = Union[TrainingDeformation, TrainingSeismic, TrainingLanguage]
 
 
 class RefineShardManifest:
@@ -34,6 +36,8 @@ class RefineShardManifest:
             labels = TrainingDeformationLabel
         elif isinstance(params, TrainingSeismic):
             labels = TrainingSeismicLabel
+        elif isinstance(params, TrainingLanguage):
+            labels = TrainingLanguageLabel
         else:
             assert_never(params)
         self._splits: Dict[str, Dict[str, Any]] = {
@@ -110,6 +114,10 @@ class RefineShardManifest:
                 "bandpass_high_hz": str(self._params.bandpass_high_hz),
                 "normalize": self._params.normalize.value,
                 "snr_min": str(self._params.snr_min),
+            }
+        elif isinstance(self._params, TrainingLanguage):
+            snapshot = {
+                "max_characters": self._params.max_characters,
             }
         else:
             assert_never(self._params)

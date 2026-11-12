@@ -13,10 +13,12 @@ import pytest
 from fiery_python import error
 from fiery_python import (
     InferenceDeformation,
+    InferenceLanguage,
     InferenceSeismic,
     ModelRole,
     ModelTier,
     TrainingDeformationLabel,
+    TrainingLanguageLabel,
     TrainingSampleSource,
     TrainingSeismicLabel,
     TrainingSplit,
@@ -365,4 +367,63 @@ def test_run_volcano_resolves_latest_seismic_event_once():
     assert waiter.call_args.args[3] == EVT_ID
     assert response.result.interferogram_id is None
     assert response.result.seismic_event_id == EVT_ID
+    assert response.result.volcano_id == VOL_ID
+
+
+def test_analyst_request_accepts_volcano_only():
+    payload = _volcano_request(role=ModelRole.ANALYST)
+    assert payload.validate_payload() is True
+    payload.interferogram_id = IFG_ID
+    assert payload.validate_payload() is False
+
+
+def test_run_persists_language_and_returns_sentence():
+    probabilities = {
+        "green": Decimal("0"),
+        "yellow": Decimal("1"),
+        "orange": Decimal("0"),
+        "red": Decimal("0"),
+    }
+    row = InferenceLanguage(
+        label=TrainingLanguageLabel.YELLOW,
+        probabilities=[
+            Decimal("0"),
+            Decimal("1"),
+            Decimal("0"),
+            Decimal("0"),
+        ],
+        class_order=[
+            TrainingLanguageLabel.GREEN,
+            TrainingLanguageLabel.YELLOW,
+            TrainingLanguageLabel.ORANGE,
+            TrainingLanguageLabel.RED,
+        ],
+        threshold_used=Decimal("0"),
+        abstention_band=Decimal("0"),
+        generated_text="Villarrica stays yellow because the lava lake remains active.",
+        transform_hash=TRANSFORM_HASH,
+        op_version=1,
+        inferred_at=NOW,
+        artifact_id=ART_ID,
+        volcano_id=VOL_ID,
+    )
+    with (
+        patch(
+            "integrations.inference.services.serving_orchestrator.InferenceServingWaiter.run",
+            return_value=(row, probabilities),
+        ) as waiter,
+        patch(
+            "integrations.inference.services.serving_orchestrator.InferencePersistService.upsert_language"
+        ) as upsert_language,
+    ):
+        response = InferenceServingOrchestrator.run(
+            _volcano_request(role=ModelRole.ANALYST)
+        )
+    waiter.assert_called_once_with(
+        (ModelTier.CLOUD, ModelRole.ANALYST), volcano_id=VOL_ID
+    )
+    upsert_language.assert_called_once_with(row)
+    assert response.artifact_id == ART_ID
+    assert response.result.label is TrainingLanguageLabel.YELLOW
+    assert response.result.generated_text == row.generated_text
     assert response.result.volcano_id == VOL_ID

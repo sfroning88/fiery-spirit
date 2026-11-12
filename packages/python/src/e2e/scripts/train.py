@@ -16,6 +16,7 @@ from ..endpoints import TRAIN_URL, endpoint_test
 from ..helpers import latest_artifact_id, wait_for_jobs, wait_for_session
 from ...fiery_python import (
     TRAINING_CONTRACT_DEFORMATION_VERSION,
+    TRAINING_CONTRACT_LANGUAGE_VERSION,
     TRAINING_CONTRACT_SEISMIC_VERSION,
     ModelRole,
     ModelTier,
@@ -24,6 +25,7 @@ from ...fiery_python import (
     TrainingNormalize,
     TrainingWindow,
     TrainingDeformation,
+    TrainingLanguage,
     TrainingSeismic,
     UuidUtils,
 )
@@ -41,9 +43,9 @@ def run_train_test(job: str, timeout: Optional[int] = _JOB_TIMEOUT_SECONDS) -> N
         stage = TrainingStage(job)
     except ValueError as err:
         raise ValueError(
-            "train requires -job pretrain|lora|distill|prune|quantize"
+            "train requires -job pretrain|lora_visual|lora_language|distill|prune|quantize"
         ) from err
-    if stage is TrainingStage.LORA:
+    if stage is TrainingStage.LORA_VISUAL:
         deformation = TrainingDeformation(
             patch_px=8,
             wrap_rad=Decimal("3.14159"),
@@ -54,6 +56,15 @@ def run_train_test(job: str, timeout: Optional[int] = _JOB_TIMEOUT_SECONDS) -> N
         transform_hash = Transformation.transform_hash_deformation(deformation)
         training_contract_id = UuidUtils.deterministic_uuid(
             "deformation", TRAINING_CONTRACT_DEFORMATION_VERSION
+        )
+    elif stage is TrainingStage.LORA_LANGUAGE:
+        language = TrainingLanguage(
+            max_characters=800,
+            class_id="ignored-for-hash",
+        )
+        transform_hash = Transformation.transform_hash_language(language)
+        training_contract_id = UuidUtils.deterministic_uuid(
+            "language", TRAINING_CONTRACT_LANGUAGE_VERSION
         )
     else:
         seismic = TrainingSeismic(

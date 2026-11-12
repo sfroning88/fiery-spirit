@@ -14,7 +14,8 @@ from fiery_python import (
     TrainingStage,
     TrainingTargetModules,
     TrainingHyperparameterPretrain,
-    TrainingHyperparameterLora,
+    TrainingHyperparameterLoraVisual,
+    TrainingHyperparameterLoraLanguage,
     TrainingHyperparameterDistill,
     TrainingHyperparameterPrune,
     TrainingHyperparameterQuantize,
@@ -26,14 +27,16 @@ from ..queries.select_training_contract import QUERY as SELECT_CONTRACT
 from ..queries.select_dataset_version import QUERY as SELECT_VERSION
 from ..queries.select_model_artifact import QUERY as SELECT_ARTIFACT
 from ..queries.select_hyperparameter_pretrain import QUERY as SELECT_PRETRAIN
-from ..queries.select_hyperparameter_lora import QUERY as SELECT_LORA
+from ..queries.select_hyperparameter_lora_visual import QUERY as SELECT_LORA_VISUAL
+from ..queries.select_hyperparameter_lora_language import QUERY as SELECT_LORA_LANGUAGE
 from ..queries.select_hyperparameter_distill import QUERY as SELECT_DISTILL
 from ..queries.select_hyperparameter_prune import QUERY as SELECT_PRUNE
 from ..queries.select_hyperparameter_quantize import QUERY as SELECT_QUANTIZE
 from ..queries.select_training_session import QUERY as SELECT_SESSION
 from ..queries.upsert_target_modules import QUERY as UPSERT_MODULES
 from ..queries.upsert_hyperparameter_pretrain import QUERY as UPSERT_PRETRAIN
-from ..queries.upsert_hyperparameter_lora import QUERY as UPSERT_LORA
+from ..queries.upsert_hyperparameter_lora_visual import QUERY as UPSERT_LORA_VISUAL
+from ..queries.upsert_hyperparameter_lora_language import QUERY as UPSERT_LORA_LANGUAGE
 from ..queries.upsert_hyperparameter_distill import QUERY as UPSERT_DISTILL
 from ..queries.upsert_hyperparameter_prune import QUERY as UPSERT_PRUNE
 from ..queries.upsert_hyperparameter_quantize import QUERY as UPSERT_QUANTIZE
@@ -43,7 +46,8 @@ logger = logging.get_logger(__name__)
 
 _MODAL_SPAWNABLE_FUNCTIONS: Dict[TrainingStage, str] = {
     TrainingStage.PRETRAIN: "pretrain_teacher",
-    TrainingStage.LORA: "lora_screener",
+    TrainingStage.LORA_VISUAL: "lora_visual_screener",
+    TrainingStage.LORA_LANGUAGE: "lora_language_analyst",
     TrainingStage.DISTILL: "distill_student",
     TrainingStage.PRUNE: "prune_student",
     TrainingStage.QUANTIZE: "quantize_student",
@@ -60,14 +64,14 @@ class TrainPersistService:
         if signal is TrainingSignal.DEFORMATION:
             modules = TrainingTargetModules()
             modules.id = modules.deterministic_id()
-            lora = TrainingHyperparameterLora(target_modules_id=modules.id)
-            lora.id = lora.deterministic_id()
-            hyperparameters = TrainPersistService.select_lora(lora.id)
+            lora_visual = TrainingHyperparameterLoraVisual(target_modules_id=modules.id)
+            lora_visual.id = lora_visual.deterministic_id()
+            hyperparameters = TrainPersistService.select_lora_visual(lora_visual.id)
             if hyperparameters:
-                lora, _modules = hyperparameters
+                lora_visual, _modules = hyperparameters
             else:
-                TrainPersistService.upsert_lora(lora, modules)
-            session.hyperparameter_lora_id = lora.id
+                TrainPersistService.upsert_lora_visual(lora_visual, modules)
+            session.hyperparameter_lora_visual_id = lora_visual.id
         elif signal is TrainingSignal.SEISMIC:
             if session.stage is TrainingStage.PRETRAIN:
                 pretrain = TrainingHyperparameterPretrain()
@@ -107,6 +111,19 @@ class TrainPersistService:
                 session.hyperparameter_quantize_id = quantize.id
             else:
                 assert_never(session.stage)
+        elif signal is TrainingSignal.LANGUAGE:
+            modules = TrainingTargetModules()
+            modules.id = modules.deterministic_id()
+            lora_language = TrainingHyperparameterLoraLanguage(
+                target_modules_id=modules.id
+            )
+            lora_language.id = lora_language.deterministic_id()
+            hyperparameters = TrainPersistService.select_lora_language(lora_language.id)
+            if hyperparameters:
+                lora_language, _modules = hyperparameters
+            else:
+                TrainPersistService.upsert_lora_language(lora_language, modules)
+            session.hyperparameter_lora_language_id = lora_language.id
         else:
             assert_never(signal)
         return session
@@ -126,14 +143,25 @@ class TrainPersistService:
                     if session.hyperparameter_pretrain_id
                     else None
                 )
-                packed = (row, None, None, None, None) if row else None
-            case TrainingStage.LORA:
+                packed = (row, None, None, None, None, None) if row else None
+            case TrainingStage.LORA_VISUAL:
                 row = (
-                    TrainPersistService.select_lora(session.hyperparameter_lora_id)
-                    if session.hyperparameter_lora_id
+                    TrainPersistService.select_lora_visual(
+                        session.hyperparameter_lora_visual_id
+                    )
+                    if session.hyperparameter_lora_visual_id
                     else None
                 )
-                packed = (None, row, None, None, None) if row else None
+                packed = (None, row, None, None, None, None) if row else None
+            case TrainingStage.LORA_LANGUAGE:
+                row = (
+                    TrainPersistService.select_lora_language(
+                        session.hyperparameter_lora_language_id
+                    )
+                    if session.hyperparameter_lora_language_id
+                    else None
+                )
+                packed = (None, None, row, None, None, None) if row else None
             case TrainingStage.DISTILL:
                 row = (
                     TrainPersistService.select_distill(
@@ -142,14 +170,14 @@ class TrainPersistService:
                     if session.hyperparameter_distill_id
                     else None
                 )
-                packed = (None, None, row, None, None) if row else None
+                packed = (None, None, None, row, None, None) if row else None
             case TrainingStage.PRUNE:
                 row = (
                     TrainPersistService.select_prune(session.hyperparameter_prune_id)
                     if session.hyperparameter_prune_id
                     else None
                 )
-                packed = (None, None, None, row, None) if row else None
+                packed = (None, None, None, None, row, None) if row else None
             case TrainingStage.QUANTIZE:
                 row = (
                     TrainPersistService.select_quantize(
@@ -158,7 +186,7 @@ class TrainPersistService:
                     if session.hyperparameter_quantize_id
                     else None
                 )
-                packed = (None, None, None, None, row) if row else None
+                packed = (None, None, None, None, None, row) if row else None
             case _:
                 assert_never(session.stage)
         return packed, fn_name
@@ -181,6 +209,7 @@ class TrainPersistService:
             version=row.get("version"),
             seismic_id=row.get("seismic_id"),
             deformation_id=row.get("deformation_id"),
+            language_id=row.get("language_id"),
         )
 
     @staticmethod
@@ -261,25 +290,61 @@ class TrainPersistService:
         )
 
     @staticmethod
-    def select_lora(
-        lora_id: str,
-    ) -> Optional[Tuple[TrainingHyperparameterLora, TrainingTargetModules]]:
+    def select_lora_visual(
+        lora_visual_id: str,
+    ) -> Optional[Tuple[TrainingHyperparameterLoraVisual, TrainingTargetModules]]:
         row = db_pool.run(
-            SELECT_LORA,
-            (lora_id,),
+            SELECT_LORA_VISUAL,
+            (lora_visual_id,),
             fetch=PoolFetch.ONE,
-            error_event="fetch_training_hyperparameter_lora_failed",
+            error_event="fetch_training_hyperparameter_lora_visual_failed",
         )
         if not row:
-            logger.warning("fetch_training_hyperparameter_lora_empty", lora_id=lora_id)
+            logger.warning(
+                "fetch_training_hyperparameter_lora_visual_empty",
+                lora_visual_id=lora_visual_id,
+            )
             return None
-        return TrainingHyperparameterLora(
-            id=lora_id,
+        return TrainingHyperparameterLoraVisual(
+            id=lora_visual_id,
             rank=row.get("rank"),
             alpha=row.get("alpha"),
             dropout=row.get("dropout"),
             epochs=row.get("epochs"),
             learning_rate=row.get("learning_rate"),
+            target_modules_id=row.get("target_modules_id"),
+        ), TrainingTargetModules(
+            id=row.get("target_modules_id"),
+            query=row.get("query"),
+            key=row.get("key"),
+            value=row.get("value"),
+            output=row.get("output"),
+        )
+
+    @staticmethod
+    def select_lora_language(
+        lora_language_id: str,
+    ) -> Optional[Tuple[TrainingHyperparameterLoraLanguage, TrainingTargetModules]]:
+        row = db_pool.run(
+            SELECT_LORA_LANGUAGE,
+            (lora_language_id,),
+            fetch=PoolFetch.ONE,
+            error_event="fetch_training_hyperparameter_lora_language_failed",
+        )
+        if not row:
+            logger.warning(
+                "fetch_training_hyperparameter_lora_language_empty",
+                lora_language_id=lora_language_id,
+            )
+            return None
+        return TrainingHyperparameterLoraLanguage(
+            id=lora_language_id,
+            rank=row.get("rank"),
+            alpha=row.get("alpha"),
+            dropout=row.get("dropout"),
+            epochs=row.get("epochs"),
+            learning_rate=row.get("learning_rate"),
+            gradient_accumulation_steps=row.get("gradient_accumulation_steps"),
             target_modules_id=row.get("target_modules_id"),
         ), TrainingTargetModules(
             id=row.get("target_modules_id"),
@@ -388,7 +453,8 @@ class TrainPersistService:
             finished_at=row.get("finished_at"),
             error_message=row.get("error_message"),
             hyperparameter_pretrain_id=row.get("hyperparameter_pretrain_id"),
-            hyperparameter_lora_id=row.get("hyperparameter_lora_id"),
+            hyperparameter_lora_visual_id=row.get("hyperparameter_lora_visual_id"),
+            hyperparameter_lora_language_id=row.get("hyperparameter_lora_language_id"),
             hyperparameter_distill_id=row.get("hyperparameter_distill_id"),
             hyperparameter_prune_id=row.get("hyperparameter_prune_id"),
             hyperparameter_quantize_id=row.get("hyperparameter_quantize_id"),
@@ -404,16 +470,30 @@ class TrainPersistService:
         )
 
     @staticmethod
-    def upsert_lora(
-        lora: TrainingHyperparameterLora, modules: TrainingTargetModules
+    def upsert_lora_visual(
+        lora_visual: TrainingHyperparameterLoraVisual, modules: TrainingTargetModules
     ) -> None:
         db_pool.run(
             UPSERT_MODULES,
             modules.prepare_for_storage(include_id=True),
         )
         db_pool.run(
-            UPSERT_LORA,
-            lora.prepare_for_storage(include_id=True),
+            UPSERT_LORA_VISUAL,
+            lora_visual.prepare_for_storage(include_id=True),
+        )
+
+    @staticmethod
+    def upsert_lora_language(
+        lora_language: TrainingHyperparameterLoraLanguage,
+        modules: TrainingTargetModules,
+    ) -> None:
+        db_pool.run(
+            UPSERT_MODULES,
+            modules.prepare_for_storage(include_id=True),
+        )
+        db_pool.run(
+            UPSERT_LORA_LANGUAGE,
+            lora_language.prepare_for_storage(include_id=True),
         )
 
     @staticmethod

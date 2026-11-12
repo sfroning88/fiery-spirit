@@ -30,7 +30,7 @@ def _artifact(
     artifact_id: str = "11111111-1111-1111-1111-111111111111",
     tier: ModelTier = ModelTier.CLOUD,
     role: ModelRole = ModelRole.SCREENER,
-    stage: TrainingStage = TrainingStage.LORA,
+    stage: TrainingStage = TrainingStage.LORA_VISUAL,
     precision: TrainingPrecision = TrainingPrecision.FP32,
     param_count: int = 1_000,
     sparsity: Decimal = Decimal("0"),

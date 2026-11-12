@@ -20,6 +20,7 @@ class ModelRole(str, Enum):
     SCREENER = "screener"
     TEACHER = "teacher"
     STUDENT = "student"
+    ANALYST = "analyst"
 
 
 class ModelMetricName(str, Enum):
@@ -32,3 +33,4 @@ class ModelMetricName(str, Enum):
     ABSTENTION_RATE = "abstention_rate"
     F1_SCORE = "f1_score"
     MACRO_F1_SCORE = "macro_f1_score"
+    BLEU_SCORE = "bleu_score"

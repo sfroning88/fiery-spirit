@@ -15,6 +15,7 @@ from fiery_python import (
     TrainingInterferogram,
     TrainingDeformationSource,
     TrainingSeismicEvent,
+    TrainingPassage,
     UuidUtils,
 )
 from ..queries.upsert_dataset_ingest import QUERY as UPSERT_INGEST
@@ -29,6 +30,10 @@ from ..queries.upsert_training_deformation_sources import (
 from ..queries.upsert_training_seismic_events import (
     QUERY as UPSERT_SEISMIC_EVENTS,
     TEMPLATE as UPSERT_SEISMIC_EVENTS_TEMPLATE,
+)
+from ..queries.upsert_training_passages import (
+    QUERY as UPSERT_PASSAGES,
+    TEMPLATE as UPSERT_PASSAGES_TEMPLATE,
 )
 
 
@@ -139,5 +144,19 @@ class IngestPersistService:
                 UPSERT_INTERFEROGRAMS.as_string(cursor),
                 interferogram_values,
                 template=UPSERT_INTERFEROGRAMS_TEMPLATE.as_string(cursor),
+                page_size=TRAINING_DB_PAGE_SIZE,
+            )
+
+    @staticmethod
+    def upsert_passages(passages: List[TrainingPassage]) -> None:
+        insert_values = UuidUtils.dedupe_uuid(
+            [passage.prepare_for_storage(include_id=True) for passage in passages]
+        )
+        with db_pool.get_cursor() as cursor:
+            execute_values(
+                cursor,
+                UPSERT_PASSAGES.as_string(cursor),
+                insert_values,
+                template=UPSERT_PASSAGES_TEMPLATE.as_string(cursor),
                 page_size=TRAINING_DB_PAGE_SIZE,
             )

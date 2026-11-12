@@ -8,43 +8,45 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import torch
-from fiery_python import TrainingStage
+from fiery_python import TrainingStage, TrainingTargetModules
 from src.build_job import (
     DistillPair,
     SeismicCnn,
     _STUDENT_ARCHITECTURE,
     _TEACHER_ARCHITECTURE,
+    _LLM_BASE_MODEL_ID,
+    _LLM_REVISION,
+    _LLM_WEIGHTS,
     _VIT_BASE_MODEL_ID,
     _VIT_REVISION,
     _VIT_SNAPSHOT,
     _VIT_WEIGHTS,
-    _peft_targets,
     build_job,
 )
 
 
-def _lora(**overrides) -> dict:
+def _lora_visual(**overrides) -> dict:
     data = {
         "rank": 8,
         "alpha": 16,
         "dropout": 0.1,
         "epochs": 1,
         "learning_rate": 1e-4,
-        "target_modules": {
-            "query": True,
-            "key": False,
-            "value": False,
-            "output": True,
-        },
+        "target_modules": TrainingTargetModules(
+            query=True,
+            key=False,
+            value=False,
+            output=True,
+        ),
     }
     data.update(overrides)
     return data
 
 
-def _lora_spec(**overrides) -> dict:
+def _lora_visual_spec(**overrides) -> dict:
     data = {
-        "stage": TrainingStage.LORA.value,
-        "lora": _lora(),
+        "stage": TrainingStage.LORA_VISUAL.value,
+        "lora_visual": _lora_visual(),
         "base_model_id": _VIT_BASE_MODEL_ID,
         "revision": _VIT_REVISION,
     }
@@ -72,40 +74,39 @@ def test_build_job_raises_when_stage_invalid():
 
 
 def test_peft_targets_maps_qkv_and_proj():
-    assert _peft_targets(
-        {"query": True, "key": False, "value": False, "output": True}
-    ) == ["qkv", "proj"]
+    modules = TrainingTargetModules(query=True, key=False, value=False, output=True)
+    assert modules._peft_targets() == ["qkv", "proj"]
+
+
+def test_peft_targets_maps_language_projections():
+    modules = TrainingTargetModules(query=True, key=True, value=True, output=True)
+    assert modules._peft_targets(language=True) == [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+    ]
 
 
 def test_peft_targets_empty_when_all_false():
-    assert (
-        _peft_targets({"query": False, "key": False, "value": False, "output": False})
-        == []
-    )
+    modules = TrainingTargetModules(query=False, key=False, value=False, output=False)
+    assert modules._peft_targets() == []
+    assert modules._peft_targets(language=True) == []
 
 
-def test_build_lora_job_raises_when_targets_empty():
-    with pytest.raises(RuntimeError, match="Empty LoRA target modules"):
+def test_build_lora_visual_job_raises_when_targets_empty():
+    with pytest.raises(RuntimeError, match="Empty lora_visual target modules"):
+        build_job(_lora_visual_spec(lora_visual=_lora_visual(target_modules=None)))
+
+
+def test_build_lora_visual_job_raises_when_pin_missing():
+    with pytest.raises(RuntimeError, match="Empty base_model_id"):
         build_job(
-            _lora_spec(
-                lora=_lora(
-                    target_modules={
-                        "query": False,
-                        "key": False,
-                        "value": False,
-                        "output": False,
-                    }
-                )
-            )
+            {"stage": TrainingStage.LORA_VISUAL.value, "lora_visual": _lora_visual()}
         )
 
 
-def test_build_lora_job_raises_when_pin_missing():
-    with pytest.raises(RuntimeError, match="Empty base_model_id"):
-        build_job({"stage": TrainingStage.LORA.value, "lora": _lora()})
-
-
-def test_build_lora_job_wraps_timm_backbone():
+def test_build_lora_visual_job_wraps_timm_backbone():
     backbone = MagicMock(name="backbone")
     wrapped = MagicMock(name="peft")
     with (
@@ -116,7 +117,7 @@ def test_build_lora_job_wraps_timm_backbone():
         patch("timm.create_model", return_value=backbone) as create_model,
         patch("peft.get_peft_model", return_value=wrapped) as get_peft_model,
     ):
-        result = build_job(_lora_spec())
+        result = build_job(_lora_visual_spec())
     assert result is wrapped
     download.assert_called_once_with(
         repo_id=_VIT_BASE_MODEL_ID,
@@ -134,6 +135,71 @@ def test_build_lora_job_wraps_timm_backbone():
     assert config.lora_alpha == 16
     assert set(config.target_modules) == {"qkv", "proj"}
     assert list(config.modules_to_save) == ["head"]
+
+
+def test_build_lora_visual_job_accepts_target_modules_dict():
+    wrapped = MagicMock(name="peft")
+    spec = _lora_visual_spec(
+        lora_visual=_lora_visual(
+            target_modules={
+                "query": True,
+                "key": False,
+                "value": False,
+                "output": True,
+            }
+        )
+    )
+    with (
+        patch(
+            "src.build_job.hf_hub_download", return_value="/tmp/vit/model.safetensors"
+        ),
+        patch("timm.create_model", return_value=MagicMock(name="backbone")),
+        patch("peft.get_peft_model", return_value=wrapped) as get_peft_model,
+    ):
+        assert build_job(spec) is wrapped
+    config = get_peft_model.call_args[0][1]
+    assert set(config.target_modules) == {"qkv", "proj"}
+
+
+def test_build_lora_language_job_accepts_target_modules_dict():
+    wrapped = MagicMock(name="peft")
+    spec = {
+        "stage": TrainingStage.LORA_LANGUAGE.value,
+        "base_model_id": _LLM_BASE_MODEL_ID,
+        "revision": _LLM_REVISION,
+        "lora_language": {
+            "rank": 8,
+            "alpha": 16,
+            "dropout": 0.05,
+            "target_modules": {
+                "query": True,
+                "key": True,
+                "value": True,
+                "output": True,
+            },
+        },
+    }
+    with (
+        patch(
+            "src.build_job.hf_hub_download",
+            return_value="/tmp/llm/model.safetensors",
+        ) as download,
+        patch(
+            "transformers.AutoModelForCausalLM.from_pretrained",
+            return_value=MagicMock(name="backbone"),
+        ) as from_pretrained,
+        patch("peft.get_peft_model", return_value=wrapped) as get_peft_model,
+    ):
+        assert build_job(spec) is wrapped
+    download.assert_called_once_with(
+        repo_id=_LLM_BASE_MODEL_ID,
+        filename=_LLM_WEIGHTS,
+        revision=_LLM_REVISION,
+    )
+    from_pretrained.assert_called_once()
+    config = get_peft_model.call_args[0][1]
+    assert set(config.target_modules) == {"q_proj", "k_proj", "v_proj", "o_proj"}
+    assert config.task_type == "CAUSAL_LM"
 
 
 def test_build_pretrain_job_returns_teacher_cnn():
