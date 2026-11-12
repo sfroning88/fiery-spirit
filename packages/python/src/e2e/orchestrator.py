@@ -11,7 +11,8 @@ Additional Kwargs:
     [refine] -shards <satellite|sensor|literature>
     [ingest|refine] -samples <max_samples>
     [train] -job <pretrain|lora_visual|lora_language|distill|prune|quantize>
-    [inference|preview|batch] -signal <deformation|seismic|language>
+    [inference|batch] -signal <deformation|seismic|language>
+    [preview] -signal <deformation|seismic>
     [ingest|refine|train|batch] -timeout <seconds|none>
 
 For example:
@@ -247,7 +248,9 @@ def _run_workflow(
         from .scripts.preview import run_preview_test
 
         if not signal:
-            raise ValueError("preview requires -signal deformation|seismic|language")
+            raise ValueError("preview requires -signal deformation|seismic")
+        if signal == "language":
+            raise ValueError("preview requires -signal deformation|seismic")
         run_preview_test(signal=signal)
     elif workflow == "batch":
         from .scripts.batch import run_batch_test
@@ -305,8 +308,11 @@ def _resolve_kwargs(
         )
     if workflow == "inference" and args.signal is None:
         parser.error("inference requires -signal deformation|seismic|language")
-    if workflow == "preview" and args.signal is None:
-        parser.error("preview requires -signal deformation|seismic|language")
+    if workflow == "preview":
+        if args.signal is None:
+            parser.error("preview requires -signal deformation|seismic")
+        if args.signal == "language":
+            parser.error("preview requires -signal deformation|seismic")
     if workflow == "batch" and args.signal is None:
         parser.error("batch requires -signal deformation|seismic|language")
     return source, shards, args.job, args.signal
@@ -383,7 +389,7 @@ def main() -> None:
     parser.add_argument(
         "-signal",
         choices=("deformation", "seismic", "language"),
-        help="[inference|preview|batch] interferogram or waveform sample or literature passage",
+        help="[inference|batch] deformation|seismic|language; [preview] deformation|seismic only",
     )
     parser.add_argument(
         "-timeout",

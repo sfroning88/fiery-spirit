@@ -14,6 +14,9 @@ from src.build_job import (
     SeismicCnn,
     _STUDENT_ARCHITECTURE,
     _TEACHER_ARCHITECTURE,
+    _LLM_BASE_MODEL_ID,
+    _LLM_REVISION,
+    _LLM_WEIGHTS,
     _VIT_BASE_MODEL_ID,
     _VIT_REVISION,
     _VIT_SNAPSHOT,
@@ -132,6 +135,71 @@ def test_build_lora_visual_job_wraps_timm_backbone():
     assert config.lora_alpha == 16
     assert set(config.target_modules) == {"qkv", "proj"}
     assert list(config.modules_to_save) == ["head"]
+
+
+def test_build_lora_visual_job_accepts_target_modules_dict():
+    wrapped = MagicMock(name="peft")
+    spec = _lora_visual_spec(
+        lora_visual=_lora_visual(
+            target_modules={
+                "query": True,
+                "key": False,
+                "value": False,
+                "output": True,
+            }
+        )
+    )
+    with (
+        patch(
+            "src.build_job.hf_hub_download", return_value="/tmp/vit/model.safetensors"
+        ),
+        patch("timm.create_model", return_value=MagicMock(name="backbone")),
+        patch("peft.get_peft_model", return_value=wrapped) as get_peft_model,
+    ):
+        assert build_job(spec) is wrapped
+    config = get_peft_model.call_args[0][1]
+    assert set(config.target_modules) == {"qkv", "proj"}
+
+
+def test_build_lora_language_job_accepts_target_modules_dict():
+    wrapped = MagicMock(name="peft")
+    spec = {
+        "stage": TrainingStage.LORA_LANGUAGE.value,
+        "base_model_id": _LLM_BASE_MODEL_ID,
+        "revision": _LLM_REVISION,
+        "lora_language": {
+            "rank": 8,
+            "alpha": 16,
+            "dropout": 0.05,
+            "target_modules": {
+                "query": True,
+                "key": True,
+                "value": True,
+                "output": True,
+            },
+        },
+    }
+    with (
+        patch(
+            "src.build_job.hf_hub_download",
+            return_value="/tmp/llm/model.safetensors",
+        ) as download,
+        patch(
+            "transformers.AutoModelForCausalLM.from_pretrained",
+            return_value=MagicMock(name="backbone"),
+        ) as from_pretrained,
+        patch("peft.get_peft_model", return_value=wrapped) as get_peft_model,
+    ):
+        assert build_job(spec) is wrapped
+    download.assert_called_once_with(
+        repo_id=_LLM_BASE_MODEL_ID,
+        filename=_LLM_WEIGHTS,
+        revision=_LLM_REVISION,
+    )
+    from_pretrained.assert_called_once()
+    config = get_peft_model.call_args[0][1]
+    assert set(config.target_modules) == {"q_proj", "k_proj", "v_proj", "o_proj"}
+    assert config.task_type == "CAUSAL_LM"
 
 
 def test_build_pretrain_job_returns_teacher_cnn():

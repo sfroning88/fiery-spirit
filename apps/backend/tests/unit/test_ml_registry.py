@@ -5,6 +5,8 @@ Unit tests for the inference-side model registry cache
 """
 
 from datetime import datetime, timezone
+
+import torch
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
@@ -27,7 +29,6 @@ from ml.registry import (
     _LLM_BASE_MODEL_ID,
     _LLM_REVISION,
     _LLM_SNAPSHOT,
-    _LLM_WEIGHTS,
 )
 
 KEY = (ModelTier.CLOUD, ModelRole.SCREENER)
@@ -162,7 +163,7 @@ def test_load_reloads_when_force_even_if_current():
             registry, "_fetch_promoted_artifact", return_value=_artifact_row()
         ),
         patch.object(
-            registry, "_load_model_entry", return_value=(entry, artifact)
+            registry, "_load_model_entry", return_value=(entry, artifact, None)
         ) as load_entry,
     ):
         registry.load(KEY, force=True)
@@ -180,7 +181,7 @@ def test_load_keeps_empty_slot_when_artifact_fails_to_materialize():
         patch.object(
             registry, "_fetch_promoted_artifact", return_value=_artifact_row()
         ),
-        patch.object(registry, "_load_model_entry", return_value=(None, None)),
+        patch.object(registry, "_load_model_entry", return_value=(None, None, None)),
     ):
         with pytest.raises(RuntimeError, match="failed to materialize"):
             registry.load(KEY)
@@ -200,7 +201,7 @@ def test_load_keeps_cached_when_artifact_fails_to_materialize():
         patch.object(
             registry, "_fetch_promoted_artifact", return_value=_artifact_row()
         ),
-        patch.object(registry, "_load_model_entry", return_value=(None, None)),
+        patch.object(registry, "_load_model_entry", return_value=(None, None, None)),
     ):
         with pytest.raises(RuntimeError, match="failed to materialize"):
             registry.load(KEY)
@@ -218,7 +219,9 @@ def test_load_caches_model_and_metadata():
         patch.object(
             registry, "_fetch_promoted_artifact", return_value=_artifact_row()
         ),
-        patch.object(registry, "_load_model_entry", return_value=(entry, artifact)),
+        patch.object(
+            registry, "_load_model_entry", return_value=(entry, artifact, None)
+        ),
     ):
         registry.load(KEY)
 
@@ -248,7 +251,7 @@ def test_reset_drops_all_cached_slots():
 def test_load_model_entry_returns_none_without_storage_path():
     registry = _ModelRegistry()
 
-    entry, artifact = registry._load_model_entry({"id": "art-1"}, "art-1")
+    entry, artifact, _tokenizer = registry._load_model_entry({"id": "art-1"}, "art-1")
 
     assert entry is None
     assert artifact is None
@@ -261,7 +264,9 @@ def test_load_model_entry_returns_none_when_storage_load_fails():
         "ml.registry.ModelStorageServices.load_artifact",
         side_effect=RuntimeError("s3 unavailable"),
     ):
-        entry, artifact = registry._load_model_entry(_artifact_row(), "art-1")
+        entry, artifact, _tokenizer = registry._load_model_entry(
+            _artifact_row(), "art-1"
+        )
 
     assert entry is None
     assert artifact is None
@@ -285,7 +290,9 @@ def test_load_model_entry_returns_none_when_materialize_fails():
             side_effect=RuntimeError("sidecar missing lora_visual"),
         ),
     ):
-        entry, artifact = registry._load_model_entry(_artifact_row(), "art-1")
+        entry, artifact, _tokenizer = registry._load_model_entry(
+            _artifact_row(), "art-1"
+        )
 
     assert entry is None
     assert artifact is None
@@ -323,7 +330,7 @@ def test_load_model_entry_builds_loaded_model():
         patch.object(registry, "materialize", return_value=artifact),
         patch("ml.registry.set_peft_model_state_dict") as set_adapter,
     ):
-        entry, loaded = registry._load_model_entry(row, "art-1")
+        entry, loaded, _tokenizer = registry._load_model_entry(row, "art-1")
 
     set_adapter.assert_called_once_with(artifact, state_dict)
     artifact.load_state_dict.assert_not_called()
@@ -407,7 +414,7 @@ def test_load_model_entry_loads_exported_quantize_without_eval():
         patch.object(registry, "materialize") as materialize,
         patch("ml.registry.torch.export.load", return_value=exported) as load_export,
     ):
-        entry, loaded = registry._load_model_entry(row, "art-1")
+        entry, loaded, _tokenizer = registry._load_model_entry(row, "art-1")
     materialize.assert_not_called()
     load_export.assert_called_once()
     exported_module.eval.assert_not_called()
@@ -501,3 +508,60 @@ def test_materialize_screener_wraps_pinned_backbone():
     config = get_peft_model.call_args[0][1]
     assert config.modules_to_save == ["head"]
     assert set(config.target_modules) == {"qkv", "proj"}
+
+
+def test_materialize_analyst_requires_base_pin():
+    with pytest.raises(RuntimeError, match="Empty base_model_id"):
+        _ModelRegistry._materialize_analyst(
+            {
+                "architecture": _LLM_SNAPSHOT,
+                "lora_language": {
+                    "rank": 8,
+                    "alpha": 16,
+                    "dropout": 0.05,
+                    "target_modules": {"query": True, "output": True},
+                },
+            }
+        )
+
+
+def test_materialize_analyst_wraps_pinned_causal_lm():
+    backbone = MagicMock(name="backbone")
+    wrapped = MagicMock(name="peft")
+    sidecar = {
+        "architecture": _LLM_SNAPSHOT,
+        "base_model_id": _LLM_BASE_MODEL_ID,
+        "revision": _LLM_REVISION,
+        "lora_language": {
+            "rank": 8,
+            "alpha": 16,
+            "dropout": 0.05,
+            "target_modules": {
+                "query": True,
+                "key": False,
+                "value": False,
+                "output": True,
+            },
+        },
+    }
+    with (
+        patch("ml.registry.hf_hub_download") as download,
+        patch(
+            "ml.registry.AutoModelForCausalLM.from_pretrained",
+            return_value=backbone,
+        ) as from_pretrained,
+        patch("ml.registry.get_peft_model", return_value=wrapped) as get_peft_model,
+    ):
+        result = _ModelRegistry._materialize_analyst(sidecar)
+    assert result is wrapped
+    download.assert_not_called()
+    from_pretrained.assert_called_once_with(
+        _LLM_BASE_MODEL_ID,
+        revision=_LLM_REVISION,
+        torch_dtype=torch.bfloat16,
+        local_files_only=True,
+    )
+    config = get_peft_model.call_args[0][1]
+    assert config.task_type == "CAUSAL_LM"
+    assert config.modules_to_save is None
+    assert set(config.target_modules) == {"q_proj", "o_proj"}

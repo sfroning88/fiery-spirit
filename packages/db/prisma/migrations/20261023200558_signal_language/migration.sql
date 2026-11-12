@@ -13,6 +13,10 @@ ALTER TYPE "ai"."training_signal" ADD VALUE 'language';
 -- AlterEnum
 ALTER TYPE "ai"."model_metric_name" ADD VALUE 'bleu_score';
 
+-- (manual) Drop Constraint
+-- remove old training_session_stage_hyperparameter_check before training_stage enum migration
+ALTER TABLE "ai"."training_session" DROP CONSTRAINT "training_session_stage_hyperparameter_check";
+
 -- AlterEnum
 BEGIN;
 CREATE TYPE "ai"."training_stage_new" AS ENUM ('pretrain', 'lora_visual', 'lora_language', 'distill', 'prune', 'quantize');
@@ -42,7 +46,8 @@ ALTER TABLE "ai"."training_session" RENAME COLUMN "hyperparameter_lora_id" TO "h
 -- RenameConstraint
 ALTER TABLE "ai"."training_session" RENAME CONSTRAINT "training_session_hyperparameter_lora_id_fkey" TO "training_session_hyperparameter_lora_visual_id_fkey";
 
--- DropConstraint
+-- (manual) Drop Constraint
+-- remove old feedback_one_per_user_per_prediction constraint
 ALTER TABLE "ai"."inference_feedback" DROP CONSTRAINT "feedback_one_per_user_per_prediction";
 
 -- AlterTable
@@ -54,6 +59,29 @@ ALTER TABLE "ai"."training_contract" ADD COLUMN     "language_id" UUID;
 
 -- AlterTable
 ALTER TABLE "ai"."training_session" ADD COLUMN "hyperparameter_lora_language_id" UUID;
+
+-- (manual) Create Constraint
+-- recreate training_session_stage_hyperparameter_check with lora_visual and lora_language
+ALTER TABLE "ai"."training_session"
+    ADD CONSTRAINT "training_session_stage_hyperparameter_check"
+    CHECK (
+        num_nonnulls(
+            hyperparameter_pretrain_id,
+            hyperparameter_lora_visual_id,
+            hyperparameter_lora_language_id,
+            hyperparameter_distill_id,
+            hyperparameter_prune_id,
+            hyperparameter_quantize_id
+        ) = 1
+        AND (
+            (stage = 'pretrain'       AND hyperparameter_pretrain_id       IS NOT NULL) OR
+            (stage = 'lora_visual'    AND hyperparameter_lora_visual_id    IS NOT NULL) OR
+            (stage = 'lora_language'  AND hyperparameter_lora_language_id  IS NOT NULL) OR
+            (stage = 'distill'        AND hyperparameter_distill_id        IS NOT NULL) OR
+            (stage = 'prune'          AND hyperparameter_prune_id          IS NOT NULL) OR
+            (stage = 'quantize'       AND hyperparameter_quantize_id       IS NOT NULL)
+        )
+    );
 
 -- CreateTable
 CREATE TABLE IF NOT EXISTS "ai"."inference_language" (
@@ -183,23 +211,28 @@ ALTER TABLE "ai"."training_contract" ADD CONSTRAINT "training_contract_language_
 -- AddForeignKey
 ALTER TABLE "ai"."training_session" ADD CONSTRAINT "training_session_hyperparameter_lora_language_id_fkey" FOREIGN KEY ("hyperparameter_lora_language_id") REFERENCES "ai"."training_hyperparameter_lora_language"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddConstraint
+-- (manual) Create Constraint
+-- recreate feedback_one_per_user_per_prediction to include language_id
 ALTER TABLE "ai"."inference_feedback"
     ADD CONSTRAINT "feedback_one_per_user_per_prediction"
     UNIQUE NULLS NOT DISTINCT ("artifact_id", "interferogram_id", "seismic_event_id", "language_id", "user_id");
 
--- DropConstraint
+-- (manual) Drop Constraint
+-- remove old feedback_single_target constraint
 ALTER TABLE "ai"."inference_feedback" DROP CONSTRAINT "feedback_single_target";
 
--- AddConstraint
+-- (manual) Create Constraint
+-- recreate feedback_single_target to include language_id
 ALTER TABLE "ai"."inference_feedback"
     ADD CONSTRAINT "feedback_single_target"
     CHECK (num_nonnulls("interferogram_id", "seismic_event_id", "language_id") = 1);
 
--- DropConstraint
+-- (manual) Drop Constraint
+-- remove old feedback_corrected_scope constraint
 ALTER TABLE "ai"."inference_feedback" DROP CONSTRAINT "feedback_corrected_scope";
 
--- AddConstraint
+-- (manual) Create Constraint
+-- recreate feedback_corrected_scope to include corrected_language
 ALTER TABLE "ai"."inference_feedback"
     ADD CONSTRAINT "feedback_corrected_scope"
     CHECK (
@@ -208,10 +241,12 @@ ALTER TABLE "ai"."inference_feedback"
         AND ("corrected_language" IS NULL OR "language_id" IS NOT NULL)
     );
 
--- DropConstraint
+-- (manual) Drop Constraint
+-- remove old feedback_corrected_required constraint
 ALTER TABLE "ai"."inference_feedback" DROP CONSTRAINT "feedback_corrected_required";
 
--- AddConstraint
+-- (manual) Add Constraint
+-- expand feedback_corrected_required constraint to include corrected_language
 ALTER TABLE "ai"."inference_feedback"
     ADD CONSTRAINT "feedback_corrected_required"
     CHECK (
@@ -219,4 +254,18 @@ ALTER TABLE "ai"."inference_feedback"
         OR "corrected_deformation" IS NOT NULL
         OR "corrected_seismic" IS NOT NULL
         OR "corrected_language" IS NOT NULL
+    );
+
+-- (manual) Drop Constraint
+-- remove old training_contract_signal_config_check constraint
+ALTER TABLE "ai"."training_contract" DROP CONSTRAINT "training_contract_signal_config_check";
+
+-- (manual) Create Constraint
+-- enforce exactly one signal config per training_contract
+ALTER TABLE "ai"."training_contract"
+    ADD CONSTRAINT "training_contract_signal_config_check"
+    CHECK (
+        ("signal" = 'seismic'     AND "seismic_id"     IS NOT NULL AND "deformation_id" IS NULL AND "language_id" IS NULL)
+     OR ("signal" = 'deformation' AND "deformation_id" IS NOT NULL AND "seismic_id"     IS NULL AND "language_id" IS NULL)
+     OR ("signal" = 'language'    AND "language_id"    IS NOT NULL AND "seismic_id"     IS NULL AND "deformation_id" IS NULL)
     );

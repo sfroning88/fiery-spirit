@@ -86,6 +86,9 @@ async def train_spawn(request: Request, payload: TrainRequest) -> TrainResponse:
         elif contract.seismic_id:
             signal = TrainingSignal.SEISMIC
 
+        elif contract.language_id:
+            signal = TrainingSignal.LANGUAGE
+
         else:
             logger.error(
                 "contract_missing_deformation_and_seismic",

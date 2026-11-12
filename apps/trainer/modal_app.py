@@ -35,17 +35,13 @@ def _download_vit_small() -> None:
 
 def _download_llm_instruct() -> None:
     import torch
-    from huggingface_hub import hf_hub_download
-    from transformers import AutoModelForCausalLM
+    from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    _LLM_SNAPSHOT = "Qwen2.5-0.5B-Instruct"
     _LLM_BASE_MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
     _LLM_REVISION = "7ae557604adf67be50417f59c2c2f167def9a775"
-    _LLM_WEIGHTS = "model.safetensors"
 
-    hf_hub_download(
-        repo_id=_LLM_BASE_MODEL_ID,
-        filename=_LLM_WEIGHTS,
+    AutoTokenizer.from_pretrained(
+        _LLM_BASE_MODEL_ID,
         revision=_LLM_REVISION,
     )
     AutoModelForCausalLM.from_pretrained(

@@ -224,37 +224,19 @@ class InferenceServingWaiter:
             raise error(f"Artifact-Contract mismatch for {metadata.artifact_id}")
         prompt = f"Volcano {volcano_id}. State the alert color and one sentence why."
         started = time.perf_counter()
-        from transformers import AutoTokenizer
-
-        name = getattr(model.config, "name_or_path", None)
-        if not isinstance(name, str) or not name:
-            raise error("Analyst model is missing a tokenizer name")
-        tokenizer = AutoTokenizer.from_pretrained(name, local_files_only=True)
+        tokenizer = model_registry.get_tokenizer(key)
         encoded = tokenizer(prompt, return_tensors="pt", add_special_tokens=False)
-        ids = encoded["input_ids"]
-        mask = encoded["attention_mask"]
-        text = ""
-        max_characters = training_language.max_characters
         with torch.no_grad():
-            for _ in range(_LANGUAGE_MAX_NEW_TOKENS):
-                logits = model(input_ids=ids, attention_mask=mask)
-                if hasattr(logits, "logits"):
-                    logits = logits.logits
-                next_id = logits[:, -1, :].argmax(dim=-1)
-                token = int(next_id[0].item())
-                if (
-                    tokenizer.eos_token_id is not None
-                    and token == tokenizer.eos_token_id
-                ):
-                    break
-                piece = tokenizer.decode([token], skip_special_tokens=True)
-                if len(text) + len(piece) > max_characters:
-                    break
-                text += piece
-                next_column = next_id.unsqueeze(1)
-                ids = torch.cat([ids, next_column], dim=1)
-                mask = torch.cat([mask, torch.ones_like(next_column)], dim=1)
-        text = text.strip()
+            output = model.generate(
+                **encoded,
+                max_new_tokens=_LANGUAGE_MAX_NEW_TOKENS,
+                do_sample=False,
+            )
+        prompt_len = int(encoded["input_ids"].shape[-1])
+        text = tokenizer.decode(
+            output[0, prompt_len:], skip_special_tokens=True
+        ).strip()
+        text = text[: training_language.max_characters]
         label = next(
             (color for color in _LANGUAGE_CLASS_ORDER if color.value in text.lower()),
             None,

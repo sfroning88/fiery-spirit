@@ -14,7 +14,7 @@ from huggingface_hub import hf_hub_download
 from peft import LoraConfig, get_peft_model, set_peft_model_state_dict
 from safetensors.torch import load
 from timm.models import load_checkpoint
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from typing import Any, Dict, Optional, Tuple
 from fiery_python import db_pool, logging, SyncLazyResource
 from fiery_python import (
@@ -41,7 +41,6 @@ _VIT_WEIGHTS = "model.safetensors"
 _LLM_SNAPSHOT = "Qwen2.5-0.5B-Instruct"
 _LLM_BASE_MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
 _LLM_REVISION = "7ae557604adf67be50417f59c2c2f167def9a775"
-_LLM_WEIGHTS = "model.safetensors"
 
 _CNN_WIDTHS = {
     TrainingStage.PRETRAIN: (32, 64, 128),
@@ -147,7 +146,7 @@ class _ModelRegistry:
                 logger.debug("registry_already_current", artifact=artifact_id)
                 return
 
-            entry, model = self._load_model_entry(row, artifact_id)
+            entry, model, tokenizer = self._load_model_entry(row, artifact_id)
             if not entry or not model:
                 logger.warning(
                     "registry_load_failed_keeping_cached",
@@ -165,6 +164,7 @@ class _ModelRegistry:
             reg.model = model
             reg.metadata = entry
             reg.artifact_id = artifact_id
+            reg.tokenizer = tokenizer
             logger.info(
                 "registry_loaded",
                 artifact=artifact_id,
@@ -182,6 +182,15 @@ class _ModelRegistry:
                 f"Model artifact not loaded for ({tier.value}, {role.value})"
             )
         return artifact
+
+    def get_tokenizer(self, key: Tuple[ModelTier, ModelRole]) -> Any:
+        """Return the tokenizer cached with the analyst model"""
+        with self._lock:
+            tokenizer = self._slot(key).get().tokenizer
+        if tokenizer is None:
+            tier, role = key
+            raise RuntimeError(f"Tokenizer not loaded for ({tier.value}, {role.value})")
+        return tokenizer
 
     def get_metadata(self, key: Tuple[ModelTier, ModelRole]) -> Dict[str, Any]:
         """Return cached metadata"""
@@ -224,7 +233,9 @@ class _ModelRegistry:
         lora_visual = sidecar.get("lora_visual")
         if not lora_visual:
             raise RuntimeError("sidecar missing lora_visual")
-        target_modules: Optional[TrainingTargetModules] = lora_visual["target_modules"]
+        target_modules = lora_visual["target_modules"]
+        if target_modules and isinstance(target_modules, dict):
+            target_modules = TrainingTargetModules(**target_modules)
         if not target_modules or not isinstance(target_modules, TrainingTargetModules):
             raise RuntimeError("Empty lora_visual target modules")
         targets = target_modules._peft_targets(language=False)
@@ -265,9 +276,9 @@ class _ModelRegistry:
         lora_language = sidecar.get("lora_language")
         if not lora_language:
             raise RuntimeError("sidecar missing lora_language")
-        target_modules: Optional[TrainingTargetModules] = lora_language[
-            "target_modules"
-        ]
+        target_modules = lora_language["target_modules"]
+        if target_modules and isinstance(target_modules, dict):
+            target_modules = TrainingTargetModules(**target_modules)
         if not target_modules or not isinstance(target_modules, TrainingTargetModules):
             raise RuntimeError("Empty lora_language target modules")
         targets = target_modules._peft_targets(language=True)
@@ -280,16 +291,11 @@ class _ModelRegistry:
             or not isinstance(revision, str)
         ):
             raise RuntimeError("Empty base_model_id and/or revision")
-        weights_path = hf_hub_download(
-            repo_id=base_model_id,
-            filename=_LLM_WEIGHTS,
-            revision=revision,
-            local_files_only=True,
-        )
         backbone = AutoModelForCausalLM.from_pretrained(
             base_model_id,
             revision=revision,
             torch_dtype=torch.bfloat16,
+            local_files_only=True,
         )
         config = LoraConfig(
             r=lora_language["rank"],
@@ -307,12 +313,12 @@ class _ModelRegistry:
 
     def _load_model_entry(
         self, row: Dict[str, Any], artifact_id: str
-    ) -> tuple[Optional[LoadedModel], Optional[nn.Module]]:
-        """Load one S3 artifact; returns (LoadedModel, artifact) or (None, None) on failure"""
+    ) -> tuple[Optional[LoadedModel], Optional[nn.Module], Optional[Any]]:
+        """Load one S3 artifact; returns (LoadedModel, artifact, tokenizer)"""
         storage_path = str(row.get("storage_path")) if row.get("storage_path") else None
         if not storage_path:
             logger.error("missing required storage_path")
-            return None, None
+            return None, None, None
         try:
             payload, sidecar = ModelStorageServices.load_artifact(
                 storage_path, is_body=True
@@ -323,7 +329,7 @@ class _ModelRegistry:
                 key=storage_path,
                 error=str(err),
             )
-            return None, None
+            return None, None, None
         try:
             stage = (
                 TrainingStage(sidecar.get("stage"))
@@ -348,15 +354,31 @@ class _ModelRegistry:
                 key=storage_path,
                 error="Stage from sidecar missing or malformed",
             )
-            return None, None
+            return None, None, None
         except Exception as err:
             logger.error(
                 "registry_materialize_failed",
                 key=storage_path,
                 error=str(err),
             )
-            return None, None
+            return None, None, None
         decision = sidecar.get("decision") or {}
+        tokenizer = None
+        if stage is TrainingStage.LORA_LANGUAGE:
+            base_model_id = sidecar.get("base_model_id")
+            revision = sidecar.get("revision")
+            if (
+                not isinstance(base_model_id, str)
+                or not isinstance(revision, str)
+                or not base_model_id
+                or not revision
+            ):
+                raise RuntimeError("Empty base_model_id and/or revision")
+            tokenizer = AutoTokenizer.from_pretrained(
+                base_model_id,
+                revision=revision,
+                local_files_only=True,
+            )
         entry = LoadedModel(
             artifact_id=artifact_id,
             tier=ModelTier(row.get("tier")),
@@ -378,7 +400,7 @@ class _ModelRegistry:
             parent_id=str(row.get("parent_id")) if row.get("parent_id") else None,
             preprocessing=decision,
         )
-        return entry, model
+        return entry, model, tokenizer
 
     @staticmethod
     def _fetch_promoted_artifact(

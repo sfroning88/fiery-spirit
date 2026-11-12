@@ -62,3 +62,4 @@ class ArtifactRegistry:
     model: Optional[Any]
     metadata: Optional[LoadedModel]
     artifact_id: Optional[str]
+    tokenizer: Optional[Any] = None

@@ -105,7 +105,9 @@ def _build_lora_visual_job(spec: dict) -> Optional[PeftModel]:
     from peft import LoraConfig, get_peft_model
 
     lora_visual = spec["lora_visual"]
-    target_modules: Optional[TrainingTargetModules] = lora_visual["target_modules"]
+    target_modules = lora_visual["target_modules"]
+    if target_modules and isinstance(target_modules, dict):
+        target_modules = TrainingTargetModules(**target_modules)
     if not target_modules or not isinstance(target_modules, TrainingTargetModules):
         raise RuntimeError("Empty lora_visual target modules")
     targets = target_modules._peft_targets(language=False)
@@ -145,7 +147,9 @@ def _build_lora_language_job(spec: dict) -> Optional[PeftModel]:
     from transformers import AutoModelForCausalLM
 
     lora_language = spec["lora_language"]
-    target_modules: Optional[TrainingTargetModules] = lora_language["target_modules"]
+    target_modules = lora_language["target_modules"]
+    if target_modules and isinstance(target_modules, dict):
+        target_modules = TrainingTargetModules(**target_modules)
     if not target_modules or not isinstance(target_modules, TrainingTargetModules):
         raise RuntimeError("Empty lora_language target modules")
     targets = target_modules._peft_targets(language=True)

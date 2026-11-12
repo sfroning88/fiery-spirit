@@ -24,7 +24,7 @@ from .persist_service import IngestPersistService
 HF_TOKEN = config.get("HF_TOKEN")
 
 _HF_ID = "sfroning88/Volcanic-States"
-_HF_REVISION = "academic-revision-unpinned"
+_HF_REVISION = "827230cd7a74c1879b040c09bee0e08ebd026f1c"
 _HF_SPLIT_MAP = (
     ("train", TrainingSplit.TRAIN),
     ("validation", TrainingSplit.VALIDATE),
@@ -140,7 +140,7 @@ class IngestAcademicSource:
         if isinstance(raw, str) and raw:
             try:
                 parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-            except:
+            except ValueError:
                 return None
             if parsed.tzinfo is None:
                 return parsed.replace(tzinfo=timezone.utc)

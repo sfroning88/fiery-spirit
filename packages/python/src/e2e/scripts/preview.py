@@ -12,7 +12,6 @@ from ..endpoints import PREVIEW_URL, endpoint_bytes
 from ..helpers import (
     random_interferogram_id,
     random_seismic_event_id,
-    random_volcano_id,
     PNG_MAGIC,
     print_ascii,
 )
@@ -24,17 +23,10 @@ def run_preview_test(signal: str) -> Dict[str, Any]:
     print("Preview integration endpoint test start")
     print(f"\nAttempting preview signal={signal}")
 
-    if signal not in (
-        TrainingSignal.DEFORMATION.value,
-        TrainingSignal.SEISMIC.value,
-        TrainingSignal.LANGUAGE.value,
-    ):
-        raise ValueError("preview requires -signal deformation|seismic|language")
+    if signal not in (TrainingSignal.DEFORMATION.value, TrainingSignal.SEISMIC.value):
+        raise ValueError("preview requires -signal deformation|seismic")
 
-    if signal == TrainingSignal.LANGUAGE.value:
-        sample_key = "volcano_id"
-        sample_id = random_volcano_id()
-    elif signal == TrainingSignal.SEISMIC.value:
+    if signal == TrainingSignal.SEISMIC.value:
         sample_key = "seismic_event_id"
         sample_id = random_seismic_event_id()
     else:
